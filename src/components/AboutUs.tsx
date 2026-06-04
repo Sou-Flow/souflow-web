@@ -56,7 +56,7 @@ export function AboutUs() {
 				<div className="flex flex-col md:grid md:grid-cols-3 gap-4 w-full">
 					<div className="relative w-full h-75 md:h-112.5 md:col-span-2 overflow-hidden rounded-2xl">
 						<Image
-							src="https://images.unsplash.com/photo-1558350315-8aa00e8e4590?q=80&w=1200&auto=format&fit=crop"
+							src="/images/about-us-main1.avif"
 							alt="Florist working on a bouquet"
 							fill
 							className="object-cover hover:scale-105 transition-transform duration-700"
@@ -66,28 +66,30 @@ export function AboutUs() {
 					</div>
 					<div className="relative w-full h-75 md:h-112.5 overflow-hidden rounded-2xl">
 						<Image
-							src="https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=800&auto=format&fit=crop"
+							src="/images/about-us-main2.avif"
 							alt="Beautiful floral arrangement details"
 							fill
 							className="object-cover hover:scale-105 transition-transform duration-700"
 							sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 33vw"
+							loading="eager"
 						/>
 					</div>
 				</div>
 			</section>
 
 			{/* Our Story Section */}
-			<section className="px-4 py-16 sm:py-24 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-[#EBE5DA] dark:border-[#C49B83]/30">
+			<section className="px-4 py-16 sm:py-24 sm:px-6 lg:px-8 max-w-6xl mx-auto border-t border-[#EBE5DA] dark:border-[#C49B83]/30">
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 items-center">
 					<div className="relative order-2 lg:order-1">
 						<div className="aspect-4/5 rounded-2xl overflow-hidden border border-[#C49B83]/30 p-2 sm:p-4">
 							<div className="relative w-full h-full rounded-xl overflow-hidden bg-[#EBE5DA] dark:bg-[#2C2C2C]">
 								<Image
-									src="https://images.unsplash.com/photo-1561848355-890d054dc55a?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YWJvdXQlMjB1cyUyMGZsb3dlcnxlbnwwfDF8MHx8fDI%3D"
+									src="/images/about-us-main3.jpg"
 									alt="Florist arranging flowers in a workshop"
 									fill
 									className="w-full h-full object-cover grayscale-20"
 									sizes="(max-width: 768px) 100vw, 50vw"
+									loading="lazy"
 								/>
 								{/* Overlay element */}
 								<div className="absolute inset-0 bg-[#C49B83]/10 mix-blend-multiply"></div>

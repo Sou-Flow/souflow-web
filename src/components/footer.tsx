@@ -7,9 +7,9 @@ import { soulFlowRoutes } from "@/lib/soulflow/routes";
 export function Footer() {
 	return (
 		<footer className="bg-sf-bg border-t-4 border-sf-border transition-colors duration-300">
-			<div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-				<div className="grid grid-cols-1 gap-8 md:grid-cols-4">
-					<div className="space-y-3">
+			<div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+				<div className="grid grid-cols-1 gap-8 md:grid-cols-12">
+					<div className="space-y-3 md:col-span-3">
 						<span className="font-sans font-bold text-2xl tracking-[0.25em] text-sf-fg">
 							SOULFLOW
 						</span>
@@ -20,7 +20,7 @@ export function Footer() {
 						</p>
 					</div>
 
-					<div className="space-y-3">
+					<div className="space-y-3 md:col-span-2">
 						<h4 className="text-sm font-bold tracking-widest uppercase text-sf-accent">
 							Đường Dẫn Nhanh
 						</h4>
@@ -64,7 +64,7 @@ export function Footer() {
 						</ul>
 					</div>
 
-					<div className="space-y-3">
+					<div className="space-y-3 md:col-span-4">
 						<h4 className="text-sm font-bold tracking-widest uppercase text-sf-accent">
 							Cam Kết Bền Vững
 						</h4>
@@ -81,7 +81,7 @@ export function Footer() {
 						</div>
 					</div>
 
-					<div className="space-y-3">
+					<div className="space-y-3 md:col-span-3">
 						<h4 className="text-sm font-bold tracking-widest uppercase text-sf-accent">
 							Địa Chỉ Cửa Hàng
 						</h4>
@@ -95,7 +95,7 @@ export function Footer() {
 					</div>
 				</div>
 
-				<div className="mt-12 border-t border-sf-border pt-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-sf-fg-muted">
+				<div className="mt-2 border-t-2 border-sf-border pt-3 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-sf-fg-muted">
 					<p>© 2026 SoulFlow Flower Vietnam. All rights reserved.</p>
 					<div className="flex gap-4">
 						<Link

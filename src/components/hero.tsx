@@ -83,7 +83,7 @@ export function Hero() {
 			<div className="absolute bottom-1/4 right-1/10 h-96 w-96 rounded-full bg-(--sf-surface)/50 blur-3xl" />
 
 			{/* Main Hero Showcase */}
-			<section className="relative mx-auto max-w-7xl px-4 pt-12 sm:px-6 lg:px-8 lg:pt-20">
+			<section className="relative mx-auto max-w-7xl px-4 pt-12 sm:px-6 lg:px-8 lg:pt-10">
 				<div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:items-center">
 					{/* Left Text Column */}
 					<motion.div
@@ -142,37 +142,37 @@ export function Hero() {
 						className="lg:col-span-12 xl:col-span-5 relative"
 					>
 						{/* Main Image Frame */}
-						<div className="relative mx-auto max-w-95 sm:max-w-md overflow-hidden rounded-2xl border-8 border-sf-bg-elevated shadow-xl">
-							<div className="relative aspect-4/5 w-full h-110">
-								<Image
-									src="https://images.unsplash.com/photo-1603919361324-11302f967304?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OTZ8fGhvYSUyMG0lRTElQkElQUJ1JTIwJUM0JTkxJUM2JUExbnxlbnwwfDF8MHx8fDI%3D"
-									alt="SoulFlow luxury floral bouquet curation"
-									className="aspect-4/5 w-full object-cover grayscale-1/10 hover:grayscale-0 transition-all duration-700 hover:scale-105"
-									referrerPolicy="no-referrer"
-									fill
-									sizes="( max-width: 640px ) 100vw, ( max-width: 1280px ) 50vw, 33vw"
-									priority
-								/>
-							</div>
-							<div className="absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-transparent"></div>
+						<div className="relative aspect-4/5 w-full h-110 overflow-hidden rounded-xl">
+							<Image
+								src="/images/hero-main.jpg"
+								alt="SoulFlow luxury floral bouquet curation"
+								className="aspect-4/5 w-full object-cover grayscale-10 hover:grayscale-0 transition-all duration-700 hover:scale-105"
+								referrerPolicy="no-referrer"
+								fill
+								sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
+								priority
+							/>
 
-							<div className="absolute bottom-6 left-20 right-6 text-white">
-								<span className="text-sm uppercase tracking-widest text-sf-accent font-bold">
-									Rực Rỡ Mùa Này
+							<div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
+
+							<div className="absolute bottom-6 left-28 z-10">
+								<span className="text-base uppercase tracking-widest text-rose-500 font-bold drop-shadow-sm">
+									BẢN TÌNH CA MÙA XUÂN
 								</span>
-								<h3 className="font-serif text-xl font-normal leading-tight">
-									Mẫu Đơn Sarah Bernhardt Hồng Phấn
+								<h3 className="font-serif text-xl font-normal leading-tight text-white drop-shadow-md mt-1">
+									Bó Tulip Đỏ Chân Thành
 								</h3>
 							</div>
 						</div>
 
 						{/* Little floating detail card */}
-						<div className="absolute -bottom-6 -left-20 hidden sm:block p-4 rounded-xl border border-sf-border bg-(--sf-bg-elevated)/90 backdrop-blur-md shadow-lg max-w-42.5">
-							<span className="font-serif text-sf-accent italic text-xs block">
-								Ý nghĩa của mẫu đơn
+						<div className="absolute -bottom-6 -left-20 hidden sm:block p-4 rounded-xl border border-sf-border bg-(--sf-bg-elevated)/90 backdrop-blur-md shadow-lg max-w-46">
+							<span className="font-serif font-bold text-sf-accent italic text-base block">
+								Ý nghĩa của Tulip đỏ
 							</span>
 							<p className="text-sm font-medium text-sf-fg mt-1">
-								&quot;Vinh hoa phú quý, may mắn ngập rạng rỡ.&quot;
+								&quot;Biểu tượng của một tình yêu hoàn hảo, chân thành và lời tỏ
+								tình sâu đậm từ trái tim.&quot;
 							</p>
 						</div>
 					</motion.div>
