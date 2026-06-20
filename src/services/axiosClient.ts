@@ -31,7 +31,7 @@ axiosClient.interceptors.request.use(
 axiosClient.interceptors.response.use(
 	(response) => {
 		// Chỉ lấy cái ruột data trả về cho code FE gọn nhẹ
-		if (response && response.data) {
+		if (response?.data) {
 			return response.data;
 		}
 		return response;

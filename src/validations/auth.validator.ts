@@ -14,7 +14,7 @@ export const registerValidator = z
 			.regex(/[a-z]/, "Mật khẩu phải chứa ít nhất một chữ cái viết thường")
 			.regex(/[0-9]/, "Mật khẩu phải chứa ít nhất một số"),
 		confirmPassword: z.string().min(1, "Vui lòng xác nhận mật khẩu"),
-		phone: z
+		phoneNumber: z
 			.string()
 			.regex(/^\d{10}$/, "Số điện thoại phải có 10 chữ số")
 			.regex(/^(0|\+84)/, "Số điện thoại phải bắt đầu bằng 0 hoặc +84"),

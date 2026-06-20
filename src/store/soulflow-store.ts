@@ -51,8 +51,8 @@ interface SoulFlowStoreState {
 	applyCoupon: (code: string) => boolean;
 	searchQuery: string;
 	setSearchQuery: (query: string) => void;
-	selectedCategory: string;
-	setSelectedCategory: (category: string) => void;
+	selectedCategory: number | null;
+	setSelectedCategory: (category: number | null) => void;
 }
 
 // const defaultUser: UserProfile = {
@@ -324,12 +324,20 @@ export const useSoulFlowStore = create<SoulFlowStoreState>()(
 			},
 			searchQuery: "",
 			setSearchQuery: (query) => set({ searchQuery: query }),
-			selectedCategory: "All",
+			selectedCategory: null,
 			setSelectedCategory: (category) => set({ selectedCategory: category }),
 		}),
 		{
 			name: "soulflow-boutique",
-			partialize: (state) => ({ cart: state.cart }),
+			partialize: (state) => ({
+				cart: state.cart,
+				user: state.user,
+				orders: state.orders,
+				flowers: state.flowers,
+				loadingFlowers: state.loadingFlowers,
+				locationData: state.locationData,
+				loadingConsultation: state.loadingConsultation,
+			}),
 		},
 	),
 );

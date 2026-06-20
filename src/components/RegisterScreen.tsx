@@ -27,7 +27,7 @@ export function RegisterScreen() {
 			email: "",
 			password: "",
 			confirmPassword: "",
-			phone: "",
+			phoneNumber: "",
 			fullName: "",
 			address: "",
 		},
@@ -170,13 +170,13 @@ export function RegisterScreen() {
 									id="reg-phone"
 									type="tel"
 									placeholder="090 123 4567"
-									{...register("phone")}
+									{...register("phoneNumber")}
 									className="w-full bg-white/5 border-0 border-b border-outline-variant/60 py-2.5 px-0 text-sm focus:border-primary transition-all focus:outline-none placeholder-secondary/30 text-sf-fg"
 									required
 								/>
-								{errors.phone && (
+								{errors.phoneNumber && (
 									<p className="text-red-500 text-xs mt-1">
-										{errors.phone.message}
+										{errors.phoneNumber.message}
 									</p>
 								)}
 							</div>

@@ -1,25 +1,50 @@
 // src/services/productService.ts
 
-import { defaultFlowers } from "@/lib/data/default-flowers"; // Import dữ liệu mẫu
-import type { Flower } from "@/types/soulflow"; // Import Type của bạn
+import type { ApiResponse } from "@/types/api.type";
+import {
+	mapProductResponseToFE,
+	type ProductFE,
+	type ProductResponseDTO,
+} from "@/types/product.type";
 import axiosClient from "./axiosClient";
 
 export const productService = {
-	getAllFlowers: async (): Promise<Flower[]> => {
+	getAllFlower: async (): Promise<ProductFE[]> => {
 		try {
-			// Cố gắng gọi API thật từ Spring Boot
-			const data = await axiosClient.get("/products");
+			// 1. Gọi API, quy định rõ kiểu trả về thô là ApiResponse bọc một mảng ProductResponseDTO
+			const rawResponse: ApiResponse<ProductResponseDTO[]> =
+				await axiosClient.get("/products");
 
-			// Giả sử API trả về mảng trực tiếp, nếu nó bọc trong { data: [...] } thì lấy data.data
-			return data as unknown as Flower[];
-		} catch {
-			// Nếu gọi API thất bại (Network Error, 404, 500...)
-			console.warn(
-				"⚠️ API '/products' lỗi hoặc BE chưa chạy. Đang sử dụng dữ liệu mẫu (Mock Data).",
-			);
+			// Lấy chính xác cái mảng dữ liệu nằm bên trong property 'data' của ApiResponse
+			const rawList = rawResponse.data;
 
-			// Trả về dữ liệu giả để FE không bị sập
-			return defaultFlowers;
+			// Chắc cú kiểm tra xem nó có phải là mảng không
+			if (!Array.isArray(rawList)) {
+				return [];
+			}
+
+			// 2. Chạy qua máy xay Mapper để gọt data thô (BE) thành data sạch (FE)
+			return rawList.map(mapProductResponseToFE);
+		} catch (error) {
+			console.warn("⚠️ API '/products' lỗi hoặc BE chưa chạy.", error);
+			// Lấy danh sách lỗi thì trả về MẢNG RỖNG, tuyệt đối không dùng notFound() ở đây
+			return [];
+		}
+	},
+
+	getFlowerById: async (id: number): Promise<ProductFE | null> => {
+		try {
+			const rawResponse: ApiResponse<ProductResponseDTO> =
+				await axiosClient.get(`/products/${id}`);
+
+			if (!rawResponse.data) return null;
+
+			// 2. Dùng Mapper gọt data cho 1 sản phẩm
+			return mapProductResponseToFE(rawResponse.data);
+		} catch (error) {
+			console.warn("⚠️ API '/products/:id' lỗi hoặc BE chưa chạy.", error);
+			// Lấy chi tiết bị lỗi thì trả về null (Để bên giao diện check == null thì mới gọi notFound() đá qua trang 404)
+			return null;
 		}
 	},
 };

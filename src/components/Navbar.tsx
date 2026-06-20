@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import {
 	ChevronDown,
 	LogIn,
@@ -18,9 +19,10 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { soulFlowRoutes } from "@/lib/soulflow/routes";
+import { authService } from "@/services/authService";
+import { categoryService } from "@/services/categoryService";
 import { useSoulFlowStore } from "@/store/soulflow-store";
-
-//import { handleLogout } from "@/lib/boutique/auth";
+import { mapCategoryResponseToFE } from "@/types/category.type";
 
 type NavbarProps = {
 	onOpenCart: () => void;
@@ -32,6 +34,7 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 	const {
 		cart,
 		user,
+		setUser,
 		searchQuery,
 		setSearchQuery,
 		selectedCategory,
@@ -46,6 +49,14 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 	const isAbout = pathname === soulFlowRoutes.about;
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+	const { data: categories = [] } = useQuery({
+		queryKey: ["categories"],
+		queryFn: async () => {
+			const rawData = await categoryService.getAllCategory();
+			return rawData.map(mapCategoryResponseToFE);
+		},
+	});
 
 	const showToast = (
 		message: string,
@@ -64,15 +75,7 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 
 	const cartItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-	const categories = [
-		{ id: "All", label: "Tất cả sản phẩm" },
-		{ id: "Roses", label: "Hoa Hồng Premium" },
-		{ id: "Peonies", label: "Hoa Mẫu Đơn Quý Phái" },
-		{ id: "Dried Botanicals", label: "Hoa Khô Nghệ Thuật" },
-		{ id: "Exotics", label: "Mẫu Hoa Nhập Khẩu" },
-	];
-
-	const handleCategorySelect = (catId: string) => {
+	const handleCategorySelect = (catId: number) => {
 		setSelectedCategory(catId);
 		router.push(soulFlowRoutes.catalog);
 		setIsDropdownOpen(false);
@@ -95,7 +98,7 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 							id="navbar-logo-btn"
 							href={soulFlowRoutes.home}
 							onClick={() => {
-								setSelectedCategory("All");
+								setSelectedCategory(null);
 								setSearchQuery("");
 							}}
 							className="group flex items-center gap-3 text-left cursor-pointer"
@@ -168,7 +171,7 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 								id="nav-link-catalog"
 								href={soulFlowRoutes.catalog}
 								onFocus={() => setIsDropdownOpen(true)}
-								onClick={() => setSelectedCategory("All")}
+								onClick={() => setSelectedCategory(null)}
 								className={`relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold tracking-wider uppercase transition-all duration-300 cursor-pointer ${
 									isCatalog
 										? "text-sf-accent"
@@ -204,16 +207,18 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 										{categories.map((cat) => (
 											<button
 												type="button"
-												key={cat.id}
-												id={`header-dropdown-cat-${cat.id.toLowerCase()}`}
-												onClick={() => handleCategorySelect(cat.id)}
+												key={cat.id} // Dùng id làm key (pk trong DB)
+												id={`header-dropdown-cat-${cat.code.toLowerCase()}`}
+												onClick={() => handleCategorySelect(cat.id)} // Truyền id (number) vào store
 												className={`flex w-full items-center justify-between px-3 py-2 rounded-lg text-left text-xs font-medium cursor-pointer transition-colors ${
 													selectedCategory === cat.id && isCatalog
 														? "bg-sf-accent/10 text-sf-accent font-bold"
 														: "text-sf-fg-muted hover:bg-sf-surface hover:text-sf-accent"
 												}`}
 											>
-												<span>{cat.label}</span>
+												{/* CHỈ LẤY nameVn SHOW RA Ở ĐÂY */}
+												<span>{cat.nameVn}</span>
+
 												{selectedCategory === cat.id && isCatalog && (
 													<span className="h-1.5 w-1.5 rounded-full bg-sf-accent" />
 												)}
@@ -391,9 +396,10 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 									<LogOut
 										className="h-4 w-4 text-sf-fg-muted hover:text-red-400 cursor-pointer transition-colors"
 										onClick={() => {
-											//handleLogout();
-
+											authService.logout(); // Xoá token trong localStorage
+											setUser(null); // Xoá data user trong Global Store -> Navbar sẽ tự đổi thành UI Đăng Nhập
 											showToast("Đăng xuất thành công", "success");
+											router.push(soulFlowRoutes.home); // Đá về trang chủ
 										}}
 									/>
 								</>
@@ -566,7 +572,7 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 									<button
 										type="button"
 										key={cat.id}
-										id={`mobile-dropdown-cat-${cat.id.toLowerCase()}`}
+										id={`mobile-dropdown-cat-${cat.code.toLowerCase()}`}
 										onClick={() => {
 											handleCategorySelect(cat.id);
 											setMobileMenuOpen(false);
@@ -577,7 +583,9 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 												: "text-sf-fg-muted hover:bg-sf-surface"
 										}`}
 									>
-										{cat.label}
+										{/* CHỈ LẤY nameVn SHOW RA Ở ĐÂY */}
+										{cat.nameVn}
+
 										{selectedCategory === cat.id && isCatalog && (
 											<span className=" h-1.5 w-1.5 rounded-full bg-sf-accent" />
 										)}
