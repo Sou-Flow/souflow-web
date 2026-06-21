@@ -9,15 +9,15 @@ type BoutiqueProvidersProps = {
 
 /** Loads catalog and location data once on the client after hydration. */
 export function BoutiqueProviders({ children }: BoutiqueProvidersProps) {
-	const fetchFlowers = useSoulFlowStore((state) => state.fetchFlowers);
+	// const fetchFlowers = useSoulFlowStore((state) => state.fetchFlowers);
 	const fetchLocationData = useSoulFlowStore(
 		(state) => state.fetchLocationData,
 	);
 
 	useEffect(() => {
-		void fetchFlowers();
+		//void fetchFlowers();
 		void fetchLocationData();
-	}, [fetchFlowers, fetchLocationData]);
+	}, [fetchLocationData]);
 
 	return children;
 }
