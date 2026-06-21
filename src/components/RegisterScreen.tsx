@@ -5,7 +5,6 @@ import axios from "axios";
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import type React from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { soulFlowRoutes } from "@/lib/soulflow/routes";
@@ -28,7 +27,7 @@ export function RegisterScreen() {
 			email: "",
 			password: "",
 			confirmPassword: "",
-			phone: "",
+			phoneNumber: "",
 			fullName: "",
 			address: "",
 		},
@@ -83,11 +82,12 @@ export function RegisterScreen() {
 					<div className="relative aspect-4/3 rounded-2xl overflow-hidden shadow-xl border border-outline-variant/40 transform transition-transform duration-700 hover:scale-[1.01]">
 						<Image
 							className="w-full h-full object-cover"
-							src="https://lh3.googleusercontent.com/aida-public/AB6AXuAUK1rJbW57ivCn2wCMegx4ARfHnlnkHwTxn-12frM1om7aGCo-GY3b2ywQPdXzthr6fyBy8sok0EQxj9-es8eZXAjD5ygVyoYJPycLOYPuvSCLR8oEyAvYDeX6CME5pBE365qatvOQJC_m5AfslWGHFW04iyQzc5b6QYdp7lQD4r0oRDiAfKADkiN2LW0m5JJWG6xg26yG-pLLtLeKJIsdRy0AsvySlmMLPf7qIlZZIr-CMnD9FZVIc68t3m6e76000MaVcGacEkU"
+							src="/images/register-image.png"
 							alt="High-end Ranunculus Close-up"
 							referrerPolicy="no-referrer"
 							fill
 							sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+							priority
 						/>
 					</div>
 				</div>
@@ -170,13 +170,13 @@ export function RegisterScreen() {
 									id="reg-phone"
 									type="tel"
 									placeholder="090 123 4567"
-									{...register("phone")}
+									{...register("phoneNumber")}
 									className="w-full bg-white/5 border-0 border-b border-outline-variant/60 py-2.5 px-0 text-sm focus:border-primary transition-all focus:outline-none placeholder-secondary/30 text-sf-fg"
 									required
 								/>
-								{errors.phone && (
+								{errors.phoneNumber && (
 									<p className="text-red-500 text-xs mt-1">
-										{errors.phone.message}
+										{errors.phoneNumber.message}
 									</p>
 								)}
 							</div>

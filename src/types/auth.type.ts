@@ -9,20 +9,21 @@ export interface LoginRequestDTO {
 // 2. Dữ liệu thô BE trả về (Giả sử BE trả về Token kèm Info User)
 export interface AuthResponseDTO {
 	accessToken: string;
-	user: UserResponseDTO;
+	tokenType: string;
+	username: string;
+	role: string;
 }
 
 export interface UserResponseDTO {
-	pk: number;
+	id: number; // BE trả id chứ không phải pk
 	username: string;
 	fullName: string;
 	email: string;
-	photo: string | null;
-	phone: string;
+	phoneNumber: string;
 	address: string;
-	activated: boolean;
-	createDate: string;
-	rolePk: number;
+	photo: string | null;
+	roleCode: string; // BE trả chuỗi (vd: "CUSTOMER") chứ không phải số rolePk
+	createdDate: string; // BE trả createdDate (có chữ d)
 }
 
 // 3. Dữ liệu sạch cho FE xài
@@ -34,23 +35,28 @@ export interface UserFE {
 	avatar: string;
 	phone: string;
 	address: string;
-	activated: boolean;
+	roleCode: string; // Đổi từ roleId (số) sang roleCode (chữ) cho tiện xài
 	createDate: string;
-	roleId: number;
+	activated: boolean;
+}
+export interface UpdateProfileRequestDTO {
+	fullName: string;
+	email: string;
+	phoneNumber: string;
 }
 
 // 4. Hàm Mapper nắn dữ liệu
 export const mapUserResponseToFE = (dto: UserResponseDTO): UserFE => {
 	return {
-		id: dto.pk,
+		id: dto.id,
 		username: dto.username,
 		fullName: dto.fullName,
 		email: dto.email,
-		avatar: dto.photo || "/images/avatar-placeholder.png", // Fallback ảnh mặc định
-		phone: dto.phone,
+		avatar: dto.photo || "/default-avatar.png", // Fallback ảnh
+		phone: dto.phoneNumber,
 		address: dto.address,
-		activated: dto.activated,
-		createDate: dto.createDate,
-		roleId: dto.rolePk,
+		roleCode: dto.roleCode,
+		createDate: dto.createdDate,
+		activated: true,
 	};
 };

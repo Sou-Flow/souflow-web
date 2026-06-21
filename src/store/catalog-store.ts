@@ -1,11 +1,11 @@
 // src/store/catalog-store.ts
 import { create } from "zustand";
 import { productService } from "@/services/productService";
-import type { Flower } from "@/types/soulflow";
+import type { ProductFE } from "./../types/product.type";
 
 interface CatalogState {
 	// Dữ liệu
-	flowers: Flower[];
+	flowers: ProductFE[];
 	loadingFlowers: boolean;
 
 	// UI State
@@ -29,7 +29,7 @@ export const useCatalogStore = create<CatalogState>((set) => ({
 		set({ loadingFlowers: true });
 
 		// Gọi service đã có sẵn cơ chế fallback ở Bước 1
-		const data = await productService.getAllFlowers();
+		const data = await productService.getAllFlower();
 
 		set({ flowers: data, loadingFlowers: false });
 	},

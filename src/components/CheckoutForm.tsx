@@ -14,7 +14,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { soulFlowRoutes } from "@/lib/soulflow/routes";
 import { useSoulFlowStore } from "@/store/soulflow-store";
-import type { Order } from "@/types/soulflow";
+import type { Order } from "@/types/order.type";
 
 export function CheckoutForm() {
 	const { cart, placeOrder, locationData, appliedCoupon } = useSoulFlowStore();
@@ -307,11 +307,11 @@ export function CheckoutForm() {
 										onChange={(e) => setSelectedDistrict(e.target.value)}
 										className="w-full text-xs rounded-lg border text-sf-fg bg-sf-bg-elevated p-3 outline-none focus:border-[#C49B83] cursor-pointer"
 									>
-										{districtsOfCity.map((dist) => (
+										{/* {districtsOfCity.map((dist) => (
 											<option key={dist} value={dist}>
 												{dist}
 											</option>
-										))}
+										))} */}
 									</select>
 								</div>
 
