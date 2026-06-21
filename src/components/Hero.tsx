@@ -111,7 +111,7 @@ export function Hero() {
 							<Link
 								id="hero-shop-now-btn"
 								href={soulFlowRoutes.catalog}
-								onClick={() => setSelectedCategory("All")}
+								onClick={() => setSelectedCategory(Number("All"))}
 								className="group flex items-center gap-2 rounded-full bg-sf-fg px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-sf-bg hover:bg-sf-accent hover:text-white transition-all duration-300 shadow-md cursor-pointer"
 							>
 								Khám Phá Cửa Hàng
@@ -237,7 +237,7 @@ export function Hero() {
 								<Link
 									id={`home-view-all-${cat.id.toLowerCase()}`}
 									href={soulFlowRoutes.catalog}
-									onClick={() => setSelectedCategory(cat.id)}
+									onClick={() => setSelectedCategory(Number(cat.id))}
 									className="group flex items-center gap-1.5 text-xs font-bold text-sf-accent hover:text-sf-fg uppercase tracking-widest transition-colors cursor-pointer"
 								>
 									Xem tất cả
@@ -344,7 +344,7 @@ export function Hero() {
 						<Link
 							key={tier.label}
 							href={soulFlowRoutes.catalog}
-							onClick={() => setSelectedCategory("All")}
+							onClick={() => setSelectedCategory(Number("All"))}
 							className="block"
 						>
 							<motion.div
