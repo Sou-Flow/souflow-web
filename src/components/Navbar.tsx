@@ -120,10 +120,6 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 								<span className="block font-serif md:text-lg text-base font-semibold tracking-[0.28em] text-sf-fg">
 									SOULFLOW
 								</span>
-
-								{/* <p className="font-sans text-[10px] tracking-[0.45em] uppercase text-sf-accent/90">
-                  Boutique Florist
-                </p> */}
 							</div>
 						</Link>
 					</div>
@@ -228,28 +224,6 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 								)}
 							</AnimatePresence>
 						</div>
-
-						{/* Bespoke consultation link */}
-						{/* <Link
-              id="nav-link-bespoke"
-              href={soulFlowRoutes.bespoke}
-              className={`relative flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold tracking-wider uppercase transition-all duration-300 cursor-pointer ${
-                isBespoke
-                  ? "text-sf-accent"
-                  : "text-[#4A4A4A]fg-muted hover:text-sf-accent"
-              }`}
-            >
-              <Sparkles className="h-3 w-3 animate-pulse text-sf-accent" />
-              Thiết Kế Riêng
-              {isBespoke && (
-                <motion.span
-                  layoutId="navUnderline"
-                  className="absolute bottom-0 left-3 right-3 h-0.5 bg-sf-accent"
-                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                />
-              )}
-            </Link> */}
-
 						{/* Contact link */}
 						<Link
 							id="nav-link-contact"
@@ -592,22 +566,6 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 									</button>
 								))}
 							</div>
-
-							{/* Bespoke design */}
-							{/* <Link
-                id="mobile-nav-link-bespoke"
-                href={soulFlowRoutes.bespoke}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex w-full items-center gap-2.5 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest ${
-                  isBespoke
-                    ? "bg-sf-accent/10 text-sf-accent"
-                    : "text-sf-fg-muted"
-                }`}
-              >
-                <Sparkles className="h-4 w-4 text-sf-accent" />
-                Thiết Kế Riêng
-              </Link> */}
-
 							{/* Contact us */}
 							<Link
 								id="mobile-nav-link-contact"

@@ -92,11 +92,6 @@ export function Hero() {
 						transition={{ duration: 0.8 }}
 						className="lg:col-span-12 xl:col-span-7 space-y-6 text-center lg:text-left"
 					>
-						{/* <div className="inline-flex items-center gap-2 rounded-full border border-(--sf-accent)/30 bg-sf-accent/10 px-3 py-1 text-sm font-bold tracking-widest uppercase text-sf-accent">
-							<Sparkles className="h-3.5 w-3.5 animate-spin" />
-							NGHỆ THUẬT HOA THIẾT KẾ RIÊNG
-						</div> */}
-
 						<h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight text-sf-fg leading-tight">
 							Hoa dành cho những
 							<br />
@@ -122,15 +117,6 @@ export function Hero() {
 								Khám Phá Cửa Hàng
 								<ArrowRight className="h-4 w-4 group-hover:translate-x-1.5 transition-transform" />
 							</Link>
-
-							{/* <Link
-								id="hero-bespoke-btn"
-								href={soulFlowRoutes.bespoke}
-								className="flex items-center gap-2 rounded-full border border-sf-accent bg-transparent px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-sf-accent hover:bg-sf-accent/10 transition-colors duration-300 cursor-pointer"
-							>
-								Tư Vấn Thợ Hoa AI
-								<Sparkles className="h-4 w-4 text-sf-accent" />
-							</Link> */}
 						</div>
 					</motion.div>
 

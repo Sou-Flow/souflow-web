@@ -43,15 +43,6 @@ export function Footer() {
 									Danh Mục Sản Phẩm
 								</Link>
 							</li>
-							{/* <li>
-								<Link
-									id="footer-btn-bespoke"
-									href={soulFlowRoutes.bespoke}
-									className="hover:text-sf-accent text-sm transition-colors"
-								>
-									Dịch Vụ Đặt Hoa Theo Yêu Cầu
-								</Link>
-							</li> */}
 							<li>
 								<Link
 									id="footer-btn-contact"
