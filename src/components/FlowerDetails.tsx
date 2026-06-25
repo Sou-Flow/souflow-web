@@ -496,7 +496,11 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 							onClick={() =>
 								router.push(
 									soulFlowRoutes.product(
-										(item as any).businessId || item.code || String(item.id),
+										String(
+											(item as Record<string, unknown>).businessId ||
+												item.code ||
+												item.id,
+										),
 									),
 								)
 							}

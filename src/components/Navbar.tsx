@@ -34,7 +34,7 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 	const router = useRouter();
 
 	const { cart } = useCartStore();
-	const { user, setUser, logout } = useAuthStore();
+	const { user, logout } = useAuthStore();
 	const { searchQuery, setSearchQuery } = useCatalogStore();
 	const { selectedCategory, setSelectedCategory } = useCategoryStore();
 	const isHome = pathname === soulFlowRoutes.home;

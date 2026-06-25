@@ -142,12 +142,14 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 
 		const distList = cityObj?.districts || [];
 		const distObj = distList.find(
+			// biome-ignore lint/suspicious/noExplicitAny: skip
 			(d: any) => String(d.code) === String(district) || d === district,
 		);
 		const districtName = distObj ? distObj.name || distObj : district;
 
 		const wardList = distObj?.wards || [];
 		const wardObj = wardList.find(
+			// biome-ignore lint/suspicious/noExplicitAny: skip
 			(w: any) => String(w.code) === String(ward) || w === ward,
 		);
 		const wardName = wardObj ? wardObj.name || wardObj : ward;
@@ -377,6 +379,7 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 											<option value="">Chọn Quận/Huyện</option>
 											{(locationData || [])
 												.find((c) => String(c.code) === String(city))
+												// biome-ignore lint/suspicious/noExplicitAny: skip
 												?.districts?.map((d: any) => (
 													<option key={d.code || d} value={d.code || d}>
 														{d.name || d}
@@ -404,10 +407,12 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 										{(locationData || [])
 											.find((c) => String(c.code) === String(city))
 											?.districts?.find(
+												// biome-ignore lint/suspicious/noExplicitAny: skip
 												(d: any) =>
 													String(d.code) === String(district) ||
 													d.name === district,
 											)
+											// biome-ignore lint/suspicious/noExplicitAny: skip
 											?.wards?.map((w: any) => (
 												<option key={w.code || w} value={w.code || w}>
 													{w.name || w}

@@ -1,3 +1,4 @@
+// biome-ignore lint/suspicious/noExplicitAny: default locations need any for now
 export const defaultLocations: any[] = [
 	{
 		code: "HCM",

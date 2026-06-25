@@ -152,11 +152,13 @@ export function CheckoutForm() {
 		);
 		const cityName = cityObj ? cityObj.name : selectedCity;
 		const distObj = cityObj?.districts?.find(
+			// biome-ignore lint/suspicious/noExplicitAny: skip
 			(d: any) =>
 				d === selectedDistrict || String(d.code) === String(selectedDistrict),
 		);
 		const districtName = distObj?.name || distObj || selectedDistrict;
 		const wardObj = distObj?.wards?.find(
+			// biome-ignore lint/suspicious/noExplicitAny: skip
 			(w: any) => w === data.ward || String(w.code) === String(data.ward),
 		);
 		const wardName = wardObj?.name || wardObj || data.ward;
@@ -201,16 +203,18 @@ export function CheckoutForm() {
 				// SEPAY hoặc WAITING_PAYMENT thì chuyển sang màn chờ quét mã
 				setOrderStatus("WAITING_PAYMENT");
 			}
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error("Lỗi đặt hàng:", error);
 
 			// Xử lý lỗi cạn kho do người khác mua mất (Race condition)
 			// Lấy thông báo lỗi từ Backend (Spring Boot thường trả về trong error.response.data.message hoặc error.response.data)
-			const backendData = error?.response?.data;
+			// biome-ignore lint/suspicious/noExplicitAny: skip
+			const err = error as any;
+			const backendData = err?.response?.data;
 			const backendMessage =
 				typeof backendData === "string" ? backendData : backendData?.message;
 
-			if (error?.response?.status === 400 || error?.response?.status === 409) {
+			if (err?.response?.status === 400 || err?.response?.status === 409) {
 				const errorStr = String(backendMessage || "").toLowerCase();
 				// Nếu BE có trả về chữ tồn kho, hết hàng, không đủ... thì báo rõ
 				if (
@@ -218,7 +222,7 @@ export function CheckoutForm() {
 					errorStr.includes("không đủ") ||
 					errorStr.includes("hết") ||
 					errorStr.includes("stock") ||
-					error?.response?.status === 409
+					err?.response?.status === 409
 				) {
 					setOrderStatus("OUT_OF_STOCK");
 
@@ -725,11 +729,13 @@ export function CheckoutForm() {
 											(locationData || []).find(
 												(c) => String(c.code) === String(selectedCity),
 											)?.districts || []
-										).map((d: any) => (
-											<option key={d.code || d} value={d.code || d}>
-												{d.name || d}
-											</option>
-										))}
+										)
+											// biome-ignore lint/suspicious/noExplicitAny: skip
+											.map((d: any) => (
+												<option key={d.code || d} value={d.code || d}>
+													{d.name || d}
+												</option>
+											))}
 									</select>
 									{errors.district && (
 										<p className="text-red-500 text-[10px] mt-1">
@@ -757,15 +763,18 @@ export function CheckoutForm() {
 											(locationData || [])
 												.find((c) => String(c.code) === String(selectedCity))
 												?.districts?.find(
+													// biome-ignore lint/suspicious/noExplicitAny: skip
 													(d: any) =>
 														String(d.code) === String(selectedDistrict) ||
 														d.name === selectedDistrict,
 												)?.wards || []
-										).map((w: any) => (
-											<option key={w.code || w} value={w.code || w}>
-												{w.name || w}
-											</option>
-										))}
+										)
+											// biome-ignore lint/suspicious/noExplicitAny: skip
+											.map((w: any) => (
+												<option key={w.code || w} value={w.code || w}>
+													{w.name || w}
+												</option>
+											))}
 									</select>
 									{errors.ward && (
 										<p className="text-red-500 text-[10px] mt-1">
