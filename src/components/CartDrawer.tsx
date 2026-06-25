@@ -10,11 +10,11 @@ import {
 	X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { soulFlowRoutes } from "@/lib/soulflow/routes";
-import { useSoulFlowStore } from "@/store/soulflow-store";
+import { useCartStore } from "@/store/cart-store";
 
 type CartDrawerProps = {
 	isOpen: boolean;
@@ -29,27 +29,34 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 		updateCartQuantity,
 		appliedCoupon,
 		applyCoupon,
-	} = useSoulFlowStore();
+		revalidateCart,
+	} = useCartStore();
 
 	const [promoCode, setPromoCode] = useState("");
 	const [promoError, setPromoError] = useState(false);
 	const [promoSuccess, setPromoSuccess] = useState(false);
 
+	useEffect(() => {
+		if (isOpen) {
+			revalidateCart();
+		}
+	}, [isOpen, revalidateCart]);
+
 	const subtotal = cart.reduce(
-		(sum, item) => sum + item.priceUnit * item.quantity,
+		(sum, item) => sum + (item.product?.price || 0) * (item.quantity || 1),
 		0,
 	);
 	const discount = appliedCoupon
-		? (subtotal * appliedCoupon.discountPercent) / 100
+		? (subtotal * appliedCoupon.percentage) / 100
 		: 0;
-	const shippingFee = subtotal > 0 ? 5 : 0;
+	const shippingFee = 0; // Tạm thời comment phí ship để test: subtotal > 0 ? 30000 : 0;
 	const total = subtotal - discount + shippingFee;
 
-	const handleApplyPromo = (e: React.FormEvent) => {
+	const handleApplyPromo = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setPromoError(false);
 		setPromoSuccess(false);
-		const success = applyCoupon(promoCode);
+		const success = await applyCoupon(promoCode);
 		if (success) {
 			setPromoSuccess(true);
 			setPromoCode("");
@@ -102,32 +109,39 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 						<div className="flex-1 overflow-y-auto p-6 space-y-4">
 							{cart.map((item) => (
 								<div
-									id={`cart-item-${item.id}`}
-									key={item.id}
+									id={`cart-item-${item.product.id}`}
+									key={item.product.id}
 									className="flex items-start gap-4 bg-sf-bg-elevated p-3 rounded-xl border border-sf-border shadow-sm"
 								>
 									{/* Photo container */}
-									<div className="relative h-16 w-16">
+									{/* <div className="relative h-16 w-16">
 										<Image
-											src={item.flower.image}
-											alt={item.flower.name}
+											src={item.product.image}
+											alt={item.product.nameVn}
 											fill
 											className="h-16 w-16 rounded-lg object-cover grayscale-1/10 shrink-0"
 											referrerPolicy="no-referrer"
 											sizes="64px"
 										/>
-									</div>
+									</div> */}
 
 									{/* Text descriptions */}
 									<div className="flex-1 space-y-1">
 										<div className="flex justify-between items-start gap-2">
-											<h4 className="font-serif text-sm font-semibold text-sf-fg line-clamp-1 leading-tight">
-												{item.flower.name}
-											</h4>
+											<div className="flex items-center flex-wrap gap-2">
+												<h4 className="font-serif text-sm font-semibold text-sf-fg line-clamp-1 leading-tight">
+													{item.product.nameVn}
+												</h4>
+												{item.product.stockQuantity <= 0 && (
+													<span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[8px] font-bold text-red-700 uppercase tracking-widest border border-red-200 shrink-0">
+														Hết hàng
+													</span>
+												)}
+											</div>
 											<button
 												type="button"
-												id={`cart-delete-btn-${item.id}`}
-												onClick={() => removeFromCart(item.id)}
+												id={`cart-delete-btn-${item.product.id}`}
+												onClick={() => removeFromCart(item.product.id)}
 												className="p-1 text-sf-fg-muted hover:text-red-500 transition-colors"
 												title="Delete item"
 											>
@@ -136,11 +150,8 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 										</div>
 
 										<div className="flex flex-wrap gap-1.5 pt-0.5">
-											<span className="rounded-full bg-sf-accent/10 px-2 py-0.5 text-[10px] font-bold text-sf-accent uppercase tracking-wider">
-												Size: {item.selectedSize}
-											</span>
 											<span className="rounded-full bg-sf-surface px-2 py-0.5 text-[10px] text-sf-fg-muted uppercase border border-sf-border font-medium">
-												${item.priceUnit} / Cái
+												{item.product.price.toLocaleString("vi-VN")} đ / Cái
 											</span>
 										</div>
 
@@ -149,9 +160,12 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 											<div className="flex items-center gap-1 rounded-lg border border-sf-border bg-sf-bg p-0.5">
 												<button
 													type="button"
-													id={`cart-qty-minus-${item.id}`}
+													id={`cart-qty-minus-${item.product.id}`}
 													onClick={() =>
-														updateCartQuantity(item.id, item.quantity - 1)
+														updateCartQuantity(
+															item.product.id,
+															item.quantity - 1,
+														)
 													}
 													className="p-1 rounded-md text-sf-fg-muted hover:bg-sf-surface transition-colors"
 												>
@@ -162,18 +176,29 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 												</span>
 												<button
 													type="button"
-													id={`cart-qty-plus-${item.id}`}
-													onClick={() =>
-														updateCartQuantity(item.id, item.quantity + 1)
-													}
-													className="p-1 rounded-md text-sf-fg-muted hover:bg-sf-surface transition-colors"
+													id={`cart-qty-plus-${item.product.id}`}
+													onClick={() => {
+														if (item.quantity >= item.product.stockQuantity) {
+															toast.error("Đã đạt giới hạn tồn kho");
+															return;
+														}
+														updateCartQuantity(
+															item.product.id,
+															item.quantity + 1,
+														);
+													}}
+													disabled={item.quantity >= item.product.stockQuantity}
+													className="p-1 rounded-md text-sf-fg-muted hover:bg-sf-surface transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
 												>
 													<Plus className="h-3 w-3" />
 												</button>
 											</div>
 
 											<span className="font-sans font-bold text-sm text-sf-fg">
-												${item.priceUnit * item.quantity}
+												{(item.product.price * item.quantity).toLocaleString(
+													"vi-VN",
+												)}{" "}
+												đ
 											</span>
 										</div>
 									</div>
@@ -233,7 +258,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 									<div className="flex items-center gap-1.5 text-xs text-sf-accent font-bold uppercase tracking-wider bg-sf-accent/10 px-3 py-2 rounded-md">
 										<Tag className="h-3.5 w-3.5" />
 										Mã Khuyến Mãi: {appliedCoupon.code} (-
-										{appliedCoupon.discountPercent}%)
+										{appliedCoupon.percentage}%)
 									</div>
 								)}
 
@@ -241,21 +266,23 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 								<div className="space-y-2 text-sm">
 									<div className="flex justify-between text-sf-fg-muted">
 										<span>Giá Trị Giỏ Hàng</span>
-										<span>${subtotal}</span>
+										<span>{subtotal.toLocaleString("vi-VN")} đ</span>
 									</div>
 									{discount > 0 && (
 										<div className="flex justify-between text-green-500 font-medium">
 											<span>Giảm Giá (15%)</span>
-											<span>-${discount.toFixed(0)}</span>
+											<span>{discount.toFixed(0)} đ</span>
 										</div>
 									)}
 									<div className="flex justify-between text-sf-fg-muted">
 										<span>Phí Vận Chuyển</span>
-										<span>${shippingFee}</span>
+										<span>{shippingFee.toLocaleString("vi-VN")} đ</span>
 									</div>
 									<div className="flex justify-between border-t border-sf-border pt-3 font-bold text-base text-sf-fg">
 										<span>Tổng Số Tiền</span>
-										<span className="text-sf-accent">${total.toFixed(0)}</span>
+										<span className="text-sf-accent">
+											{total.toLocaleString("vi-VN")}
+										</span>
 									</div>
 								</div>
 

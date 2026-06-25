@@ -1,5 +1,5 @@
 // src/services/authService.ts
-
+import Cookies from "js-cookie";
 import type { ApiResponse } from "@/types/api.type";
 import {
 	type AuthResponseDTO,
@@ -9,7 +9,6 @@ import {
 	type UserFE,
 	type UserResponseDTO,
 } from "@/types/auth.type";
-import type { RegisterFormData } from "@/validations/auth.validator";
 import axiosClient from "./axiosClient";
 
 export const authService = {
@@ -22,8 +21,8 @@ export const authService = {
 		const authData = rawResponse.data;
 
 		// 2. BE trả về thành công -> Lưu Token vào trình duyệt để xài cho các API sau
-		if (authData.accessToken && typeof window !== "undefined") {
-			localStorage.setItem("accessToken", authData.accessToken);
+		if (authData.accessToken) {
+			Cookies.set("accessToken", authData.accessToken, { expires: 7 }); // Expires in 7 days
 		}
 
 		// 3. Nắn cục data user thô thành user sạch và ném về cho Component
@@ -39,16 +38,14 @@ export const authService = {
 		const userData = rawResponse.data;
 		return mapUserResponseToFE(userData);
 	},
-	register: async (data: RegisterFormData): Promise<void> => {
+	register: async (data: Record<string, unknown>): Promise<void> => {
 		console.log("REGISTER DATA:", data);
 		// Gọi API đăng ký, BE sẽ tự xử lý logic tạo user mới
 		await axiosClient.post("/auth/register", data);
 	},
 	logout: () => {
 		// Hàm phụ trợ để xóa token khi đăng xuất (hoặc khi token hết hạn)
-		if (typeof window !== "undefined") {
-			localStorage.removeItem("accessToken");
-		}
+		Cookies.remove("accessToken");
 	},
 	updateProfile: async (
 		updatedData: UpdateProfileRequestDTO,

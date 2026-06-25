@@ -1,30 +1,45 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Flower, Lock, User } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import type React from "react";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
+import { z } from "zod";
 import { soulFlowRoutes } from "@/lib/soulflow/routes";
 import { authService } from "@/services/authService";
-import { useSoulFlowStore } from "@/store/soulflow-store";
+import { useAuthStore } from "@/store/auth-store";
+
+const loginSchema = z.object({
+	username: z.string().min(1, "Vui lòng nhập Username"),
+	password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
+	rememberMe: z.boolean().optional(),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginScreen() {
-	const [username, setUsername] = useState("");
-	const [password, setPassword] = useState("");
+	const {
+		register,
+		handleSubmit,
+		formState: { errors, isSubmitting },
+	} = useForm<LoginFormValues>({
+		resolver: zodResolver(loginSchema),
+		defaultValues: { username: "", password: "", rememberMe: false },
+	});
 	const [showPassword, setShowPassword] = useState(false);
-	const [rememberMe, setRememberMe] = useState(false);
-	const [isLoading, setIsLoading] = useState(false);
-	const setUser = useSoulFlowStore((state) => state.setUser);
+	const setUser = useAuthStore((state) => state.setUser);
 	const router = useRouter();
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
-		setIsLoading(true);
+	const onSubmit = async (data: LoginFormValues) => {
 		const toastId = toast.loading("Đang đăng nhập...");
 		try {
 			// Đưa username/password cho service đi xin token
-			const userData = await authService.login({ username, password });
+			const userData = await authService.login({
+				username: data.username,
+				password: data.password,
+			});
 			const userName =
 				userData.fullName?.slice(0, userData.fullName.indexOf(" ")) ||
 				userData.username ||
@@ -40,8 +55,6 @@ export function LoginScreen() {
 			router.push(soulFlowRoutes.home);
 		} catch {
 			toast.error("Sai tài khoản hoặc mật khẩu!", { id: toastId });
-		} finally {
-			setIsLoading(false);
 		}
 	};
 
@@ -109,7 +122,7 @@ export function LoginScreen() {
 						</p>
 					</header>
 
-					<form className="space-y-6" onSubmit={handleSubmit}>
+					<form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
 						{/* Trường Username */}
 						<div className="space-y-2 group">
 							<label
@@ -124,12 +137,15 @@ export function LoginScreen() {
 									id="login-username"
 									type="text"
 									placeholder="Enter your username"
-									value={username}
-									onChange={(e) => setUsername(e.target.value)}
+									{...register("username")}
 									className="pl-7 pr-4 text-sm placeholder-secondary/30 border-0 w-full bg-white/5 py-2.5 px-0 focus:border-primary transition-all focus:outline-none placeholder-secondary/30 text-sf-fg"
-									required
 								/>
 							</div>
+							{errors.username && (
+								<p className="text-red-500 text-xs mt-1">
+									{errors.username.message}
+								</p>
+							)}
 						</div>
 
 						{/* Trường Mật khẩu */}
@@ -159,10 +175,8 @@ export function LoginScreen() {
 									id="login-password"
 									type={showPassword ? "text" : "password"}
 									placeholder="••••••••"
-									value={password}
-									onChange={(e) => setPassword(e.target.value)}
+									{...register("password")}
 									className="pl-7 pr-4 text-sm placeholder-secondary/30 border-0 w-full bg-white/5 py-2.5 px-0 focus:border-primary transition-all focus:outline-none placeholder-secondary/30 text-sf-fg"
-									required
 								/>
 								<button
 									type="button"
@@ -176,6 +190,11 @@ export function LoginScreen() {
 									)}
 								</button>
 							</div>
+							{errors.password && (
+								<p className="text-red-500 text-xs mt-1">
+									{errors.password.message}
+								</p>
+							)}
 						</div>
 
 						{/* Ghi nhớ đăng nhập */}
@@ -183,8 +202,7 @@ export function LoginScreen() {
 							<label className="flex items-center space-x-3 cursor-pointer group">
 								<input
 									type="checkbox"
-									checked={rememberMe}
-									onChange={(e) => setRememberMe(e.target.checked)}
+									{...register("rememberMe")}
 									className="h-4 w-4 rounded border-outline-variant text-primary focus:ring-primary/20 accent-primary"
 								/>
 								<span className="font-sans text-xs text-secondary/80 group-hover:text-[#111c2d] transition-colors font-medium">
@@ -197,10 +215,10 @@ export function LoginScreen() {
 						<div>
 							<button
 								type="submit"
-								disabled={isLoading}
+								disabled={isSubmitting}
 								className="w-full py-3.5 bg-primary bg-[#be754b] hover:bg-[#c3632b] text-sf-fg text-xs font-semibold uppercase tracking-[0.2em] rounded-lg shadow-login hover:shadow-lg transition-all duration-300 transform active:scale-[0.98] flex items-center justify-center gap-2"
 							>
-								{isLoading ? (
+								{isSubmitting ? (
 									<span className="flex items-center gap-2">
 										<span className="w-1.5 h-1.5 bg-white rounded-full animate-ping"></span>
 										LOGGING IN...

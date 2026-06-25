@@ -4,6 +4,8 @@ import { Toaster } from "react-hot-toast";
 import { BoutiqueProviders } from "@/providers/SoulflowProviders";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import "./globals.css";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { SoulFlowShell } from "@/components/SoulFlowShell";
 import { AuthProvider } from "@/providers/AuthProviders";
 import TanStackProvider from "@/providers/TanStackProvider";
 
@@ -38,7 +40,11 @@ export default function RootLayout({
 				<TanStackProvider>
 					<AuthProvider>
 						<ThemeProvider>
-							<BoutiqueProviders>{children}</BoutiqueProviders>
+							<BoutiqueProviders>
+								<ErrorBoundary>
+									<SoulFlowShell>{children}</SoulFlowShell>
+								</ErrorBoundary>
+							</BoutiqueProviders>
 							<Toaster
 								position="top-right"
 								toastOptions={{

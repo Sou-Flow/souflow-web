@@ -1,6 +1,5 @@
-import type { VietnamCity } from "@/types/soulflow";
-
-export const defaultLocations: VietnamCity[] = [
+// biome-ignore lint/suspicious/noExplicitAny: default locations need any for now
+export const defaultLocations: any[] = [
 	{
 		code: "HCM",
 		name: "Hồ Chí Minh",

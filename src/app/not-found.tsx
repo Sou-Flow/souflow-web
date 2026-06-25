@@ -1,13 +1,10 @@
 "use client";
 
-import { motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
-import { SoulFlowShell } from "@/components/SoulFlowShell";
-
 export default function NotFound() {
 	return (
-		<SoulFlowShell>
+		<>
 			{/* Main Wrapper: flex-grow để nó chiếm hết phần không gian trống giữa Header và Footer */}
 			<div className="grow flex flex-col items-center justify-center px-4 md:px-16 py-12 relative overflow-hidden min-h-[75vh]">
 				{/* Background Atmospheric Accents (Vệt sáng mờ phía sau) */}
@@ -17,12 +14,8 @@ export default function NotFound() {
 				<div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 items-center gap-12 md:gap-24 z-10">
 					{/* Phần Hình Ảnh (Visual Side) - Hiển thị trước trên mobile */}
 					<div className="relative flex justify-center order-1 md:order-1">
-						{/* Dùng Framer Motion để tạo hiệu ứng bay lơ lửng (float) */}
-						<motion.div
-							animate={{ y: [0, -15, 0] }}
-							transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-							className="relative w-64 h-80 md:w-80 md:h-112.5 bg-sf-surface rounded-t-full rounded-b-[40%] overflow-hidden shadow-2xl shadow-sf-hover-shadow"
-						>
+						{/* Dùng CSS animation thay vì Framer Motion để tránh lỗi back navigation */}
+						<div className="relative w-64 h-80 md:w-80 md:h-112.5 bg-sf-surface rounded-t-full rounded-b-[40%] overflow-hidden shadow-2xl shadow-sf-hover-shadow animate-float">
 							<Image
 								alt="A wilting but elegant rose"
 								className="w-full h-full object-cover opacity-90 mix-blend-multiply"
@@ -31,7 +24,7 @@ export default function NotFound() {
 								height={450}
 								priority
 							/>
-						</motion.div>
+						</div>
 
 						{/* Decorative Petals (Mấy mảng decor nhỏ xung quanh ảnh) */}
 						<div className="absolute -top-4 -left-4 w-12 h-12 bg-sf-accent/30 rounded-full blur-xl"></div>
@@ -89,6 +82,6 @@ export default function NotFound() {
 					</div>
 				</div>
 			</div>
-		</SoulFlowShell>
+		</>
 	);
 }

@@ -1,39 +1,39 @@
 "use client";
 
+import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { authService } from "@/services/authService";
-import type { UserFE } from "@/types/auth.type";
+import { useAuthStore } from "@/store/auth-store";
 import AccountForm from "./AccountForm"; // Import form từ file mới vào
 
 export function MyAccount() {
-	const [user, setUser] = useState<UserFE | null>(null);
+	const { user } = useAuthStore();
 	const [isLoading, setIsLoading] = useState(true);
 	const router = useRouter();
 
 	useEffect(() => {
-		const fetchUserData = async () => {
-			try {
-				const token = localStorage.getItem("accessToken");
-				if (!token) {
-					setIsLoading(false);
-					router.push("/login");
-					return; // Không có token thì dừng luôn
-				}
-
-				const userData = await authService.me();
-				setUser(userData);
-			} catch (error) {
-				console.error("Phiên đăng nhập hết hạn hoặc lỗi lấy thông tin:", error);
-				setUser(null);
-				authService.logout();
-			} finally {
-				setIsLoading(false);
+		const checkAuth = async () => {
+			const token = Cookies.get("accessToken");
+			if (!token) {
+				router.push("/login");
+				return;
 			}
+			// Nếu có token nhưng chưa có user (đang tải từ AuthProvider)
+			if (!user) {
+				// Đợi AuthProvider hoặc tự fetch
+				try {
+					const userData = await authService.me();
+					useAuthStore.getState().setUser(userData);
+				} catch (error) {
+					console.error(error);
+					router.push("/login");
+				}
+			}
+			setIsLoading(false);
 		};
-
-		fetchUserData();
-	}, [router.push]);
+		checkAuth();
+	}, [user, router]);
 
 	// Không có useState nào ở dưới đây nữa, nên dùng return thoải mái không sợ lỗi!
 	if (isLoading) {

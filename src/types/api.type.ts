@@ -5,3 +5,12 @@ export interface ApiResponse<T> {
 	errorCode: string;
 	data: T; // <-- Chữ T (Type) này sẽ được thay thế linh hoạt
 }
+
+export interface PaginatedResponse<T> {
+	content: T[];
+	pageNo: number;
+	pageSize: number;
+	totalElements: number;
+	totalPages: number;
+	last: boolean;
+}
