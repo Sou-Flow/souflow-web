@@ -9,26 +9,36 @@ import {
 	SlidersHorizontal,
 	Star,
 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
+import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import toast from "react-hot-toast";
+import { soulFlowRoutes } from "@/lib/soulflow/routes";
 import { categoryService } from "@/services/categoryService";
 import { productService } from "@/services/productService";
-import { useSoulFlowStore } from "@/store/soulflow-store";
-import { mapCategoryResponseToFE } from "@/types/category.type";
+import { useAuthStore } from "@/store/auth-store";
+import { useCartStore } from "@/store/cart-store";
+import { useCatalogStore } from "@/store/catalog-store";
+import { useCategoryStore } from "@/store/category-store";
 
 export function FlowerCatalog() {
 	const [sortBy, setSortBy] = useState<string>("featured");
 	const [currentPage, setCurrentPage] = useState<number>(1);
+	const [addingItems, setAddingItems] = useState<Record<number, boolean>>({});
 	const itemsPerPage = 20;
-	const { selectedCategory, setSelectedCategory, searchQuery, setSearchQuery } =
-		useSoulFlowStore();
+	const { selectedCategory, setSelectedCategory } = useCategoryStore();
+	const { searchQuery, setSearchQuery } = useCatalogStore();
+	const { addToCart, cart } = useCartStore();
+	const { user } = useAuthStore();
+	const router = useRouter();
 
 	const { data: categories = [] } = useQuery({
 		queryKey: ["categories"],
 		queryFn: async () => {
 			const rawData = await categoryService.getAllCategory();
-			return rawData.map(mapCategoryResponseToFE);
+			return rawData;
 		},
 	});
 
@@ -52,11 +62,10 @@ export function FlowerCatalog() {
 	}, [selectedCategory, searchQuery, sortBy]);
 
 	const filteredFlowers = useMemo(() => {
-		// SỬA DÒNG NÀY: Kiểm tra chắc chắn nó là mảng thì mới copy, không thì cho mảng rỗng
 		let result = Array.isArray(flowers) ? [...flowers] : [];
 
 		if (selectedCategory !== null) {
-			result = result.filter((f) => f.categoryId === selectedCategory);
+			result = result.filter((f) => f.categoryId === Number(selectedCategory));
 		}
 
 		if (searchQuery.trim()) {
@@ -77,6 +86,13 @@ export function FlowerCatalog() {
 			result.sort((a, b) => b.totalSales - a.totalSales);
 		}
 
+		// Đẩy sản phẩm hết hàng xuống cuối cùng
+		result.sort((a, b) => {
+			const aInStock = a.stockQuantity > 0 ? 1 : 0;
+			const bInStock = b.stockQuantity > 0 ? 1 : 0;
+			return bInStock - aInStock;
+		});
+
 		return result;
 	}, [flowers, selectedCategory, searchQuery, sortBy]);
 
@@ -91,7 +107,7 @@ export function FlowerCatalog() {
 	);
 
 	const getCategoryName = (catId: number) => {
-		const match = categories.find((c) => c.id === catId);
+		const match = categories?.find((c) => c.id === catId);
 		return match ? match.nameVn : catId;
 	};
 
@@ -168,7 +184,7 @@ export function FlowerCatalog() {
 					return (
 						<button
 							type="button"
-							id={`category-btn-${cat.code.toLowerCase()}`}
+							id={`category-btn-${cat.code}`}
 							key={cat.id}
 							onClick={() => setSelectedCategory(cat.id)}
 							className={`rounded-full px-5 py-2.5 text-xs font-semibold tracking-wider whitespace-nowrap transition-all duration-300 cursor-pointer ${
@@ -188,45 +204,60 @@ export function FlowerCatalog() {
 				layout
 				className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
 			>
-				<AnimatePresence mode="popLayout" initial={false}>
-					{paginatedFlowers.map((flower, index) => (
+				{paginatedFlowers.map((flower, index) => {
+					const cartItem = cart.find((i) => i.product.id === flower.id);
+					const currentCartQty = cartItem ? cartItem.quantity : 0;
+					const availableStock = Math.max(
+						0,
+						flower.stockQuantity - currentCartQty,
+					);
+
+					return (
 						<motion.div
 							id={`flower-card-${flower.code}`}
 							key={flower.id || flower.code || `flower-${index}`}
 							layout
-							initial={{ opacity: 0, scale: 0.95 }}
-							animate={{ opacity: 1, scale: 1 }}
-							exit={{ opacity: 0, scale: 0.95 }}
 							transition={{ duration: 0.4 }}
 							className="group relative cursor-pointer flex flex-col h-full bg-sf-bg-elevated border border-sf-border rounded-xl p-3 overflow-hidden shadow-sm hover:shadow-lg hover:border-sf-accent transition-all duration-300"
 						>
 							{/* Product Card Image Frame */}
 							<Link
-								className="relative aspect-square w-full filter brightness-100 group-hover:brightness-105 overflow-hidden rounded-lg bg-sf-surface"
-								href={`/catalog/${flower.id}`}
+								className={`relative aspect-square w-full filter brightness-100 group-hover:brightness-105 overflow-hidden rounded-lg bg-sf-surface ${availableStock <= 0 ? "grayscale opacity-70" : ""}`}
+								href={soulFlowRoutes.product(
+									flower.businessId || flower.code || String(flower.id),
+								)}
 							>
-								{/* <Image
-									src={flower.image}
-									alt={flower.name}
+								<Image
+									src="/images/about-us-main1.avif"
+									alt={flower.nameVn}
 									className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
 									referrerPolicy="no-referrer"
 									fill
 									loading="lazy"
 									sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
-								/> */}
+								/>
 
-								{flower.totalSales && (
+								{flower.totalSales > 0 && availableStock > 0 && (
 									<span className="absolute top-3 left-3 flex items-center gap-1 rounded-full bg-amber-500 text-white px-2.5 py-1 text-[8px] font-bold tracking-widest uppercase shadow-md">
 										<Star className="h-2.5 w-2.5 fill-current" />
 										BEST SELLER
 									</span>
+								)}
+								{availableStock <= 0 && (
+									<div className="absolute inset-0 flex items-center justify-center bg-black/30">
+										<span className="bg-sf-fg text-sf-bg px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest shadow-lg">
+											Hết hàng
+										</span>
+									</div>
 								)}
 							</Link>
 
 							{/* Text metadata */}
 							<div className="flex flex-col justify-between grow mt-4">
 								<Link
-									href={String(flower.id || flower.code || `flower-${index}`)}
+									href={soulFlowRoutes.product(
+										flower.businessId || flower.code || String(flower.id),
+									)}
 								>
 									<span className="text-xs uppercase tracking-widest text-sf-accent font-bold">
 										{getCategoryName(flower.categoryId)}
@@ -243,8 +274,10 @@ export function FlowerCatalog() {
 
 								<div className="flex items-center justify-between border-t border-sf-border mt-4 pt-3">
 									<div>
-										<span className="text-xs text-sf-fg-muted uppercase tracking-wider block">
-											Giá tuyển chọn
+										<span className="text-[10px] text-sf-fg-muted uppercase tracking-wider block font-bold">
+											{availableStock > 0
+												? `Kho: ${availableStock}`
+												: "Hết hàng"}
 										</span>
 										<span className="font-sans font-bold text-sf-fg text-base">
 											{flower.price.toLocaleString("vi-VN")} ₫
@@ -254,20 +287,47 @@ export function FlowerCatalog() {
 									<button
 										type="button"
 										id={`add-to-cart-btn-${flower.id}`}
-										onClick={(e) => {
+										onClick={async (e) => {
 											e.stopPropagation();
-											//addToCart(flower, "M");
+											if (availableStock <= 0) return;
+											if (!user) {
+												toast.error("Vui lòng đăng nhập để thêm vào giỏ hàng");
+												router.push("/login");
+												return;
+											}
+											setAddingItems((prev) => ({
+												...prev,
+												[flower.id]: true,
+											}));
+											await addToCart(flower);
+											setAddingItems((prev) => ({
+												...prev,
+												[flower.id]: false,
+											}));
 										}}
-										className="flex h-8 w-8 items-center justify-center rounded-full bg-sf-fg text-sf-bg hover:bg-sf-accent hover:text-white transition-all duration-300 shadow-sm"
-										title="Thêm hoa vào giỏ"
+										disabled={addingItems[flower.id] || availableStock <= 0}
+										className={`flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300 shadow-sm ${
+											availableStock <= 0
+												? "disabled:bg-gray-400 disabled:text-gray-200 cursor-not-allowed"
+												: addingItems[flower.id]
+													? "bg-sf-fg/50 text-white cursor-not-allowed"
+													: "bg-sf-fg text-sf-bg hover:bg-sf-accent hover:text-white"
+										}`}
+										title={
+											availableStock <= 0 ? "Đã hết hàng" : "Thêm hoa vào giỏ"
+										}
 									>
-										<Plus className="h-4 w-4" />
+										{addingItems[flower.id] ? (
+											<div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+										) : (
+											<Plus className="h-4 w-4" />
+										)}
 									</button>
 								</div>
 							</div>
 						</motion.div>
-					))}
-				</AnimatePresence>
+					);
+				})}
 			</motion.div>
 
 			{/* Empty Result State */}

@@ -11,9 +11,11 @@ import axiosClient from "./axiosClient";
 export const productService = {
 	getAllFlower: async (): Promise<ProductFE[]> => {
 		try {
-			// 1. Gọi API, quy định rõ kiểu trả về thô là ApiResponse bọc một mảng ProductResponseDTO
+			// 1. Gọi API, thêm query param t để bypass cache của backend nếu backend cấu hình cache theo URL
 			const rawResponse: ApiResponse<ProductResponseDTO[]> =
-				await axiosClient.get("/products");
+				await axiosClient.get("/products", {
+					params: { t: Date.now() },
+				});
 
 			// Lấy chính xác cái mảng dữ liệu nằm bên trong property 'data' của ApiResponse
 			const rawList = rawResponse.data;
@@ -32,17 +34,20 @@ export const productService = {
 		}
 	},
 
-	getFlowerById: async (id: number): Promise<ProductFE | null> => {
+	getFlowerByCode: async (code: string): Promise<ProductFE | null> => {
 		try {
 			const rawResponse: ApiResponse<ProductResponseDTO> =
-				await axiosClient.get(`/products/${id}`);
+				await axiosClient.get(`/products/by-code/${code}`);
 
 			if (!rawResponse.data) return null;
 
 			// 2. Dùng Mapper gọt data cho 1 sản phẩm
 			return mapProductResponseToFE(rawResponse.data);
 		} catch (error) {
-			console.warn("⚠️ API '/products/:id' lỗi hoặc BE chưa chạy.", error);
+			console.warn(
+				`⚠️ API '/products/by-code/${code}' lỗi hoặc BE chưa chạy.`,
+				error,
+			);
 			// Lấy chi tiết bị lỗi thì trả về null (Để bên giao diện check == null thì mới gọi notFound() đá qua trang 404)
 			return null;
 		}

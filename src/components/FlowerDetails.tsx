@@ -17,10 +17,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { soulFlowRoutes } from "@/lib/soulflow/routes";
 import { categoryService } from "@/services/categoryService";
 import { productService } from "@/services/productService";
-import { mapCategoryResponseToFE } from "@/types/category.type";
+import { useAuthStore } from "@/store/auth-store";
+import { useCartStore } from "@/store/cart-store";
 
 type FlowerDetailsProps = {
 	productId: string;
@@ -61,15 +63,14 @@ const MOCK_COMMENTS: CommentType[] = [
 
 export function FlowerDetails({ productId }: FlowerDetailsProps) {
 	const router = useRouter();
+	const { user } = useAuthStore();
 	//const { addToCart } = CartFE();
 
 	// 1. Gọi API lấy chi tiết 1 sản phẩm
 	const { data: fetchedFlower, isLoading } = useQuery({
 		queryKey: ["flower", productId],
 		queryFn: async () => {
-			const id = Number(productId);
-			if (Number.isNaN(id)) return null;
-			return await productService.getFlowerById(id);
+			return await productService.getFlowerByCode(productId);
 		},
 	});
 
@@ -78,7 +79,7 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 		queryKey: ["categories"],
 		queryFn: async () => {
 			const rawData = await categoryService.getAllCategory();
-			return rawData.map(mapCategoryResponseToFE);
+			return rawData;
 		},
 	});
 
@@ -108,6 +109,8 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [isHoveringImage, setIsHoveringImage] = useState(false);
 	const [prevProductId, setPrevProductId] = useState(productId);
+	const [isAddingToCart, setIsAddingToCart] = useState(false);
+	const { addToCart, cart } = useCartStore();
 
 	if (productId !== prevProductId) {
 		setPrevProductId(productId);
@@ -142,7 +145,7 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 
 	// Lấy 3 sản phẩm liên quan (khác id hiện tại)
 	const relatedFlowers = apiFlowers
-		.filter((f) => String(f.id) !== productId)
+		.filter((f) => (f.businessId || f.code || String(f.id)) !== productId)
 		.slice(0, 3)
 		.map((f) => {
 			const catName =
@@ -217,6 +220,13 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 			</div>
 		);
 	}
+
+	const cartItem = cart.find((i) => i.product.id === fetchedFlower.id);
+	const currentCartQty = cartItem ? cartItem.quantity : 0;
+	const availableStock = Math.max(
+		0,
+		fetchedFlower.stockQuantity - currentCartQty,
+	);
 
 	return (
 		<div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 bg-sf-bg-elevated transition-colors duration-300">
@@ -297,9 +307,9 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 						<span className="font-sans text-3xl font-bold text-sf-fg">
 							{fetchedFlower.formattedPrice}
 						</span>
-						{fetchedFlower.isAvailable ? (
+						{fetchedFlower.isAvailable && availableStock > 0 ? (
 							<span className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700 uppercase tracking-widest border border-green-200">
-								Còn hàng
+								Kho: {availableStock}
 							</span>
 						) : (
 							<span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700 uppercase tracking-widest border border-red-200">
@@ -315,12 +325,34 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 					<div className="border-t border-[#EBE5DA] dark:border-[#C49B83]/30 mt-8 pt-6">
 						<button
 							type="button"
-							disabled={!fetchedFlower.isAvailable}
-							//onClick={() => addToCart(fetchedFlower)} // Xóa selectedSize khỏi giỏ hàng
-							className="w-full sm:w-2/3 group flex items-center justify-center gap-2.5 rounded-xl bg-[#1A1A1A] dark:bg-[#FCFAF7] py-4 text-xs font-bold uppercase tracking-widest text-white dark:text-[#1F1A16] hover:bg-[#C49B83] transition-all duration-300 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+							disabled={
+								!fetchedFlower.isAvailable ||
+								availableStock <= 0 ||
+								isAddingToCart
+							}
+							onClick={async () => {
+								if (!fetchedFlower.isAvailable || availableStock <= 0) return;
+								if (!user) {
+									toast.error("Vui lòng đăng nhập để thêm vào giỏ hàng");
+									router.push("/login");
+									return;
+								}
+								setIsAddingToCart(true);
+								await addToCart(fetchedFlower);
+								setIsAddingToCart(false);
+							}}
+							className="w-full sm:w-2/3 group flex items-center justify-center gap-2.5 rounded-xl bg-[#1A1A1A] dark:bg-[#FCFAF7] py-4 text-xs font-bold uppercase tracking-widest text-white dark:text-[#1F1A16] hover:bg-[#C49B83] transition-all duration-300 shadow-md disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed"
 						>
-							<ShoppingBag className="h-4 w-4" />
-							{fetchedFlower.isAvailable ? "Thêm vào giỏ hàng" : "Tạm hết hàng"}
+							{isAddingToCart ? (
+								<div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+							) : (
+								<ShoppingBag className="h-4 w-4" />
+							)}
+							{isAddingToCart
+								? "Đang thêm..."
+								: fetchedFlower.isAvailable && availableStock > 0
+									? "Thêm vào giỏ hàng"
+									: "Đã hết hàng"}
 						</button>
 					</div>
 				</div>
@@ -461,7 +493,13 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 						<button
 							type="button"
 							key={item.id}
-							onClick={() => router.push(soulFlowRoutes.product(item.id))}
+							onClick={() =>
+								router.push(
+									soulFlowRoutes.product(
+										(item as any).businessId || item.code || String(item.id),
+									),
+								)
+							}
 							className="group cursor-pointer overflow-hidden rounded-xl border border-[#C49B83]/30 bg-sf-bg-elevated p-3 shadow-xs hover:shadow-sm hover:-translate-y-1 transition-all"
 						>
 							<div className="relative aspect-square w-full overflow-hidden rounded-lg bg-[#EBE5DA] dark:bg-[#2C2C2C] grayscale-1/10 group-hover:grayscale-0">

@@ -16,6 +16,11 @@ const nextConfig: NextConfig = {
 				protocol: "http", // Thêm dòng này dự phòng vì trong code bạn đang để http
 				hostname: "**.googleusercontent.com",
 			},
+			{
+				protocol: "https",
+				hostname: "qr.sepay.vn",
+				pathname: "/**",
+			},
 		],
 	},
 };

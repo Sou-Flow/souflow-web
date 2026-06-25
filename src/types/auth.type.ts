@@ -35,7 +35,7 @@ export interface UserFE {
 	avatar: string;
 	phone: string;
 	address: string;
-	roleCode: string; // Đổi từ roleId (số) sang roleCode (chữ) cho tiện xài
+	roleCode: string;
 	createDate: string;
 	activated: boolean;
 }
@@ -43,6 +43,7 @@ export interface UpdateProfileRequestDTO {
 	fullName: string;
 	email: string;
 	phoneNumber: string;
+	address?: string;
 }
 
 // 4. Hàm Mapper nắn dữ liệu
@@ -52,7 +53,7 @@ export const mapUserResponseToFE = (dto: UserResponseDTO): UserFE => {
 		username: dto.username,
 		fullName: dto.fullName,
 		email: dto.email,
-		avatar: dto.photo || "/default-avatar.png", // Fallback ảnh
+		avatar: dto.photo || "/images/avatar.png", // Fallback ảnh
 		phone: dto.phoneNumber,
 		address: dto.address,
 		roleCode: dto.roleCode,

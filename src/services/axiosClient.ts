@@ -1,4 +1,6 @@
 import axios from "axios";
+import Cookies from "js-cookie";
+import { useAuthStore } from "@/store/auth-store";
 
 const axiosClient = axios.create({
 	baseURL: process.env.NEXT_PUBLIC_API_URL,
@@ -12,13 +14,11 @@ const axiosClient = axios.create({
 // Xử lý trước khi GỬI request đi (Nhét Token vào)
 axiosClient.interceptors.request.use(
 	(config) => {
-		// typeof window !== 'undefined' để đảm bảo code chỉ chạy trên trình duyệt (tránh lỗi SSR của Next.js)
-		if (typeof window !== "undefined") {
-			const token = localStorage.getItem("accessToken");
-			if (token && config.headers) {
-				// Nhét token vào chuẩn Bearer của JWT
-				config.headers.Authorization = `Bearer ${token}`;
-			}
+		const token =
+			typeof window !== "undefined" ? Cookies.get("accessToken") : null;
+		if (token && config.headers) {
+			// Nhét token vào chuẩn Bearer của JWT
+			config.headers.Authorization = `Bearer ${token}`;
 		}
 		return config;
 	},
@@ -41,9 +41,10 @@ axiosClient.interceptors.response.use(
 			// Lỗi 401: Token hết hạn hoặc chưa đăng nhập
 			console.warn("Phiên đăng nhập hết hạn!");
 
-			// Tùy chọn: Tự động xóa token cũ và đá về trang chủ/login
+			// Xóa trạng thái người dùng trong Zustand và chuyển hướng cứng về trang login
 			if (typeof window !== "undefined") {
-				localStorage.removeItem("accessToken");
+				useAuthStore.getState().clearUser();
+				window.location.href = "/login";
 			}
 		}
 		return Promise.reject(error);

@@ -9,6 +9,8 @@ import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { soulFlowRoutes } from "@/lib/soulflow/routes";
 import { authService } from "@/services/authService";
+import { useLocationStore } from "@/store/location-store";
+import { encodeAddress } from "@/utils/addressUtils";
 import {
 	type RegisterFormData,
 	registerValidator,
@@ -18,6 +20,7 @@ export function RegisterScreen() {
 	const router = useRouter();
 	const {
 		register,
+		watch,
 		handleSubmit: handleFormSubmit,
 		formState: { errors, isSubmitting },
 	} = useForm<RegisterFormData>({
@@ -29,13 +32,61 @@ export function RegisterScreen() {
 			confirmPassword: "",
 			phoneNumber: "",
 			fullName: "",
-			address: "",
+			street: "",
+			ward: "",
+			district: "",
+			city: "",
 		},
 	});
 
+	const { locationData } = useLocationStore();
+
+	// Watch city & district để render
+	const watchCity = watch("city");
+	const watchDistrict = watch("district");
+
 	const onSubmit = async (data: RegisterFormData) => {
 		try {
-			await authService.register(data);
+			// Resolve names for encodeAddress based on selected codes
+			const cityObj = locationData.find(
+				(c) => String(c.code) === String(data.city),
+			);
+			const cityName = cityObj ? cityObj.name : data.city;
+
+			const distList = cityObj?.districts || [];
+			const distObj = distList.find(
+				(d: Record<string, string> | string) =>
+					d === data.district ||
+					(typeof d === "object" && String(d.code) === String(data.district)),
+			);
+			const districtName = distObj ? distObj.name || distObj : data.district;
+
+			const wardList = distObj?.wards || [];
+			const wardObj = wardList.find(
+				(w: Record<string, string> | string) =>
+					w === data.ward ||
+					(typeof w === "object" && String(w.code) === String(data.ward)),
+			);
+			const wardName = wardObj ? wardObj.name || wardObj : data.ward;
+
+			const finalAddress = encodeAddress(
+				data.street,
+				String(wardName),
+				String(districtName),
+				String(cityName),
+			);
+
+			const payload = {
+				username: data.username,
+				email: data.email,
+				password: data.password,
+				confirmPassword: data.confirmPassword,
+				phoneNumber: data.phoneNumber,
+				fullName: data.fullName,
+				address: finalAddress,
+			};
+
+			await authService.register(payload);
 			toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
 			setTimeout(() => {
 				router.push(soulFlowRoutes.login);
@@ -204,27 +255,144 @@ export function RegisterScreen() {
 								)}
 							</div>
 
-							{/* Address */}
-							<div className="space-y-1.5">
-								<label
-									className="text-[10px] uppercase tracking-widest font-bold text-secondary"
-									htmlFor="reg-address"
-								>
+							{/* Address: 4 Fields */}
+							<div className="space-y-4 border-t border-outline-variant/30 pt-4 mt-2">
+								<h3 className="text-xs uppercase tracking-widest font-bold text-sf-fg">
 									Địa chỉ giao hàng
-								</label>
-								<input
-									id="reg-address"
-									type="text"
-									placeholder="123 Flower St, District 1"
-									{...register("address")}
-									className="w-full bg-white/5 border-0 border-b border-outline-variant/60 py-2.5 px-0 text-sm focus:border-primary transition-all focus:outline-none placeholder-secondary/30 text-sf-fg"
-									required
-								/>
-								{errors.address && (
-									<p className="text-red-500 text-xs mt-1">
-										{errors.address.message}
-									</p>
-								)}
+								</h3>
+
+								<div className="space-y-1.5">
+									<label
+										className="text-[10px] uppercase tracking-widest font-bold text-secondary"
+										htmlFor="reg-street"
+									>
+										Số nhà, Tên đường
+									</label>
+									<input
+										id="reg-street"
+										type="text"
+										placeholder="12/A, Hẻm 4, Lê Lợi"
+										{...register("street")}
+										className="w-full bg-white/5 border-0 border-b border-outline-variant/60 py-2.5 px-0 text-sm focus:border-primary transition-all focus:outline-none placeholder-secondary/30 text-sf-fg"
+										required
+									/>
+									{errors.street && (
+										<p className="text-red-500 text-xs mt-1">
+											{errors.street.message}
+										</p>
+									)}
+								</div>
+
+								<div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+									<div className="space-y-1.5">
+										<label
+											htmlFor="register-city"
+											className="text-[10px] uppercase tracking-widest font-bold text-secondary"
+										>
+											Tỉnh/Thành phố
+										</label>
+										<select
+											id="register-city"
+											{...register("city")}
+											className="w-full bg-white/5 border-0 border-b border-outline-variant/60 py-2.5 px-0 text-sm focus:border-primary transition-all focus:outline-none text-sf-fg"
+											required
+										>
+											<option value="" className="text-black">
+												Chọn Tỉnh/Thành phố
+											</option>
+											{(locationData || []).map((c) => (
+												<option
+													key={c.code}
+													value={c.code}
+													className="text-black"
+												>
+													{c.name}
+												</option>
+											))}
+										</select>
+										{errors.city && (
+											<p className="text-red-500 text-xs mt-1">
+												{errors.city.message}
+											</p>
+										)}
+									</div>
+
+									<div className="space-y-1.5">
+										<label
+											htmlFor="register-district"
+											className="text-[10px] uppercase tracking-widest font-bold text-secondary"
+										>
+											Quận/Huyện
+										</label>
+										<select
+											id="register-district"
+											{...register("district")}
+											className="w-full bg-white/5 border-0 border-b border-outline-variant/60 py-2.5 px-0 text-sm focus:border-primary transition-all focus:outline-none text-sf-fg"
+											required
+										>
+											<option value="" className="text-black">
+												Chọn Quận/Huyện
+											</option>
+											{/* Lấy selected city thông qua register() - sẽ được fix trong render */}
+											{locationData
+												?.find((c) => String(c.code) === String(watchCity))
+												?.districts?.map((d: Record<string, string>) => (
+													<option
+														key={d.code || d}
+														value={d.code || d}
+														className="text-black"
+													>
+														{d.name || d}
+													</option>
+												))}
+										</select>
+										{errors.district && (
+											<p className="text-red-500 text-xs mt-1">
+												{errors.district.message}
+											</p>
+										)}
+									</div>
+								</div>
+
+								<div className="space-y-1.5">
+									<label
+										htmlFor="register-ward"
+										className="text-[10px] uppercase tracking-widest font-bold text-secondary"
+									>
+										Phường/Xã
+									</label>
+									<select
+										id="register-ward"
+										{...register("ward")}
+										className="w-full bg-white/5 border-0 border-b border-outline-variant/60 py-2.5 px-0 text-sm focus:border-primary transition-all focus:outline-none text-sf-fg"
+										required
+									>
+										<option value="" className="text-black">
+											Chọn Phường/Xã
+										</option>
+										{locationData
+											?.find((c) => String(c.code) === String(watchCity))
+											?.districts?.find(
+												(d: Record<string, string>) =>
+													String(d.code) === String(watchDistrict) ||
+													d.name === watchDistrict,
+											)
+											?.wards?.map((w: Record<string, string>) => (
+												<option
+													key={w.code || w}
+													value={w.code || w}
+													className="text-black"
+												>
+													{w.name || w}
+												</option>
+											))}
+									</select>
+									{errors.ward && (
+										<p className="text-red-500 text-xs mt-1">
+											{errors.ward.message}
+										</p>
+									)}
+								</div>
 							</div>
 
 							{/* Password Fields */}

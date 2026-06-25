@@ -1,6 +1,4 @@
-import type { VietnamCity } from "@/types/soulflow";
-
-export const defaultLocations: VietnamCity[] = [
+export const defaultLocations: any[] = [
 	{
 		code: "HCM",
 		name: "Hồ Chí Minh",

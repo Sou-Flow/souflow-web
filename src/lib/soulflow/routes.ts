@@ -1,7 +1,7 @@
 export const soulFlowRoutes = {
 	home: "/",
 	catalog: "/catalog",
-	product: (id: string) => `/catalog/${id}`,
+	product: (code: string) => `/catalog/${code}`,
 	//bespoke: "/bespoke",
 	checkout: "/checkout",
 	account: "/account",

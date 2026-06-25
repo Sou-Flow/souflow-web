@@ -15,14 +15,15 @@ import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { soulFlowRoutes } from "@/lib/soulflow/routes";
-import { authService } from "@/services/authService";
 import { categoryService } from "@/services/categoryService";
-import { useSoulFlowStore } from "@/store/soulflow-store";
-import { mapCategoryResponseToFE } from "@/types/category.type";
+import { useAuthStore } from "@/store/auth-store";
+import { useCartStore } from "@/store/cart-store";
+import { useCatalogStore } from "@/store/catalog-store";
+import { useCategoryStore } from "@/store/category-store";
 
 type NavbarProps = {
 	onOpenCart: () => void;
@@ -31,16 +32,11 @@ type NavbarProps = {
 export function Navbar({ onOpenCart }: NavbarProps) {
 	const pathname = usePathname();
 	const router = useRouter();
-	const {
-		cart,
-		user,
-		setUser,
-		searchQuery,
-		setSearchQuery,
-		selectedCategory,
-		setSelectedCategory,
-	} = useSoulFlowStore();
 
+	const { cart } = useCartStore();
+	const { user, setUser, logout } = useAuthStore();
+	const { searchQuery, setSearchQuery } = useCatalogStore();
+	const { selectedCategory, setSelectedCategory } = useCategoryStore();
 	const isHome = pathname === soulFlowRoutes.home;
 	const isCatalog = pathname.startsWith(soulFlowRoutes.catalog);
 	//const isBespoke = pathname === soulFlowRoutes.bespoke;
@@ -50,11 +46,17 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+	const { fetchCart } = useCartStore();
+
+	useEffect(() => {
+		fetchCart(); // Kéo giỏ hàng từ DB xuống ngay khi component mount
+	}, [fetchCart]);
+
 	const { data: categories = [] } = useQuery({
 		queryKey: ["categories"],
 		queryFn: async () => {
 			const rawData = await categoryService.getAllCategory();
-			return rawData.map(mapCategoryResponseToFE);
+			return rawData;
 		},
 	});
 
@@ -370,8 +372,7 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 									<LogOut
 										className="h-4 w-4 text-sf-fg-muted hover:text-red-400 cursor-pointer transition-colors"
 										onClick={() => {
-											authService.logout(); // Xoá token trong localStorage
-											setUser(null); // Xoá data user trong Global Store -> Navbar sẽ tự đổi thành UI Đăng Nhập
+											logout(); // Xóa token, clear user, clear cart state
 											showToast("Đăng xuất thành công", "success");
 											router.push(soulFlowRoutes.home); // Đá về trang chủ
 										}}

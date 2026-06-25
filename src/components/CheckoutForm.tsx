@@ -1,92 +1,520 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
 import {
 	Check,
 	CheckCircle2,
-	Clipboard,
 	CreditCard,
+	Loader2,
+	Lock,
 	ShoppingBag,
 	Truck,
 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import toast from "react-hot-toast";
+import { z } from "zod";
 import { soulFlowRoutes } from "@/lib/soulflow/routes";
-import { useSoulFlowStore } from "@/store/soulflow-store";
-import type { Order } from "@/types/order.type";
+import { orderService } from "@/services/orderService";
+import { useAuthStore } from "@/store/auth-store";
+import { useCartStore } from "@/store/cart-store";
+import { useDiscountStore } from "@/store/discount-store";
+import { useLocationStore } from "@/store/location-store";
+import { useOrderStore } from "@/store/order-store";
+import type { OrderFE } from "@/types/order.type";
+import { decodeAddress, encodeAddress } from "@/utils/addressUtils";
+
+const checkoutSchema = z.object({
+	fullName: z.string().min(2, "Họ và tên phải có ít nhất 2 ký tự"),
+	phone: z
+		.string()
+		.regex(/^(84|0)(3|5|7|8|9)[0-9]{8}$/, "Số điện thoại không hợp lệ"),
+	address: z.string().min(5, "Số nhà, tên đường phải có ít nhất 5 ký tự"),
+	ward: z.string().min(1, "Vui lòng nhập Phường/Xã"),
+	city: z.string().min(1, "Vui lòng chọn Tỉnh/Thành phố"),
+	district: z.string().min(1, "Vui lòng chọn Quận/Huyện"),
+});
+
+type CheckoutFormValues = z.infer<typeof checkoutSchema>;
 
 export function CheckoutForm() {
-	const { cart, placeOrder, locationData, appliedCoupon } = useSoulFlowStore();
+	const router = useRouter();
+	const queryClient = useQueryClient();
+	// === 1. LẤY DATA TỪ STORE ===
+	const { user } = useAuthStore(); // Mở comment này khi bạn có auth store
 
-	// Contact form state
-	const [recipientName, setRecipientName] = useState("Sarah Beauchamp");
-	const [recipientPhone, setRecipientPhone] = useState("+84 90 999 7777");
-	const [address, setAddress] = useState("25A Thảo Điền Road");
-	const [selectedCity, setSelectedCity] = useState("HCM");
-	const [selectedDistrict, setSelectedDistrict] = useState("Quận 1");
-	const [ward, setWard] = useState("Thảo Điền Ward");
-	const [paymentMethod, setPaymentMethod] = useState<
-		"VNPAY" | "MoMo" | "Bank Transfer"
-	>("VNPAY");
+	const { placeOrder, isPlacingOrder } = useOrderStore();
+	const { cart, clearCart } = useCartStore(); // Lấy thêm clearCart
+	const { locationData } = useLocationStore();
+	const { appliedDiscount, clearDiscount } = useDiscountStore(); // Lấy thêm clearDiscount
 
-	// Order processing/receipt flags
-	const [isPlaced, setIsPlaced] = useState(false);
-	const [placedOrderDetails, setPlacedOrderDetails] = useState<Order | null>(
+	// === 2. STATES QUẢN LÝ FORM ===
+	const {
+		register,
+		handleSubmit,
+		setValue,
+		watch,
+		formState: { errors, isSubmitting },
+	} = useForm<CheckoutFormValues>({
+		resolver: zodResolver(checkoutSchema),
+		defaultValues: {
+			fullName: "",
+			phone: "",
+			address: "",
+			ward: "",
+			city: "",
+			district: "",
+		},
+	});
+
+	const selectedCity = watch("city");
+	const selectedDistrict = watch("district");
+
+	// Rút gọn lại chỉ còn SEPAY và COD
+	const [paymentMethod, setPaymentMethod] = useState<"SEPAY" | "COD" | null>(
 		null,
 	);
-	const [clipboardCopied, setClipboardCopied] = useState(false);
+	// 2. Thêm cờ đánh dấu xem đã điền tự động lần nào chưa
+	const [hasAutoFilled, setHasAutoFilled] = useState(false);
 
-	const districtsOfCity = useMemo(() => {
-		const city = locationData.find((c) => c.code === selectedCity);
-		return city ? city.districts : [];
-	}, [locationData, selectedCity]);
+	// 3. Dùng useEffect bắt nhịp dữ liệu
+	useEffect(() => {
+		// Nếu có thông tin user, có địa chỉ, chưa từng điền tự động VÀ locationData đã sẵn sàng
+		if (
+			user?.address &&
+			!hasAutoFilled &&
+			locationData &&
+			locationData.length > 0
+		) {
+			// Lấy đúng tên thuộc tính trong DB của bạn
+			setValue("fullName", user.fullName || "");
+			setValue("phone", user.phone || "");
 
-	// Pricing math
+			const { street, cityCode, districtCode, wardCode } = decodeAddress(
+				user.address,
+				locationData,
+			);
+
+			setValue("address", street);
+			setValue("city", String(cityCode));
+
+			// Đợi React render xong options của district dựa trên city
+			setTimeout(() => {
+				setValue("district", String(districtCode));
+				// Đợi React render xong options của ward dựa trên district
+				setTimeout(() => {
+					setValue("ward", String(wardCode));
+					// Đánh dấu đã điền xong
+					setHasAutoFilled(true);
+				}, 50);
+			}, 50);
+
+			// Cực kỳ quan trọng: Bật cờ lên để lần sau không điền đè nữa
+			// Đã chuyển setHasAutoFilled(true) vào trong setTimeout cuối cùng
+		}
+	}, [user, hasAutoFilled, setValue, locationData]);
+
+	// === 3. STATES QUẢN LÝ TRẠNG THÁI ĐƠN HÀNG ===
+	// IDLE: Đang điền form | WAITING_PAYMENT: Hiện QR chờ quét | SUCCESS: Đã xong | CANCELED: Đã hủy | OUT_OF_STOCK: Lỗi hết hàng
+	const [orderStatus, setOrderStatus] = useState<
+		"IDLE" | "WAITING_PAYMENT" | "SUCCESS" | "CANCELED" | "OUT_OF_STOCK"
+	>("IDLE");
+	const [placedOrderDetails, setPlacedOrderDetails] = useState<OrderFE | null>(
+		null,
+	);
+	const [timeLeft, setTimeLeft] = useState(300); // 5 phút đếm ngược cho QR
+
+	// === 4. TÍNH TOÁN TIỀN BẠC ===
 	const subtotal = cart.reduce(
-		(sum, item) => sum + item.priceUnit * item.quantity,
+		(sum, item) => sum + (item.product?.price || 0) * (item.quantity || 1),
 		0,
 	);
-	const discount = appliedCoupon
-		? (subtotal * appliedCoupon.discountPercent) / 100
+	const discount = appliedDiscount
+		? (subtotal * appliedDiscount.percentage) / 100
 		: 0;
-	const shippingFee = subtotal > 0 ? 5 : 0;
+	const shippingFee = 0; // Tạm thời comment phí ship: subtotal > 0 ? 30000 : 0;
 	const total = subtotal - discount + shippingFee;
 
-	const handlePlaceOrder = (e: React.FormEvent) => {
-		e.preventDefault();
-		const cityObj = locationData.find((c) => c.code === selectedCity);
+	// === 5. XỬ LÝ NHẤN ĐẶT HÀNG ===
+	const onSubmit = async (data: CheckoutFormValues) => {
+		if (!paymentMethod) {
+			toast.error("Vui lòng chọn phương thức thanh toán!");
+			return;
+		}
+
+		const cityObj = (locationData || []).find(
+			(c) => String(c.code) === String(selectedCity),
+		);
 		const cityName = cityObj ? cityObj.name : selectedCity;
+		const distObj = cityObj?.districts?.find(
+			(d: any) =>
+				d === selectedDistrict || String(d.code) === String(selectedDistrict),
+		);
+		const districtName = distObj?.name || distObj || selectedDistrict;
+		const wardObj = distObj?.wards?.find(
+			(w: any) => w === data.ward || String(w.code) === String(data.ward),
+		);
+		const wardName = wardObj?.name || wardObj || data.ward;
+
+		const fullAddress = encodeAddress(
+			data.address,
+			String(wardName),
+			String(districtName),
+			String(cityName),
+		);
 
 		const details = {
-			recipientName,
-			recipientPhone,
-			address: `${address}, ${ward}`,
-			city: cityName,
-			district: selectedDistrict,
+			recipientName: data.fullName,
+			recipientPhone: data.phone,
+			address: fullAddress,
+			city: cityName || "",
+			district: selectedDistrict || "",
 			paymentMethod,
 		};
 
-		const newOrder = placeOrder(details);
-		setPlacedOrderDetails(newOrder);
-		setIsPlaced(true);
-	};
-
-	const handleCopyBank = async () => {
 		try {
-			await navigator.clipboard.writeText(
-				"TECHCOMBANK - 19034567891011 - SOULFLOW BOUTIQUE",
-			);
-			setClipboardCopied(true);
-			setTimeout(() => setClipboardCopied(false), 2000);
-		} catch {
-			setClipboardCopied(false);
+			// Gửi API tạo đơn (status ở BE lúc này sẽ là PENDING_SEPAY hoặc PENDING_COD)
+			const newOrder = await placeOrder(details);
+
+			// CHÈN DÒNG NÀY ĐỂ KIỂM TRA:
+			console.log("=== ĐÃ TẠO ĐƠN THÀNH CÔNG. DATA THỰC TẾ LÀ: ===", newOrder);
+
+			setPlacedOrderDetails(newOrder);
+
+			// Chia luồng giao diện dựa trên status thực tế BE trả về (yêu cầu mới)
+			if (newOrder.status === "PENDING" || paymentMethod === "COD") {
+				// COD hoặc PENDING thì không cần quét mã, cho qua trang Success luôn
+				setOrderStatus("SUCCESS");
+				clearCart();
+				clearDiscount();
+				queryClient.invalidateQueries({ queryKey: ["flowers"] });
+				queryClient.invalidateQueries({ queryKey: ["flower"] });
+			} else if (
+				newOrder.status === "WAITING_PAYMENT" ||
+				paymentMethod === "SEPAY"
+			) {
+				// SEPAY hoặc WAITING_PAYMENT thì chuyển sang màn chờ quét mã
+				setOrderStatus("WAITING_PAYMENT");
+			}
+		} catch (error: any) {
+			console.error("Lỗi đặt hàng:", error);
+
+			// Xử lý lỗi cạn kho do người khác mua mất (Race condition)
+			// Lấy thông báo lỗi từ Backend (Spring Boot thường trả về trong error.response.data.message hoặc error.response.data)
+			const backendData = error?.response?.data;
+			const backendMessage =
+				typeof backendData === "string" ? backendData : backendData?.message;
+
+			if (error?.response?.status === 400 || error?.response?.status === 409) {
+				const errorStr = String(backendMessage || "").toLowerCase();
+				// Nếu BE có trả về chữ tồn kho, hết hàng, không đủ... thì báo rõ
+				if (
+					errorStr.includes("tồn kho") ||
+					errorStr.includes("không đủ") ||
+					errorStr.includes("hết") ||
+					errorStr.includes("stock") ||
+					error?.response?.status === 409
+				) {
+					setOrderStatus("OUT_OF_STOCK");
+
+					// Xoá sạch giỏ hàng và kéo lại danh sách hoa để UI cập nhật số lượng
+					queryClient.invalidateQueries({ queryKey: ["flowers"] });
+					queryClient.invalidateQueries({ queryKey: ["flower"] });
+					clearCart();
+					return;
+				}
+
+				toast.error(
+					`Lỗi tạo đơn: ${backendMessage || "Vui lòng kiểm tra lại thông tin!"}`,
+				);
+			} else {
+				toast.error("Không thể kết nối đến máy chủ. Vui lòng thử lại sau!");
+			}
 		}
 	};
 
-	if (isPlaced && placedOrderDetails) {
+	// === 6. EFFECT KIỂM TRA TIỀN (POLLING) DÀNH CHO SEPAY ===
+	useEffect(() => {
+		let interval: NodeJS.Timeout;
+
+		// Chỉ chạy interval khi đang ở màn hình chờ thanh toán SEPAY
+		if (orderStatus === "WAITING_PAYMENT" && placedOrderDetails) {
+			interval = setInterval(async () => {
+				try {
+					console.log("Đang kiểm tra trạng thái thanh toán...");
+					const res = await orderService.getOrderByCode(
+						(placedOrderDetails.businessId || placedOrderDetails.id) as string,
+					);
+
+					if (res && (res.status === "PAID" || res.status === "COMPLETED")) {
+						clearInterval(interval);
+						toast.success("Thanh toán thành công!");
+						clearCart();
+						clearDiscount();
+						queryClient.invalidateQueries({ queryKey: ["flowers"] });
+						queryClient.invalidateQueries({ queryKey: ["flower"] });
+						setOrderStatus("SUCCESS");
+					}
+				} catch (error) {
+					console.error("Lỗi khi kiểm tra thanh toán", error);
+				}
+			}, 3000); // Cứ 3 giây hỏi BE một lần
+		}
+
+		return () => clearInterval(interval);
+	}, [
+		orderStatus,
+		placedOrderDetails,
+		clearCart,
+		clearDiscount,
+		queryClient.invalidateQueries,
+	]);
+
+	const handleCancelOrder = useCallback(async () => {
+		if (!placedOrderDetails) return;
+		try {
+			// Truyền trực tiếp chuỗi ID
+			await orderService.updateOrderStatus(
+				(placedOrderDetails.businessId || placedOrderDetails.id) as string,
+				"CANCELED",
+			);
+
+			// Xóa cache của products để lấy lại số lượng tồn kho mới được hoàn trả
+			queryClient.invalidateQueries({ queryKey: ["flowers"] });
+			queryClient.invalidateQueries({ queryKey: ["flower"] });
+
+			toast.error("Đã hủy giao dịch thanh toán!");
+			setOrderStatus("CANCELED");
+		} catch (error) {
+			console.error("Lỗi khi hủy đơn:", error);
+			toast.error("Không thể hủy đơn lúc này.");
+		}
+	}, [placedOrderDetails, queryClient.invalidateQueries]);
+
+	// === 6.1. EFFECT ĐẾM NGƯỢC THỜI GIAN QR ===
+	// === 6.1. EFFECT ĐẾM NGƯỢC THỜI GIAN QR ===
+	useEffect(() => {
+		let timer: NodeJS.Timeout;
+
+		if (orderStatus === "WAITING_PAYMENT" && timeLeft > 0) {
+			timer = setInterval(() => {
+				setTimeLeft((prev) => prev - 1);
+			}, 1000);
+		} else if (orderStatus === "WAITING_PAYMENT" && timeLeft === 0) {
+			// Xử lý hết giờ -> Tự động hủy
+			// Đưa hàm cập nhật state vào setTimeout để chạy bất đồng bộ, tránh lỗi cascading render
+			const cancelTimeout = setTimeout(() => {
+				handleCancelOrder();
+			}, 0);
+
+			// Dọn dẹp cả timeout nếu component unmount bất ngờ
+			return () => clearTimeout(cancelTimeout);
+		}
+
+		return () => clearInterval(timer);
+	}, [orderStatus, timeLeft, handleCancelOrder]);
+
+	const formatTime = (seconds: number) => {
+		const m = Math.floor(seconds / 60);
+		const s = seconds % 60;
+		return `${m}:${s < 10 ? "0" : ""}${s}`;
+	};
+
+	// ==========================================
+	// KHU VỰC RENDER GIAO DIỆN
+	// ==========================================
+
+	// CHẶN 1: NẾU CHƯA ĐĂNG NHẬP
+	if (!user) {
 		return (
-			<div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 lg:px-8 text-center bg-sf-bg transition-colors duration-300">
+			<div className="mx-auto max-w-2xl px-4 py-20 text-center space-y-6">
+				<Lock className="h-12 w-12 text-[#C49B83] mx-auto opacity-50" />
+				<h2 className="font-serif text-3xl text-sf-fg">Vui Lòng Đăng Nhập</h2>
+				<p className="text-sf-fg-muted text-sm max-w-md mx-auto">
+					Bạn cần đăng nhập để tiến hành thanh toán và theo dõi đơn hàng của
+					mình.
+				</p>
+				<Link
+					href={soulFlowRoutes.login}
+					className="inline-block bg-[#1A1A1A] text-white px-8 py-3 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-[#C49B83] transition-colors"
+				>
+					Đi tới Đăng Nhập
+				</Link>
+			</div>
+		);
+	}
+
+	// CHẶN 2: MÀN HÌNH CHỜ THANH TOÁN QR CODE (SEPAY)
+	if (orderStatus === "WAITING_PAYMENT" && placedOrderDetails) {
+		// Link tạo QR tự động của SePay theo thiết lập của bạn
+		const qrCodeUrl = `https://qr.sepay.vn/img?bank=VPBank&acc=AGBSPE74K58LCEU9&template=compact&amount=${placedOrderDetails.total}&des=${placedOrderDetails.businessId || placedOrderDetails.id}&showinfo=true&fullacc=true&holder=DANG%20HUY%20HOANG&store=C%E1%BB%ADa%20H%C3%A0ng%20B%C3%A1n%20Hoa%20SouFlow`;
+
+		return (
+			<div className="mx-auto max-w-2xl px-4 py-16 text-center">
+				<motion.div
+					initial={{ opacity: 0, y: 20 }}
+					animate={{ opacity: 1, y: 0 }}
+					className="bg-sf-bg-elevated rounded-2xl border border-[#C49B83]/30 p-8 shadow-xl space-y-6"
+				>
+					<h2 className="font-serif text-2xl text-sf-fg">
+						Thanh Toán Đơn Hàng
+					</h2>
+					<p className="text-sm text-sf-fg-muted">
+						Mã đơn:{" "}
+						<strong className="text-sf-fg">
+							{placedOrderDetails.businessId || placedOrderDetails.id}
+						</strong>
+					</p>
+
+					<div className="bg-white p-4 rounded-xl border border-gray-200 inline-block">
+						<Image
+							src={qrCodeUrl}
+							alt="Mã QR Thanh Toán"
+							width={256}
+							height={256}
+							className="w-64 h-64 object-contain mx-auto"
+						/>
+					</div>
+
+					<div className="flex flex-col items-center gap-3">
+						<Loader2 className="h-6 w-6 text-[#C49B83] animate-spin" />
+						<p className="text-xs text-amber-600 font-medium tracking-wide uppercase">
+							Hệ thống đang chờ nhận tiền...
+						</p>
+						<p className="text-xl font-bold font-mono text-red-500">
+							{formatTime(timeLeft)}
+						</p>
+						<p className="text-[11px] text-sf-fg-muted">
+							Mã QR sẽ tự động hủy nếu quá thời gian hoặc thanh toán thất bại.
+						</p>
+						<button
+							type="button"
+							onClick={handleCancelOrder}
+							className="mt-4 px-6 py-2 rounded-full border border-red-500 text-red-500 text-xs font-bold uppercase tracking-widest hover:bg-red-50 transition-colors"
+						>
+							Hủy thanh toán
+						</button>
+					</div>
+				</motion.div>
+			</div>
+		);
+	}
+
+	// CHẶN 2.5: MÀN HÌNH HỦY THANH TOÁN (CANCELED)
+	if (orderStatus === "CANCELED" && placedOrderDetails) {
+		return (
+			<div className="mx-auto max-w-2xl px-4 py-16 text-center">
+				<motion.div
+					initial={{ opacity: 0, scale: 0.95 }}
+					animate={{ opacity: 1, scale: 1 }}
+					className="bg-sf-bg-elevated rounded-2xl border border-red-500/30 p-8 shadow-xl space-y-6"
+				>
+					<div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50 dark:bg-red-950/50">
+						<CheckCircle2 className="h-8 w-8 text-red-500" />
+					</div>
+					<div className="space-y-2">
+						<span className="text-sm text-red-500 uppercase tracking-widest font-bold block">
+							Đã Hủy Giao Dịch
+						</span>
+						<h1 className="font-serif text-3xl font-light text-sf-fg">
+							Đơn hàng của bạn đã bị hủy!
+						</h1>
+						<p className="text-xs text-[#666666] dark:text-[#A0A0A0] max-w-md mx-auto leading-relaxed">
+							Mã đơn{" "}
+							<strong className="text-sf-fg">
+								{placedOrderDetails.businessId || placedOrderDetails.id}
+							</strong>{" "}
+							đã được hủy thành công. Bạn có thể đặt lại đơn hàng khác bất cứ
+							lúc nào.
+						</p>
+					</div>
+					<div className="pt-4 flex flex-col sm:flex-row gap-3 justify-center">
+						<button
+							type="button"
+							onClick={async () => {
+								const toastId = toast.loading("Đang khôi phục giỏ hàng...");
+								await useCartStore.getState().recreateCart();
+								toast.dismiss(toastId);
+								setOrderStatus("IDLE");
+							}}
+							className="inline-block px-6 py-3 rounded-full bg-sf-accent text-white text-xs font-bold uppercase tracking-widest hover:bg-sf-accent/90 transition-colors"
+						>
+							Đổi Cách Thanh Toán
+						</button>
+						<button
+							type="button"
+							onClick={() => router.push("/catalog")}
+							className="inline-block px-6 py-3 rounded-full bg-sf-surface border border-sf-border text-sf-fg text-xs font-bold uppercase tracking-widest hover:bg-sf-bg transition-colors"
+						>
+							Mua Sắm Thêm
+						</button>
+						<button
+							type="button"
+							onClick={() => {
+								clearCart();
+								router.push("/catalog");
+							}}
+							className="inline-block px-6 py-3 rounded-full bg-red-50 dark:bg-red-950/30 text-red-500 border border-red-200 dark:border-red-900/50 text-xs font-bold uppercase tracking-widest hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"
+						>
+							Hủy Giỏ Hàng
+						</button>
+					</div>
+				</motion.div>
+			</div>
+		);
+	}
+
+	// CHẶN 2.6: MÀN HÌNH HẾT HÀNG / CÓ NGƯỜI MUA TRƯỚC (RACE CONDITION)
+	if (orderStatus === "OUT_OF_STOCK") {
+		return (
+			<div className="mx-auto max-w-2xl px-4 py-16 text-center">
+				<motion.div
+					initial={{ opacity: 0, scale: 0.95 }}
+					animate={{ opacity: 1, scale: 1 }}
+					className="bg-sf-bg-elevated rounded-2xl border border-[#C49B83]/30 p-8 shadow-xl space-y-6"
+				>
+					<div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-orange-50 dark:bg-orange-950/50">
+						<ShoppingBag className="h-8 w-8 text-orange-500" />
+					</div>
+					<div className="space-y-2">
+						<span className="text-sm text-orange-500 uppercase tracking-widest font-bold block">
+							Rất tiếc! Chậm một bước
+						</span>
+						<h1 className="font-serif text-3xl font-light text-sf-fg">
+							Sản phẩm vừa có người mua mất!
+						</h1>
+						<p className="text-xs text-[#666666] dark:text-[#A0A0A0] max-w-md mx-auto leading-relaxed">
+							Trong lúc bạn đang điền thông tin, một khách hàng khác đã nhanh
+							tay thanh toán và làm cạn số lượng tồn kho của một vài sản phẩm
+							trong giỏ của bạn. <br />
+							<br />
+							Hệ thống đã tự động làm mới lại giỏ hàng và danh sách hoa. Mong
+							bạn thông cảm vì sự bất tiện này nhé!
+						</p>
+					</div>
+					<div className="pt-4">
+						<button
+							type="button"
+							onClick={() => router.push("/catalog")}
+							className="inline-block px-6 py-3 rounded-full bg-[#1A1A1A] text-white text-xs font-bold uppercase tracking-widest hover:bg-orange-500 transition-colors"
+						>
+							Quay Lại Cửa Hàng
+						</button>
+					</div>
+				</motion.div>
+			</div>
+		);
+	}
+
+	// MÀN HÌNH 3: HOÀN TẤT ĐƠN HÀNG (SUCCESS INVOICE)
+	if (orderStatus === "SUCCESS" && placedOrderDetails) {
+		return (
+			<div className="mx-auto max-w-2xl px-4 py-16 text-center">
 				<motion.div
 					initial={{ opacity: 0, scale: 0.95 }}
 					animate={{ opacity: 1, scale: 1 }}
@@ -98,92 +526,83 @@ export function CheckoutForm() {
 
 					<div className="space-y-2">
 						<span className="text-sm text-[#C49B83] uppercase tracking-widest font-bold block">
-							Xác Nhận Đơn Hàng
+							Đặt Hàng Thành Công
 						</span>
 						<h1 className="font-serif text-3xl font-light text-sf-fg">
-							Bông Hoa Của Bạn Đang Được Gửi Đi!
+							Cảm ơn bạn đã tin tưởng SoulFlow!
 						</h1>
 						<p className="text-xs text-[#666666] dark:text-[#A0A0A0] max-w-md mx-auto leading-relaxed">
 							Đơn{" "}
-							<strong className="text-sf-fg">{placedOrderDetails.id}</strong>{" "}
-							của bạn đã được tiếp nhận và đang trong quá trình xử lý. Chúng tôi
-							sẽ liên hệ với bạn qua số điện thoại{" "}
 							<strong className="text-sf-fg">
-								{placedOrderDetails.recipientPhone}
+								{placedOrderDetails.businessId || placedOrderDetails.id}
 							</strong>{" "}
+							của bạn đã được xác nhận. Chúng tôi sẽ liên hệ qua SĐT{" "}
+							<strong className="text-sf-fg">
+								{placedOrderDetails.phoneNumber}
+							</strong>
+							.
 						</p>
 					</div>
 
-					{/* Detailed Invoice Receipt Card */}
-					<div className="rounded-xl border text-sf-fg bg-sf-bg-elevated p-5 text-left text-xs space-y-4">
-						<h3 className="font-serif text-sm font-semibold text-sf-fg pb-2 border-b border-[#EBE5DA]/50 dark:border-[#2C2C2C]/50">
-							Hóa Đơn Chi Tiết
+					{/* Hoá đơn chi tiết */}
+					<div className="rounded-xl border text-sf-fg bg-sf-surface p-5 text-left text-xs space-y-4">
+						<h3 className="font-serif text-sm font-semibold pb-2 border-b border-[#EBE5DA]/50 dark:border-[#2C2C2C]/50">
+							Hoá Đơn Chi Tiết
 						</h3>
 
-						<div className="grid grid-cols-2 gap-y-2.5 text-[#666666] dark:text-[#A0A0A0]">
-							<div>Khởi tạo ngày:</div>
-							<div className="text-right text-sf-fg font-medium">
-								{placedOrderDetails.date}
+						{/* Danh sách sản phẩm */}
+						{placedOrderDetails.items &&
+							placedOrderDetails.items.length > 0 && (
+								<div className="border-b border-dashed border-[#EBE5DA]/50 dark:border-[#2C2C2C]/50 pb-3 space-y-2">
+									{placedOrderDetails.items.map((item, idx) => (
+										<div
+											// biome-ignore lint/suspicious/noArrayIndexKey: no unique ID
+											key={`item-${idx}`}
+											className="flex justify-between text-xs"
+										>
+											<div className="text-sf-fg-muted truncate mr-4">
+												{item.quantity}x{" "}
+												{item.productNameVn ||
+													item.productNameEng ||
+													"Sản phẩm"}
+											</div>
+											<div className="font-medium whitespace-nowrap">
+												{Number(
+													item.subtotal || item.productPrice * item.quantity,
+												).toLocaleString("vi-VN")}{" "}
+												đ
+											</div>
+										</div>
+									))}
+								</div>
+							)}
+
+						<div className="grid grid-cols-2 gap-y-2.5">
+							<div className="text-sf-fg-muted">Phương Thức:</div>
+							<div className="text-right font-medium uppercase">
+								{paymentMethod || placedOrderDetails.paymentMethod}
 							</div>
 
-							<div>Người Nhận:</div>
-							<div className="text-right text-sf-fg font-medium">
-								{placedOrderDetails.recipientName}
+							<div className="text-sf-fg-muted">Người Nhận:</div>
+							<div className="text-right font-medium">
+								{placedOrderDetails.fullname}
 							</div>
 
-							<div>Số Điện Thoại:</div>
-							<div className="text-right text-sf-fg font-medium">
-								{placedOrderDetails.recipientPhone}
-							</div>
-
-							<div>Địa Chỉ:</div>
-							<div className="text-right text-sf-fg font-medium line-clamp-1">
-								{placedOrderDetails.address}, {placedOrderDetails.district},{" "}
-								{placedOrderDetails.city}
-							</div>
-
-							<div>Phương Thức Thanh Toán:</div>
-							<div className="text-right text-sf-fg font-medium uppercase">
-								{placedOrderDetails.paymentMethod}
-							</div>
-
-							<div className="border-t border-dashed text-sf-fg pt-2.5 font-bold">
+							<div className="border-t border-dashed pt-2.5 font-bold">
 								Tổng Số Tiền:
 							</div>
-							<div className="border-t border-dashed text-sf-fg pt-2.5 text-right font-bold text-lg">
-								${placedOrderDetails.totalAmount}
+							<div className="border-t border-dashed pt-2.5 text-right font-bold text-lg text-[#C49B83]">
+								{Number(placedOrderDetails.total).toLocaleString("vi-VN")} đ
 							</div>
 						</div>
 					</div>
 
-					{paymentMethod === "Bank Transfer" && (
-						<div className="bg-amber-50 dark:bg-amber-950/30 rounded-xl p-4 border border-amber-200/50 text-left space-y-2">
-							<span className="text-xs uppercase tracking-widest font-bold text-amber-700 dark:text-amber-300 block">
-								Hướng Dẫn Thanh Toán Chuyển Khoản
-							</span>
-							<p className="text-[11px] text-amber-600 dark:text-amber-400 font-light leading-relaxed">
-								Vui lòng chuyển khoản đúng số tiền{" "}
-								<strong className="text-base font-bold">
-									${placedOrderDetails.totalAmount}
-								</strong>{" "}
-								Tới VPBank:{" "}
-								<strong className="font-semibold text-sf-fg">50041808</strong>{" "}
-								(SOULFLOW LTD) with memo content{" "}
-								<strong className="font-semibold text-sf-fg">
-									{placedOrderDetails.id}
-								</strong>
-								.
-							</p>
-						</div>
-					)}
-
 					<div className="pt-4">
 						<Link
-							id="checkout-receipt-back-btn"
 							href={soulFlowRoutes.home}
-							className="inline-block px-6 py-3 rounded-full bg-amber-600 text-white dark:text-[#1A1A1A] text-xs font-bold uppercase tracking-widest hover:bg-[#C49B83] dark:hover:bg-[#C49B83] hover:text-white dark:hover:text-white transition-colors duration-200"
+							className="inline-block px-6 py-3 rounded-full bg-amber-600 text-white text-xs font-bold uppercase tracking-widest hover:bg-[#C49B83] transition-colors"
 						>
-							Tiếp Tục Khám Phá Cửa Hàng
+							Tiếp Tục Mua Sắm
 						</Link>
 					</div>
 				</motion.div>
@@ -191,6 +610,9 @@ export function CheckoutForm() {
 		);
 	}
 
+	// ==========================================
+	// MÀN HÌNH CHÍNH: FORM ĐIỀN THÔNG TIN
+	// ==========================================
 	return (
 		<div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 bg-sf-bg-elevated transition-colors duration-300">
 			<div className="text-center space-y-2 mb-10">
@@ -198,403 +620,302 @@ export function CheckoutForm() {
 					Thanh Toán An Toàn
 				</span>
 				<h1 className="font-serif text-3xl sm:text-4xl font-light text-sf-fg">
-					Kiểm Tra Và Xác Nhận Đơn Hàng Của Bạn
+					Xác Nhận Đơn Hàng Của Bạn
 				</h1>
 			</div>
 
 			{cart.length === 0 ? (
 				<div className="text-center py-20 bg-sf-bg-elevated rounded-2xl border text-sf-fg max-w-md mx-auto">
 					<ShoppingBag className="mx-auto h-10 w-10 text-[#C49B83] opacity-65 mb-4" />
-					<h3 className="font-serif text-lg text-sf-fg">
-						Giỏ hàng của bạn đang trống!
-					</h3>
-					<p className="text-xs text-[#666666] dark:text-[#A0A0A0] mt-1 max-w-xs mx-auto leading-relaxed font-light">
-						Vui lòng thêm một số sản phẩm vào giỏ hàng của bạn để bắt đầu quy
-						trình thanh toán.
-					</p>
+					<h3 className="font-serif text-lg">Giỏ hàng của bạn đang trống!</h3>
 				</div>
 			) : (
 				<form
-					onSubmit={handlePlaceOrder}
+					onSubmit={handleSubmit(onSubmit)}
 					className="grid grid-cols-1 gap-10 lg:grid-cols-12 items-start"
 				>
-					{/* Left Columns - Details Form & Payments */}
+					{/* CỘT TRÁI: THÔNG TIN VÀ PHƯƠNG THỨC TT */}
 					<div className="lg:col-span-7 space-y-6">
-						{/* Recipient details card */}
+						{/* Box 1: Người nhận */}
 						<div className="bg-sf-bg-elevated p-6 rounded-2xl border border-[#EBE5DA] dark:border-[#222222] shadow-xs space-y-4">
-							<h2 className="font-serif text-lg font-semibold text-sf-fg flex items-center gap-2 border-b border-[#EBE5DA] dark:border-[#222222] pb-3">
-								<Truck className="h-4.5 w-4.5 text-[#C49B83]" />
-								1. Thông Tin Người Nhận
+							<h2 className="font-serif text-lg font-semibold flex items-center gap-2 border-b border-[#EBE5DA] pb-3">
+								<Truck className="h-4.5 w-4.5 text-[#C49B83]" /> 1. Thông Tin
+								Nhận Hàng
 							</h2>
-
 							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 								<div className="space-y-1">
 									<label
-										htmlFor="recipient-name-input"
-										className="text-sm uppercase tracking-wider font-bold text-[#666666] dark:text-[#A0A0A0]"
+										htmlFor="checkout-fullname"
+										className="text-sm uppercase font-bold text-[#666666]"
 									>
 										Tên Người Nhận
 									</label>
 									<input
-										id="recipient-name-input"
-										type="text"
-										required
-										value={recipientName}
-										onChange={(e) => setRecipientName(e.target.value)}
-										className="w-full text-xs rounded-lg border bg-sf-bg-elevated text-sf-fg p-3 outline-none focus:border-[#C49B83]"
+										id="checkout-fullname"
+										{...register("fullName")}
+										className={`w-full text-xs rounded-lg border bg-sf-surface p-3 outline-none ${errors.fullName ? "border-red-500" : ""}`}
 									/>
+									{errors.fullName && (
+										<p className="text-red-500 text-[10px] mt-1">
+											{errors.fullName.message}
+										</p>
+									)}
 								</div>
-
 								<div className="space-y-1">
 									<label
-										htmlFor="recipient-phone-input"
-										className="text-sm uppercase tracking-wider font-bold text-[#666666] dark:text-[#A0A0A0]"
+										htmlFor="checkout-phone"
+										className="text-sm uppercase font-bold text-[#666666]"
 									>
-										Số Điện Thoại Người Nhận
+										SĐT
 									</label>
 									<input
-										id="recipient-phone-input"
+										id="checkout-phone"
 										type="tel"
-										required
-										value={recipientPhone}
-										onChange={(e) => setRecipientPhone(e.target.value)}
-										className="w-full text-xs rounded-lg border text-sf-fg bg-sf-bg-elevated p-3 outline-none focus:border-[#C49B83]"
+										{...register("phone")}
+										className={`w-full text-xs rounded-lg border bg-sf-surface p-3 outline-none ${errors.phone ? "border-red-500" : ""}`}
 									/>
+									{errors.phone && (
+										<p className="text-red-500 text-[10px] mt-1">
+											{errors.phone.message}
+										</p>
+									)}
 								</div>
 							</div>
 
-							{/* Cascade selectors */}
-							<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-4">
 								<div className="space-y-1">
 									<label
-										htmlFor="city-select"
-										className="text-sm uppercase tracking-wider font-bold text-[#666666] dark:text-[#A0A0A0]"
+										htmlFor="checkout-city"
+										className="text-sm uppercase font-bold text-[#666666]"
 									>
-										Tỉnh / Thành phố
+										Tỉnh/Thành phố
 									</label>
 									<select
-										id="city-select"
-										value={selectedCity}
-										onChange={(e) => {
-											setSelectedCity(e.target.value);
-											const city = locationData.find(
-												(c) => c.code === e.target.value,
-											);
-											if (city && city.districts.length > 0) {
-												setSelectedDistrict(city.districts[0]);
-											}
-										}}
-										className="w-full text-xs rounded-lg border text-sf-fg bg-sf-bg-elevated p-3 outline-none focus:border-[#C49B83] cursor-pointer animate-none"
+										id="checkout-city"
+										{...register("city")}
+										className={`w-full text-xs rounded-lg border bg-sf-surface p-3 outline-none ${errors.city ? "border-red-500" : ""}`}
 									>
-										{locationData.map((city) => (
-											<option key={city.code} value={city.code}>
-												{city.name}
+										<option value="">Chọn Tỉnh/Thành phố</option>
+										{(locationData || []).map((c) => (
+											<option key={c.code} value={c.code}>
+												{c.name}
 											</option>
 										))}
 									</select>
+									{errors.city && (
+										<p className="text-red-500 text-[10px] mt-1">
+											{errors.city.message}
+										</p>
+									)}
 								</div>
-
 								<div className="space-y-1">
 									<label
-										htmlFor="district-select"
-										className="text-sm uppercase tracking-wider font-bold text-[#666666] dark:text-[#A0A0A0]"
+										htmlFor="checkout-district"
+										className="text-sm uppercase font-bold text-[#666666]"
 									>
 										Quận/Huyện
 									</label>
 									<select
-										id="district-select"
-										value={selectedDistrict}
-										onChange={(e) => setSelectedDistrict(e.target.value)}
-										className="w-full text-xs rounded-lg border text-sf-fg bg-sf-bg-elevated p-3 outline-none focus:border-[#C49B83] cursor-pointer"
+										id="checkout-district"
+										{...register("district")}
+										className={`w-full text-xs rounded-lg border bg-sf-surface p-3 outline-none ${errors.district ? "border-red-500" : ""}`}
 									>
-										{/* {districtsOfCity.map((dist) => (
-											<option key={dist} value={dist}>
-												{dist}
+										<option value="">Chọn Quận/Huyện</option>
+										{(
+											(locationData || []).find(
+												(c) => String(c.code) === String(selectedCity),
+											)?.districts || []
+										).map((d: any) => (
+											<option key={d.code || d} value={d.code || d}>
+												{d.name || d}
 											</option>
-										))} */}
+										))}
 									</select>
+									{errors.district && (
+										<p className="text-red-500 text-[10px] mt-1">
+											{errors.district.message}
+										</p>
+									)}
 								</div>
+							</div>
 
+							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-4">
 								<div className="space-y-1">
 									<label
-										htmlFor="ward-input"
-										className="text-sm uppercase tracking-wider font-bold text-[#666666] dark:text-[#A0A0A0]"
+										htmlFor="checkout-ward"
+										className="text-sm uppercase font-bold text-[#666666]"
 									>
 										Phường/Xã
 									</label>
-									<input
-										id="ward-input"
-										type="text"
-										required
-										value={ward}
-										onChange={(e) => setWard(e.target.value)}
-										placeholder="Thảo Điền Ward"
-										className="w-full text-xs rounded-lg border bg-sf-bg-elevated text-sf-fg p-3 outline-none focus:border-[#C49B83]"
-									/>
+									<select
+										id="checkout-ward"
+										{...register("ward")}
+										className={`w-full text-xs rounded-lg border bg-sf-surface p-3 outline-none ${errors.ward ? "border-red-500" : ""}`}
+									>
+										<option value="">Chọn Phường/Xã</option>
+										{(
+											(locationData || [])
+												.find((c) => String(c.code) === String(selectedCity))
+												?.districts?.find(
+													(d: any) =>
+														String(d.code) === String(selectedDistrict) ||
+														d.name === selectedDistrict,
+												)?.wards || []
+										).map((w: any) => (
+											<option key={w.code || w} value={w.code || w}>
+												{w.name || w}
+											</option>
+										))}
+									</select>
+									{errors.ward && (
+										<p className="text-red-500 text-[10px] mt-1">
+											{errors.ward.message}
+										</p>
+									)}
 								</div>
-							</div>
-
-							<div className="space-y-1">
-								<label
-									htmlFor="address-street"
-									className="text-sm uppercase tracking-wider font-bold text-[#666666] dark:text-[#A0A0A0]"
-								>
-									Địa Chỉ Đường phố & Căn Hộ
-								</label>
-								<input
-									id="address-street"
-									type="text"
-									required
-									value={address}
-									onChange={(e) => setAddress(e.target.value)}
-									className="w-full text-xs rounded-lg border text-sf-fg bg-sf-bg-elevated p-3 outline-none focus:border-[#C49B83]"
-								/>
+								<div className="space-y-1">
+									<label
+										htmlFor="checkout-address"
+										className="text-sm uppercase font-bold text-[#666666]"
+									>
+										Số nhà, tên đường
+									</label>
+									<input
+										id="checkout-address"
+										{...register("address")}
+										placeholder="Nhập địa chỉ cụ thể"
+										className={`w-full text-xs rounded-lg border bg-sf-surface p-3 outline-none ${errors.address ? "border-red-500" : ""}`}
+									/>
+									{errors.address && (
+										<p className="text-red-500 text-[10px] mt-1">
+											{errors.address.message}
+										</p>
+									)}
+								</div>
 							</div>
 						</div>
 
-						{/* Vietnam Payment Options with Tabs */}
+						{/* Box 2: Payment Methods (Thu gọn lại 2 cái) */}
 						<div className="bg-sf-bg-elevated p-6 rounded-2xl border border-[#EBE5DA] dark:border-[#222222] shadow-xs space-y-4">
-							<h2 className="font-serif text-lg font-semibold text-sf-fg flex items-center gap-2 border-b border-[#EBE5DA] dark:border-[#222222] pb-3">
-								<CreditCard className="h-4.5 w-4.5 text-[#C49B83]" />
-								2. Chọn Phương Thức Thanh Toán
+							<h2 className="font-serif text-lg font-semibold flex items-center gap-2 border-b border-[#EBE5DA] pb-3">
+								<CreditCard className="h-4.5 w-4.5 text-[#C49B83]" /> 2. Phương
+								Thức Thanh Toán
 							</h2>
-
-							<div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 								{[
 									{
-										id: "VNPAY" as const,
-										label: "VNPAY QR-PAY",
-										desc: "Quét mã VNPay an toàn, không cần nhập liệu thủ công. Hoàn hảo cho người dùng địa phương.",
+										id: "SEPAY" as const,
+										label: "Chuyển Khoản Mã QR",
+										desc: "Tự động xác nhận qua SePay.",
 									},
 									{
-										id: "MoMo" as const,
-										label: "MOMO E-WALLET",
-										desc: "Thanh toán an toàn thông qua nền tảng ứng dụng di động MoMo.",
-									},
-									{
-										id: "Bank Transfer" as const,
-										label: "BANK TRANSFER",
-										desc: "Chuyển khoản ngân hàng nhanh chóng với ghi chú đơn hàng.",
+										id: "COD" as const,
+										label: "Thanh Toán Khi Nhận Hàng",
+										desc: "Thanh toán bằng tiền mặt (COD).",
 									},
 								].map((pay) => {
 									const isChose = paymentMethod === pay.id;
 									return (
 										<button
-											id={`payment-btn-${pay.id.toLowerCase().replace(/\s+/g, "-")}`}
 											key={pay.id}
 											type="button"
 											onClick={() => setPaymentMethod(pay.id)}
-											className={`text-left p-3.5 rounded-xl border transition-all duration-300 flex flex-col justify-between h-24 ${
+											className={`text-left p-4 rounded-xl border transition-all h-24 flex flex-col justify-between ${
 												isChose
-													? "border-[#C49B83] bg-[#C49B83]/5 ring-1 ring-[#C49B83]"
-													: "text-sf-fg hover:border-[#C49B83]"
+													? "border-[#C49B83] bg-[#C49B83]/10 ring-1 ring-[#C49B83]"
+													: "hover:border-[#C49B83]"
 											}`}
 										>
-											<span className="block text-xs font-semibold text-sf-fg uppercase">
+											<span className="text-sm font-semibold uppercase">
 												{pay.label}
 											</span>
-											<p className="text-xs text-[#888888] font-light leading-tight">
-												{pay.desc}
-											</p>
-											{isChose && (
-												<div className="flex h-3 w-3 self-end rounded-full bg-[#C49B83]" />
-											)}
+											<p className="text-xs text-sf-fg-muted">{pay.desc}</p>
 										</button>
 									);
 								})}
 							</div>
-
-							{/* Payment Instructions boxes based on selection */}
-							<AnimatePresence mode="wait">
-								{paymentMethod === "VNPAY" && (
-									<motion.div
-										key="vnpay"
-										initial={{ opacity: 0, height: 0 }}
-										animate={{ opacity: 1, height: "auto" }}
-										exit={{ opacity: 0, height: 0 }}
-										className="p-4 bg-red-50/50 dark:bg-red-950/25 border border-red-200/50 rounded-xl space-y-3"
-									>
-										<span className="text-xs font-bold tracking-widest text-[#D9381E] uppercase block">
-											Hướng Dẫn Thanh Toán VNPAY QR-PAY
-										</span>
-										<p className="text-xs text-[#D9381E] font-light leading-relaxed">
-											A secured dynamic VNPay QR code will be generated on
-											confirmation. Perfect for effortless local payouts.
-										</p>
-										<div className="inline-flex items-center gap-1.5 rounded-md bg-white border border-[#EBE5DA] p-1.5">
-											<span className="text-sm font-mono font-bold text-black shadow-xs">
-												VNPAY - QR PAY ENABLED
-											</span>
-										</div>
-									</motion.div>
-								)}
-
-								{paymentMethod === "MoMo" && (
-									<motion.div
-										key="momo"
-										initial={{ opacity: 0, height: 0 }}
-										animate={{ opacity: 1, height: "auto" }}
-										exit={{ opacity: 0, height: 0 }}
-										className="p-4 bg-pink-50/50 dark:bg-pink-950/25 border border-pink-200/50 rounded-xl space-y-3"
-									>
-										<span className="text-xs font-bold tracking-widest text-[#D82685] uppercase block">
-											Instructions
-										</span>
-										<p className="text-xs text-[#D82685] font-light leading-relaxed">
-											Pay instantly with MoMo wallet on confirmation. Ensure
-											your mobile billing credentials matches properly.
-										</p>
-									</motion.div>
-								)}
-
-								{paymentMethod === "Bank Transfer" && (
-									<motion.div
-										key="bank"
-										initial={{ opacity: 0, height: 0 }}
-										animate={{ opacity: 1, height: "auto" }}
-										exit={{ opacity: 0, height: 0 }}
-										className="p-4 bg-sf-surface rounded-xl space-y-3"
-									>
-										<span className="text-xs font-bold tracking-widest text-[#C49B83] uppercase block">
-											Atelier Settlement Credentials
-										</span>
-										<div className="text-xs text-sf-fg space-y-2">
-											<p className="font-light leading-relaxed">
-												Manually transfer exactly the total invoice sum to our
-												secure central shop reserves:
-											</p>
-
-											<div className="bg-sf-bg-elevated p-3 rounded-lg border text-sf-fg space-y-1 relative">
-												<p>
-													<strong className="font-normal text-sf-fg">
-														Ngân Hàng:
-													</strong>{" "}
-													VPBank
-												</p>
-												<p>
-													<strong className="font-normal text-sf-fg">
-														Số Tài Khoản:
-													</strong>{" "}
-													00000000
-												</p>
-												<p>
-													<strong className="font-normal text-sf-fg">
-														Tên Chủ Tài Khoản:
-													</strong>{" "}
-													SOULFLOW FLOWER SHOP
-												</p>
-
-												<button
-													id="copy-bank-details"
-													type="button"
-													onClick={handleCopyBank}
-													className="absolute right-3 top-3 p-1.5 border text-sf-fg rounded-md hover:bg-[#FCFAF7] dark:hover:bg-[#161616]"
-													title="Copy details"
-												>
-													<Clipboard className="h-3.5 w-3.5 text-gray-500" />
-												</button>
-												{clipboardCopied && (
-													<span className="absolute right-12 top-4 text-xs text-green-500 font-bold uppercase">
-														Đã sao chép!
-													</span>
-												)}
-											</div>
-										</div>
-									</motion.div>
-								)}
-							</AnimatePresence>
 						</div>
 					</div>
 
-					{/* Right Column - Order Summary Billing */}
+					{/* CỘT PHẢI: BILLING (Giữ nguyên giao diện của bạn) */}
 					<div className="lg:col-span-5 bg-sf-bg-elevated p-6 rounded-2xl border border-[#EBE5DA] dark:border-[#222222] shadow-xs space-y-5">
-						<h2 className="font-serif text-lg font-semibold text-sf-fg pb-3 border-b border-[#EBE5DA] dark:border-[#222222] flex items-center gap-2">
-							<ShoppingBag className="h-4.5 w-4.5 text-[#C49B83]" />
-							3. Đơn Hàng Của Bạn
+						<h2 className="font-serif text-lg font-semibold pb-3 border-b border-[#EBE5DA] flex items-center gap-2">
+							<ShoppingBag className="h-4.5 w-4.5 text-[#C49B83]" /> 3. Đơn Hàng
+							Của Bạn
 						</h2>
 
-						{/* List items */}
 						<div className="space-y-4 max-h-55 overflow-y-auto pr-2 scrollbar-none">
 							{cart.map((item) => (
 								<div
-									key={item.id}
+									key={item.product.id}
 									className="flex gap-3 justify-between items-start text-xs border-b border-sf-border pb-3"
 								>
 									<div className="flex gap-2">
-										<div className="relative h-10 w-10 rounded-sm overflow-hidden bg-sf-bg">
+										{/* <div className="relative h-10 w-10 rounded-sm overflow-hidden bg-sf-bg">
 											<Image
-												src={item.flower.image}
-												alt={item.flower.name}
+												src={item.product.image}
+												alt={item.product.name}
 												className="h-10 w-10 rounded-sm object-cover grayscale-1/10 shrink-0"
 												referrerPolicy="no-referrer"
 												fill
 												sizes="40px"
 											/>
-										</div>
+										</div> */}
 										<div>
-											<h4 className="font-serif font-semibold text-[#1A1A1A] dark:text-white line-clamp-1 leading-tight">
-												{item.flower.name}
+											<h4 className="font-serif font-semibold text-sf-fg line-clamp-1 leading-tight">
+												{item.product.nameVn}
 											</h4>
-											<p className="text-sm text-[#A0A0A0] mt-0.5">
-												Size: {item.selectedSize} · Số lượng: {item.quantity}
-											</p>
 										</div>
 									</div>
-									<span className="font-bold text-[#1A1A1A] dark:text-white">
-										${item.priceUnit * item.quantity}
+									<span className="font-bold text-sf-fg">
+										{(item.product.price * item.quantity).toLocaleString(
+											"vi-VN",
+										)}{" "}
+										đ
 									</span>
 								</div>
 							))}
 						</div>
 
-						{/* Invoice summaries */}
-						<div className="space-y-2 text-xs border-t border-sf-border pt-4">
-							<div className="flex justify-between text-[#666666] dark:text-[#A0A0A0]">
+						<div className="space-y-2 text-xs pt-4">
+							<div className="flex justify-between">
+								<span>Phí Ship</span>
+								<span>{shippingFee.toLocaleString("vi-VN")} đ</span>
+							</div>
+							<div className="flex justify-between">
 								<span>Thành Tiền</span>
-								<span>${subtotal}</span>
+								<span>{subtotal.toLocaleString("vi-VN")} đ</span>
 							</div>
 							{discount > 0 && (
 								<div className="flex justify-between text-green-500 font-semibold uppercase">
 									<span>Khuyến mãi</span>
-									<span>-${discount.toFixed(0)}</span>
+									<span>-{discount.toLocaleString("vi-VN")} đ</span>
 								</div>
 							)}
-							<div className="flex justify-between text-[#666666] dark:text-[#A0A0A0]">
-								<span>Phí Vận Chuyển</span>
-								<span>${shippingFee}</span>
-							</div>
-							<div className="flex justify-between font-bold text-sm text-sf-fg border-t border-sf-border pt-3">
+							<div className="flex justify-between font-bold text-sm border-t border-sf-border pt-3">
 								<span>Tổng Cộng</span>
-								<span className="text-[#C49B83] text-base font-bold">
-									${total.toFixed(0)}
+								<span className="text-[#C49B83] text-base">
+									{total.toLocaleString("vi-VN")} đ
 								</span>
 							</div>
 						</div>
 
-						{/* Place Order Trigger */}
 						<button
-							id="checkout-submit-btn"
+							disabled={isSubmitting || isPlacingOrder || !paymentMethod}
 							type="submit"
-							className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#1A1A1A] dark:bg-[#FCFAF7] py-4 text-xs font-bold uppercase tracking-widest text-white dark:text-[#1F1A16] hover:bg-[#C49B83] dark:hover:bg-[#C49B83] hover:text-white dark:hover:text-white transition-all duration-300 shadow-md"
+							className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#1A1A1A] py-4 text-xs font-bold uppercase text-white hover:bg-[#C49B83] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
 						>
-							<Check className="h-4 w-4 text-[#C49B83]" />
-							Xác Nhận Thanh Toán
+							{isSubmitting || isPlacingOrder ? (
+								<Loader2 className="h-4 w-4 animate-spin" />
+							) : (
+								<Check className="h-4 w-4" />
+							)}
+							{isSubmitting || isPlacingOrder
+								? "Đang Xử Lý..."
+								: !paymentMethod
+									? "Vui lòng chọn P.Thức TT"
+									: "Xác Nhận Thanh Toán"}
 						</button>
-						<p className="text-sm text-center text-[#888888] font-light leading-normal flex items-start justify-center gap-2">
-							<input type="checkbox" required className="mt-1.5 h-3 w-3" />
-
-							<span>
-								Khi đặt hàng, bạn đã đồng ý với{" "}
-								<Link
-									href={soulFlowRoutes.terms}
-									target="_blank"
-									rel="noopener noreferrer"
-									className="text-[#C49B83] hover:underline"
-								>
-									Điều khoản và Điều kiện
-								</Link>
-							</span>
-						</p>
 					</div>
 				</form>
 			)}
