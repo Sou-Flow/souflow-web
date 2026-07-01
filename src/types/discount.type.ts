@@ -2,7 +2,7 @@
 
 // 1. Dữ liệu thô BE trả về (bảng discounts)
 export interface DiscountResponseDTO {
-	id: number; // Map từ 'pk'
+	pk: number; // Map từ 'pk'
 	code: string; // Map từ 'id' (VARCHAR) - mã giảm giá VD: SOULWINTER
 	percentage: number; // Map từ 'percentage' (FLOAT)
 	descriptionVn: string | null;
@@ -31,7 +31,7 @@ export const mapDiscountResponseToFE = (
 	dto: DiscountResponseDTO,
 ): DiscountFE => {
 	return {
-		id: dto.id,
+		id: dto.pk,
 		code: dto.code,
 		percentage: dto.percentage,
 		descriptionVn: dto.descriptionVn || "",

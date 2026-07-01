@@ -8,7 +8,7 @@ export interface ProductQueryRequestDTO {
 
 // 2. Dữ liệu thô BE trả về (Product)
 export interface ProductResponseDTO {
-	id: number; // Map từ 'pk'
+	pk: number; // Map từ 'pk'
 	businessId?: string; // ID string mới của BE
 	code: string; // Map từ 'id' (vd: PROD001)
 	nameVn: string;
@@ -22,6 +22,7 @@ export interface ProductResponseDTO {
 	sales: number;
 	delIf: boolean;
 	categoryId: number; // Map từ 'category_pk'
+	imageUrl?: string; // Link ảnh từ MinIO
 }
 
 // 3. Dữ liệu sạch cho FE xài
@@ -41,15 +42,30 @@ export interface ProductFE {
 	totalSales: number;
 	isActive: boolean;
 	categoryId: number;
-	// thumbnail: string;     // Lên FE chừa sẵn field này, mốt map table Images vào sau
+	imageUrl: string;
+	images: string[];
+	comments: {
+		id: string;
+		author: string;
+		content: string;
+		timestamp: string;
+		replies: {
+			id: string;
+			author: string;
+			content: string;
+			timestamp: string;
+		}[];
+	}[];
 }
 
 export interface FlexibleProductDTO {
 	id?: number | string;
 	businessId?: string;
-	pk?: number;
-	productPk?: number;
-	product_pk?: number;
+	pk?: number | string;
+	productPk?: number | string;
+	product_pk?: number | string;
+	productId?: number | string;
+	product_id?: number | string;
 	code?: string;
 	nameVn?: string;
 	name_vn?: string;
@@ -61,21 +77,45 @@ export interface FlexibleProductDTO {
 	product_name_eng?: string;
 	descriptionVn?: string;
 	description_vn?: string;
+	description?: string;
 	descriptionEng?: string;
 	description_eng?: string;
-	price?: number;
-	productPrice?: number;
-	product_price?: number;
+	price?: number | string;
+	productPrice?: number | string;
+	product_price?: number | string;
 	createdDate?: string;
 	created_date?: string;
-	available?: boolean;
-	quantity?: number;
-	sales?: number;
-	delIf?: boolean;
-	del_if?: boolean;
-	categoryId?: number;
-	category_pk?: number;
-	categoryPk?: number;
+	available?: boolean | string;
+	quantity?: number | string;
+	stockQuantity?: number | string;
+	stock_quantity?: number | string;
+	sales?: number | string;
+	sold?: number | string;
+	soldQuantity?: number | string;
+	sold_quantity?: number | string;
+	totalSales?: number | string;
+	total_sales?: number | string;
+	delIf?: boolean | string;
+	del_if?: boolean | string;
+	categoryId?: number | string;
+	category_pk?: number | string;
+	categoryPk?: number | string;
+	imageUrl?: string;
+	productImageResponses?: { url?: string; name?: string }[];
+	commentResponses?: {
+		pk?: string | number;
+		fullname?: string;
+		username?: string;
+		content?: string;
+		createdDate?: string;
+		replyResponses?: {
+			pk?: string | number;
+			fullname?: string;
+			username?: string;
+			content?: string;
+			createdDate?: string;
+		}[];
+	}[];
 }
 
 export const mapProductResponseToFE = (
@@ -98,19 +138,26 @@ export const mapProductResponseToFE = (
 			totalSales: 0,
 			isActive: false,
 			categoryId: 0,
+			imageUrl: "/images/about-us-main1.avif",
+			images: [],
+			comments: [],
 		};
 	}
 
-	const price = dto.price || dto.productPrice || dto.product_price || 0;
+	const price = Number(dto.price || dto.productPrice || dto.product_price || 0);
 
 	// Backend có thể trả về 'pk' là ID số (Long), và 'id' là mã chữ (String, vd PROD001)
 	const numericId =
-		dto.pk ??
-		dto.productPk ??
-		dto.product_pk ??
-		(typeof dto.id === "number" ? dto.id : 0);
+		Number(
+			dto.pk ??
+				dto.productPk ??
+				dto.product_pk ??
+				dto.productId ??
+				dto.product_id ??
+				(typeof dto.id === "number" ? dto.id : Number(dto.id) || 0),
+		) || 0;
 	const stringCode =
-		dto.code ?? (typeof dto.id === "string" ? dto.id : String(numericId));
+		dto.code ?? dto.businessId ?? (dto.id ? String(dto.id) : String(numericId));
 	const businessId = dto.businessId || stringCode;
 
 	return {
@@ -129,8 +176,10 @@ export const mapProductResponseToFE = (
 			dto.productNameEng ||
 			dto.product_name_eng ||
 			"Premium Flower",
-		descriptionVn: dto.descriptionVn || dto.description_vn || "",
-		descriptionEng: dto.descriptionEng || dto.description_eng || "",
+		descriptionVn:
+			dto.descriptionVn || dto.description_vn || dto.description || "",
+		descriptionEng:
+			dto.descriptionEng || dto.description_eng || dto.description || "",
 		price: price,
 		formattedPrice: new Intl.NumberFormat("vi-VN", {
 			style: "currency",
@@ -138,10 +187,43 @@ export const mapProductResponseToFE = (
 		}).format(price),
 		createdDate:
 			dto.createdDate || dto.created_date || new Date().toISOString(),
-		isAvailable: dto.available ?? true,
-		stockQuantity: dto.quantity ?? 1,
-		totalSales: dto.sales || 0,
+		isAvailable: dto.available !== false && dto.available !== "false",
+		stockQuantity: Number(
+			dto.quantity ?? dto.stockQuantity ?? dto.stock_quantity ?? 0,
+		),
+		totalSales: Number(
+			dto.sales ??
+				dto.sold ??
+				dto.soldQuantity ??
+				dto.sold_quantity ??
+				dto.totalSales ??
+				dto.total_sales ??
+				0,
+		),
 		isActive: !(dto.delIf || dto.del_if),
-		categoryId: dto.categoryId || dto.category_pk || dto.categoryPk || 0,
+		categoryId:
+			Number(dto.categoryId || dto.category_pk || dto.categoryPk) || 0,
+		imageUrl: String(
+			dto.imageUrl ||
+				dto.productImageResponses?.[0]?.url ||
+				dto.productImageResponses?.[0]?.name ||
+				"/images/about-us-main1.avif",
+		).replace(/([^:]\/)\/+/g, "$1"),
+		images:
+			dto.productImageResponses?.map((img) =>
+				String(img.url || img.name || "").replace(/([^:]\/)\/+/g, "$1"),
+			) || [],
+		comments: (dto.commentResponses || []).map((c) => ({
+			id: String(c.pk || ""),
+			author: c.fullname || c.username || "Khách",
+			content: c.content || "",
+			timestamp: c.createdDate || "",
+			replies: (c.replyResponses || []).map((r) => ({
+				id: String(r.pk || ""),
+				author: r.fullname || r.username || "Admin",
+				content: r.content || "",
+				timestamp: r.createdDate || "",
+			})),
+		})),
 	};
 };

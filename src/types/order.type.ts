@@ -21,10 +21,11 @@ export interface OrderDetailRequestDTO {
 
 export interface OrderRequestDTO {
 	fullname: string; // Map vào 'fullname' trong bảng orders
-	phoneNumber: string; // Trả lại camelCase
+	phone: string; // Match BE field 'phone'
 	address: string; // Map vào 'address'
-	cartId: number; // Trả lại camelCase
+	orderDetailRequests: OrderDetailRequestDTO[]; // Gửi danh sách sản phẩm thay vì cartId
 	paymentMethod: string; // Thêm trường paymentMethod cho dual-payment (COD, SEPAY)
+	shippingFee?: number; // Truyền phí ship lên Backend
 }
 
 // ===== ORDER RESPONSE (BE trả về) =====
@@ -62,6 +63,7 @@ export interface OrderDetailFE {
 	productPrice: number;
 	quantity: number;
 	subtotal: number;
+	productImage?: string;
 }
 
 // 4. Đơn hàng - Dữ liệu sạch cho FE
@@ -73,6 +75,7 @@ export interface OrderFE {
 	phoneNumber: string;
 	address: string;
 	total: number;
+	shippingFee: number;
 	status: string;
 	createdDate: string;
 	isExpired: boolean;
@@ -85,42 +88,112 @@ export interface OrderFE {
 // biome-ignore lint/suspicious/noExplicitAny: skip
 export const mapOrderDetailResponseToFE = (dto: any): OrderDetailFE => {
 	// Hỗ trợ cả 2 trường hợp: BE trả về phẳng (dto.productNameVn) hoặc lồng trong object product (dto.product.productNameVn)
-	const product = dto.product || {};
+	const product = dto.product || dto.flower || dto.item || {};
 
-	return {
-		productNameVn:
-			dto.productNameVn ||
-			dto.product_name_vn ||
-			product.nameVn ||
-			product.name_vn ||
-			product.productNameVn ||
-			product.product_name_vn ||
-			"Hoa Tuyển Chọn",
-		productNameEng:
-			dto.productNameEng ||
-			dto.product_name_eng ||
-			product.nameEng ||
-			product.name_eng ||
-			product.productNameEng ||
-			product.product_name_eng ||
-			"Premium Flower",
-		productPrice:
-			dto.productPrice ||
+	// Gom tất cả các key có thể chứa tên
+	const mappedNameVn =
+		dto.productNameVn ||
+		dto.product_name_vn ||
+		dto.productName ||
+		dto.product_name ||
+		dto.nameVn ||
+		dto.name_vn ||
+		dto.name ||
+		dto.flowerName ||
+		dto.title ||
+		product.nameVn ||
+		product.name_vn ||
+		product.productNameVn ||
+		product.product_name_vn ||
+		product.productName ||
+		product.name ||
+		product.title ||
+		"Hoa Tuyển Chọn";
+
+	const mappedNameEng =
+		dto.productNameEng ||
+		dto.product_name_eng ||
+		dto.nameEng ||
+		dto.name_eng ||
+		product.nameEng ||
+		product.name_eng ||
+		product.productNameEng ||
+		product.product_name_eng ||
+		"Premium Flower";
+
+	// Gom tất cả các key có thể chứa giá
+	const mappedPrice = Number(
+		dto.productPrice ||
 			dto.product_price ||
+			dto.price ||
+			dto.unitPrice ||
+			dto.unit_price ||
+			dto.amount ||
 			product.price ||
 			product.product_price ||
+			product.productPrice ||
+			product.unitPrice ||
 			0,
-		quantity: dto.quantity || 1,
-		subtotal:
-			dto.subtotal ||
-			(dto.quantity || 1) * (dto.productPrice || product.price || 0) ||
+	);
+
+	const mappedQuantity = Number(dto.quantity || dto.qty || dto.amount || 1);
+
+	const mappedSubtotal = Number(
+		dto.subtotal ||
+			dto.sub_total ||
+			dto.totalPrice ||
+			dto.total_price ||
+			mappedQuantity * mappedPrice ||
 			0,
+	);
+
+	// Gom tất cả các key có thể chứa ảnh
+	const rawImage =
+		dto.productImage ||
+		dto.product_image ||
+		dto.imageUrl ||
+		dto.imageURL ||
+		dto.image_url ||
+		dto.image ||
+		dto.picture ||
+		dto.thumbnail ||
+		dto.url ||
+		product?.imageUrl ||
+		product?.imageURL ||
+		product?.image_url ||
+		product?.image ||
+		product?.productImage ||
+		product?.product_image ||
+		product?.picture ||
+		product?.thumbnail ||
+		product?.url ||
+		product?.productImageResponses?.[0]?.url ||
+		product?.productImageResponses?.[0]?.name ||
+		product?.images?.[0] ||
+		"";
+
+	// Lọc bỏ chuỗi "null" do BE vô tình parse sai
+	const isValidImage =
+		rawImage && rawImage !== "null" && rawImage !== "undefined";
+	const mappedImage = isValidImage
+		? String(rawImage).replace(/([^:]\/)\/+/g, "$1")
+		: "";
+
+	return {
+		productNameVn: mappedNameVn,
+		productNameEng: mappedNameEng,
+		productPrice: mappedPrice,
+		quantity: mappedQuantity,
+		subtotal: mappedSubtotal,
+		productImage: mappedImage,
 	};
 };
 
 // biome-ignore lint/suspicious/noExplicitAny: skip
 export const mapOrderResponseToFE = (dto: any): OrderFE => {
 	const rawItems =
+		dto.orderDetailResponses ||
+		dto.order_detail_responses ||
 		dto.items ||
 		dto.details ||
 		dto.orderDetails ||
@@ -134,15 +207,27 @@ export const mapOrderResponseToFE = (dto: any): OrderFE => {
 		id: dto.id || String(dto.pk),
 		businessId: dto.businessId || dto.id || String(dto.pk),
 		fullname: dto.fullname || dto.fullName || dto.full_name || "Khách hàng",
-		phoneNumber: dto.phoneNumber || dto.phone_number || "",
+		phoneNumber: dto.phone || dto.phoneNumber || dto.phone_number || "",
 		address: dto.address || "",
 		total: dto.total || 0,
+		shippingFee: Number(
+			dto.shippingFee || dto.shipping_fee || dto.shipping || dto.fee || 0,
+		),
 		status: dto.status || "PENDING",
 		createdDate:
 			dto.createdDate || dto.created_date || new Date().toISOString(),
 		isExpired: !!dto.expired,
 		isActive: !dto.delIf && !dto.del_if,
-		items: rawItems.map(mapOrderDetailResponseToFE),
-		paymentMethod: dto.paymentMethod || dto.payment_method || "COD",
+		items: Array.isArray(rawItems)
+			? rawItems.map(mapOrderDetailResponseToFE)
+			: [],
+		paymentMethod:
+			dto.paymentmethod ||
+			dto.paymentMethod ||
+			dto.payment_method ||
+			dto.paymentType ||
+			dto.payment_type ||
+			dto.payment ||
+			"COD",
 	};
 };

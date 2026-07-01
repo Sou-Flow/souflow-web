@@ -10,10 +10,11 @@ import {
 	X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { soulFlowRoutes } from "@/lib/soulflow/routes";
+import { soulFlowRoutes } from "@/lib/souflow/routes";
 import { useCartStore } from "@/store/cart-store";
 
 type CartDrawerProps = {
@@ -49,8 +50,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 	const discount = appliedCoupon
 		? (subtotal * appliedCoupon.percentage) / 100
 		: 0;
-	const shippingFee = 0; // Tạm thời comment phí ship để test: subtotal > 0 ? 30000 : 0;
-	const total = subtotal - discount + shippingFee;
+	const total = subtotal - discount;
 
 	const handleApplyPromo = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -109,21 +109,23 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 						<div className="flex-1 overflow-y-auto p-6 space-y-4">
 							{cart.map((item) => (
 								<div
-									id={`cart-item-${item.product.id}`}
-									key={item.product.id}
+									id={`cart-item-${item.itemPk}-${item.product.id}`}
+									key={`cart-item-${item.itemPk || "new"}-${item.product.id}`}
 									className="flex items-start gap-4 bg-sf-bg-elevated p-3 rounded-xl border border-sf-border shadow-sm"
 								>
 									{/* Photo container */}
-									{/* <div className="relative h-16 w-16">
+									<div className="relative h-16 w-16">
 										<Image
-											src={item.product.image}
+											src={
+												item.product.imageUrl || "/images/about-us-main1.avif"
+											}
 											alt={item.product.nameVn}
 											fill
 											className="h-16 w-16 rounded-lg object-cover grayscale-1/10 shrink-0"
 											referrerPolicy="no-referrer"
 											sizes="64px"
 										/>
-									</div> */}
+									</div>
 
 									{/* Text descriptions */}
 									<div className="flex-1 space-y-1">
@@ -223,7 +225,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 						{cart.length > 0 && (
 							<div className="border-t border-sf-border bg-sf-bg-elevated p-6 space-y-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
 								{/* Promo Code Form */}
-								<form onSubmit={handleApplyPromo} className="flex gap-2">
+								{/* <form onSubmit={handleApplyPromo} className="flex gap-2">
 									<input
 										id="cart-coupon-input"
 										type="text"
@@ -260,7 +262,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 										Mã Khuyến Mãi: {appliedCoupon.code} (-
 										{appliedCoupon.percentage}%)
 									</div>
-								)}
+								)} */}
 
 								{/* Pricing summary list */}
 								<div className="space-y-2 text-sm">
@@ -274,10 +276,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 											<span>{discount.toFixed(0)} đ</span>
 										</div>
 									)}
-									<div className="flex justify-between text-sf-fg-muted">
-										<span>Phí Vận Chuyển</span>
-										<span>{shippingFee.toLocaleString("vi-VN")} đ</span>
-									</div>
+
 									<div className="flex justify-between border-t border-sf-border pt-3 font-bold text-base text-sf-fg">
 										<span>Tổng Số Tiền</span>
 										<span className="text-sf-accent">

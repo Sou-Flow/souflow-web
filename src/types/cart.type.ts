@@ -10,7 +10,7 @@ import { mapProductResponseToFE } from "./product.type";
  *   productNameVn / productNameEng / productPrice  (flat, no nested product object)
  */
 export interface CartItemResponseDTO {
-	id: number; // items.pk — used for DELETE /carts/{cartId}/items/{id}
+	pk: number; // items.pk — used for DELETE /carts/{cartId}/items/{pk}
 	productId: number; // products.pk — used for POST add/increment
 	productNameVn: string;
 	productNameEng: string;
@@ -25,7 +25,7 @@ export interface CartItemResponseDTO {
  *   businessId  → carts.id  (string like "CART-XXXX")
  */
 export interface CartResponseDTO {
-	id: number; // carts.pk (numeric) — used in API URL /carts/{id}/items
+	pk: number; // carts.pk (numeric) — used in API URL /carts/{pk}/items
 	businessId: string; // carts.id (string business key)
 	total: number;
 	expired: boolean;
@@ -41,18 +41,31 @@ export interface CartItemFE extends CartItemFE_Base {
 	itemPk: number; // items.pk — needed for removeItemFromCart
 }
 
-// Map CartItemResponseDTO → CartItemFE
+// Map CartItemResponseDTO / ItemResponse → CartItemFE
 export const mapCartItemResponseToFE = (
-	dto: CartItemResponseDTO,
+	dto: Record<string, unknown>,
 ): CartItemFE => {
+	const itemPk = dto.pk ?? dto.id ?? dto.itemPk ?? dto.cartItemId;
+	const productId =
+		dto.productId ??
+		dto.productPk ??
+		dto.product_pk ??
+		(dto.product as any)?.pk ??
+		(dto.product as any)?.id ??
+		0;
+
 	return {
-		itemPk: dto.id, // items.pk stored separately
-		product: mapProductResponseToFE({
-			id: dto.productId, // CORRECT: product pk, not item pk
-			nameVn: dto.productNameVn,
-			nameEng: dto.productNameEng,
-			price: dto.productPrice,
-		}),
-		quantity: dto.quantity,
+		itemPk: itemPk ? Number(itemPk) : 0,
+		product: mapProductResponseToFE(
+			(dto.product as any) ||
+				({
+					pk: productId,
+					nameVn: (dto as any).productNameVn || (dto as any).name || "Sản phẩm",
+					nameEng:
+						(dto as any).productNameEng || (dto as any).name || "Product",
+					price: (dto as any).productPrice || (dto as any).price || 0,
+				} as any),
+		),
+		quantity: Number(dto.quantity || 1),
 	};
 };

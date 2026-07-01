@@ -7,7 +7,6 @@ import {
 	ChevronLeft,
 	ChevronRight,
 	CornerDownRight,
-	Heart,
 	MessageSquare,
 	Send,
 	ShoppingBag,
@@ -18,8 +17,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { soulFlowRoutes } from "@/lib/soulflow/routes";
+import { soulFlowRoutes } from "@/lib/souflow/routes";
 import { categoryService } from "@/services/categoryService";
+import { commentService } from "@/services/commentService";
 import { productService } from "@/services/productService";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cart-store";
@@ -44,7 +44,7 @@ type CommentType = {
 	replies: ReplyType[];
 };
 
-const MOCK_COMMENTS: CommentType[] = [
+const _MOCK_COMMENTS: CommentType[] = [
 	{
 		id: "c1",
 		author: "Eleanor Vance",
@@ -53,7 +53,7 @@ const MOCK_COMMENTS: CommentType[] = [
 		replies: [
 			{
 				id: "r1",
-				author: "Admin SoulFlow",
+				author: "Admin SouFlow",
 				content: "Cảm ơn bạn đã tin tưởng ủng hộ shop ạ!",
 				timestamp: "1 ngày trước",
 			},
@@ -93,18 +93,20 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 
 	// --- Xử lý Gallery Ảnh (Mock tạm 1 ảnh chờ bảng product_images) ---
 	// Mốt ông có api trả list hình thì gán vào đây: fetchedFlower.images || [...]
-	const galleryImages = [
-		{
-			id: 1,
-			image:
-				"https://images.unsplash.com/photo-1582794543139-8ac9cb0f7b11?q=80&w=500&auto=format&fit=crop",
-		},
-		{
-			id: 2,
-			image:
-				"https://images.unsplash.com/photo-1563241527-3004b7be0ffd?q=80&w=500&auto=format&fit=crop",
-		},
-	];
+	const galleryImages =
+		fetchedFlower?.images && fetchedFlower.images.length > 0
+			? fetchedFlower.images.map((img, index) => ({
+					id: index + 1,
+					image: img,
+				}))
+			: [
+					{
+						id: 1,
+						image:
+							fetchedFlower?.imageUrl ||
+							"https://images.unsplash.com/photo-1582794543139-8ac9cb0f7b11?q=80&w=500&auto=format&fit=crop",
+					},
+				];
 
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [isHoveringImage, setIsHoveringImage] = useState(false);
@@ -133,7 +135,15 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 	}, [isHoveringImage, galleryImages.length]);
 
 	// --- State Comment ---
-	const [comments, setComments] = useState<CommentType[]>(MOCK_COMMENTS);
+	const [comments, setComments] = useState<CommentType[]>([]);
+
+	// Đồng bộ comments từ API khi fetchedFlower thay đổi
+	useEffect(() => {
+		if (fetchedFlower?.comments) {
+			setComments(fetchedFlower.comments);
+		}
+	}, [fetchedFlower?.comments]);
+
 	const [newComment, setNewComment] = useState("");
 	const [replyingTo, setReplyingTo] = useState<string | null>(null);
 	const [replyContent, setReplyContent] = useState("");
@@ -157,44 +167,76 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 				category: catName,
 				formattedPrice: f.formattedPrice, // Xài luôn giá đã format từ Mapper
 				image:
+					f.imageUrl ||
 					"https://images.unsplash.com/photo-1582794543139-8ac9cb0f7b11?q=80&w=500&auto=format&fit=crop",
 			};
 		});
 
-	const handleAddComment = () => {
-		/* Giữ nguyên logic cũ */
+	const handleAddComment = async () => {
 		if (!newComment.trim()) return;
-		setComments([
-			{
-				id: crypto.randomUUID(),
-				author: "Guest User",
-				content: newComment,
-				timestamp: "Vừa xong",
-				replies: [],
-			},
-			...comments,
-		]);
-		setNewComment("");
+		if (!user) {
+			toast.error("Vui lòng đăng nhập để bình luận");
+			router.push("/login");
+			return;
+		}
+		if (!fetchedFlower) return;
+		try {
+			const saved = await commentService.addComment(
+				fetchedFlower.id,
+				newComment,
+			);
+			if (saved) {
+				setComments([
+					{
+						id: String(saved.id),
+						author: user.fullName || user.username || "Khách",
+						content: saved.content,
+						timestamp: "Vừa xong",
+						replies: [],
+					},
+					...comments,
+				]);
+				setNewComment("");
+				toast.success("Đã gửi bình luận");
+			}
+		} catch (_error) {
+			toast.error("Không thể gửi bình luận");
+		}
 	};
 
-	const handleAddReply = (commentId: string) => {
-		/* Giữ nguyên logic cũ */
+	const handleAddReply = async (commentId: string) => {
 		if (!replyContent.trim()) return;
-		const newReply = {
-			id: crypto.randomUUID(),
-			author: "Guest User",
-			content: replyContent,
-			timestamp: "Vừa xong",
-		};
-		setComments(
-			comments.map((cmt) =>
-				cmt.id === commentId
-					? { ...cmt, replies: [...cmt.replies, newReply] }
-					: cmt,
-			),
-		);
-		setReplyContent("");
-		setReplyingTo(null);
+		if (!user) {
+			toast.error("Vui lòng đăng nhập để trả lời");
+			router.push("/login");
+			return;
+		}
+		try {
+			const saved = await commentService.addReply(
+				Number(commentId),
+				replyContent,
+			);
+			if (saved) {
+				const newReply = {
+					id: String((saved as { pk?: string | number }).pk || crypto.randomUUID()),
+					author: user.fullName || user.username || "Admin",
+					content: replyContent,
+					timestamp: "Vừa xong",
+				};
+				setComments(
+					comments.map((cmt) =>
+						cmt.id === commentId
+							? { ...cmt, replies: [...cmt.replies, newReply] }
+							: cmt,
+					),
+				);
+				setReplyContent("");
+				setReplyingTo(null);
+				toast.success("Đã trả lời");
+			}
+		} catch (_error) {
+			toast.error("Không thể gửi câu trả lời");
+		}
 	};
 
 	if (isLoading) {
@@ -269,9 +311,6 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 								</motion.div>
 							</AnimatePresence>
 						</div>
-						<div className="absolute top-6 right-6 p-2 rounded-full bg-white/80 dark:bg-black/60 shadow-md backdrop-blur-xs text-[#C49B83] cursor-pointer z-10">
-							<Heart className="h-4 w-4 hover:fill-current transition-colors" />
-						</div>
 						<button
 							type="button"
 							onClick={handlePrevImage}
@@ -287,6 +326,32 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 							<ChevronRight className="h-5 w-5" />
 						</button>
 					</section>
+
+					{/* Thumbnails */}
+					{galleryImages.length > 1 && (
+						<div className="mt-2 flex gap-3 overflow-x-auto pb-2 scrollbar-hide justify-center max-w-md mx-auto w-full">
+							{galleryImages.map((img, idx) => (
+								<button
+									type="button"
+									key={img.id}
+									onClick={() => setCurrentIndex(idx)}
+									className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 transition-all ${
+										currentIndex === idx
+											? "border-[#C49B83] opacity-100"
+											: "border-transparent opacity-60 hover:opacity-100"
+									}`}
+								>
+									<Image
+										src={img.image}
+										alt={`${fetchedFlower.nameVn} thumbnail ${idx + 1}`}
+										fill
+										className="object-cover"
+										sizes="64px"
+									/>
+								</button>
+							))}
+						</div>
+					)}
 				</div>
 
 				{/* Cột Phải: Thông tin sản phẩm */}

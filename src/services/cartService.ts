@@ -11,15 +11,19 @@ export const cartService = {
 	getCarts: async (): Promise<CartResponseDTO[]> => {
 		try {
 			const rawResponse: ApiResponse<CartResponseDTO[]> =
-				await axiosClient.get("/carts");
+				await axiosClient.get("/user/cart");
 
-			const data = rawResponse.data;
-			if (!Array.isArray(data)) {
-				return [];
-			}
-			return data;
+			// CÁCH SỬA LỖI: Thêm as unknown và gán kiểu trung gian là any
+			// biome-ignore lint/suspicious/noExplicitAny: skip
+			const actualData: any =
+				(rawResponse as unknown as Record<string, unknown>).data ?? rawResponse;
+			// Nếu BE trả về PageResponse (có chứa content) thì lấy content
+			const list = Array.isArray(actualData)
+				? actualData
+				: (actualData as Record<string, unknown>)?.content || [];
+			return list as CartResponseDTO[];
 		} catch (error) {
-			console.warn("⚠️ API 'GET /carts' lỗi.", error);
+			console.warn("⚠️ API 'GET /user/cart' lỗi.", error);
 			return [];
 		}
 	},
@@ -31,10 +35,15 @@ export const cartService = {
 		try {
 			// Payload có thể trống hoặc chứa accountId tuỳ thiết kế BE
 			const rawResponse: ApiResponse<CartResponseDTO> = await axiosClient.post(
-				"/carts",
-				{},
+				"/user/cart",
+				{ itemRequests: [] },
 			);
-			return rawResponse.data || null;
+
+			// CÁCH SỬA LỖI
+			// biome-ignore lint/suspicious/noExplicitAny: skip
+			const actualData: any =
+				(rawResponse as unknown as Record<string, unknown>).data ?? rawResponse;
+			return actualData || null;
 		} catch (error) {
 			console.error("Lỗi khi tạo giỏ hàng:", error);
 			throw error;
@@ -47,76 +56,61 @@ export const cartService = {
 	getCartById: async (cartId: number): Promise<CartResponseDTO | null> => {
 		try {
 			const rawResponse: ApiResponse<CartResponseDTO> = await axiosClient.get(
-				`/carts/${cartId}`,
+				`/user/cart/${cartId}`,
 			);
-			return rawResponse.data || null;
+
+			// CÁCH SỬA LỖI
+			// biome-ignore lint/suspicious/noExplicitAny: skip
+			const actualData: any =
+				(rawResponse as unknown as Record<string, unknown>).data ?? rawResponse;
+			return actualData || null;
 		} catch (error) {
-			console.warn(`⚠️ API 'GET /carts/${cartId}' lỗi.`, error);
+			console.warn(`⚠️ API 'GET /user/cart/${cartId}' lỗi.`, error);
 			return null;
 		}
 	},
 
 	/**
-	 * Thêm sản phẩm vào một giỏ hàng cụ thể
+	 * Lưu toàn bộ giỏ hàng lên backend
 	 */
-	addItemToCart: async (
-		cartId: number,
-		productId: number,
-		quantity: number,
-	): Promise<void> => {
-		// Body tuỳ thuộc vào BE yêu cầu, ví dụ { productId, quantity }
-		await axiosClient.post(`/carts/${cartId}/items`, { productId, quantity });
-	},
-
-	/**
-	 * Cập nhật số lượng sản phẩm trong giỏ hàng
-	 */
-	updateQuantity: async (
-		cartId: number,
-		productId: number,
-		quantity: number,
-	): Promise<void> => {
+	saveCart: async (
+		cartId: number | null,
+		items: { pk: number | null; productId: number; quantity: number }[],
+	): Promise<CartResponseDTO | null> => {
 		try {
-			await axiosClient.put(`/carts/${cartId}/items/${productId}`, {
-				quantity,
-			});
+			const payload = {
+				id: cartId,
+				pk: cartId,
+				itemRequests: items.map((i) => ({
+					id: i.pk,
+					pk: i.pk,
+					productId: i.productId,
+					productPk: i.productId,
+					product_pk: i.productId,
+					quantity: i.quantity,
+				})),
+			};
+			const rawResponse = await axiosClient.post("/user/cart", payload);
+
+			// CÁCH SỬA LỖI
+			// biome-ignore lint/suspicious/noExplicitAny: skip
+			const actualData: any =
+				(rawResponse as unknown as Record<string, unknown>).data ?? rawResponse;
+			return actualData;
 		} catch (error) {
-			console.error(
-				`Lỗi khi cập nhật số lượng SP ${productId} trong giỏ ${cartId}:`,
-				error,
-			);
+			console.error("Lỗi khi lưu giỏ hàng:", error);
 			throw error;
 		}
 	},
 
 	/**
-	 * Xoá một giỏ hàng
+	 * Xóa giỏ hàng (khi đã thanh toán)
 	 */
 	deleteCart: async (cartId: number): Promise<void> => {
 		try {
-			await axiosClient.delete(`/carts/${cartId}`);
-		} catch (error: unknown) {
-			const err = error as { response?: { status?: number } };
-			if (err.response && err.response.status === 404) {
-				// BE đã tự xóa giỏ hàng khi lên đơn thành công, bỏ qua lỗi này
-				return;
-			}
-			console.error(`Lỗi khi xóa giỏ hàng ${cartId}:`, error);
-			throw error;
-		}
-	},
-
-	/**
-	 * Xoá một sản phẩm khỏi giỏ hàng
-	 */
-	removeItemFromCart: async (cartId: number, itemId: number): Promise<void> => {
-		try {
-			await axiosClient.delete(`/carts/${cartId}/items/${itemId}`);
+			await axiosClient.delete(`/user/cart/${cartId}`);
 		} catch (error) {
-			console.error(
-				`Lỗi khi xóa sản phẩm ${itemId} khỏi giỏ ${cartId}:`,
-				error,
-			);
+			console.error(`Lỗi khi xóa giỏ hàng ${cartId}:`, error);
 			throw error;
 		}
 	},

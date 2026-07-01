@@ -187,7 +187,7 @@ export function ContactUs() {
 			{/* Page Title */}
 			<div className="text-center space-y-2 mb-12">
 				<span className="text-sm font-bold tracking-widest text-[#C49B83] uppercase block">
-					Kết nối với SoulFlow
+					Kết nối với SouFlow
 				</span>
 				<h1 className="font-serif text-3xl sm:text-4xl font-light text-sf-fg">
 					Liên hệ với chúng tôi
@@ -313,11 +313,11 @@ export function ContactUs() {
 								<MapPin className="h-4.5 w-4.5 text-[#C49B83] shrink-0 mt-0.5" />
 								<div>
 									<p className="font-bold text-sf-fg uppercase tracking-wider">
-										Cửa Hàng SoulFlow
+										Cửa Hàng SouFlow
 									</p>
 									<p className="text-sf-fg text-[17px] leading-relaxed mt-0.5">
-										88 Đồng Khởi, Phường Bến Nghé, Quận 1, Thành phố Hồ Chí
-										Minh, Việt Nam
+										Tòa nhà QTSC 9, Công viên phần mềm Quang Trung, Quận 12,
+										Thành phố Hồ Chí Minh
 									</p>
 								</div>
 							</div>
@@ -341,7 +341,7 @@ export function ContactUs() {
 										Email Hỗ Trợ & Đặt Hàng
 									</p>
 									<p className="text-sf-fg text-[17px] mt-1">
-										contact@soulflow.com
+										contact@souflow.com
 									</p>
 								</div>
 							</div>
@@ -366,14 +366,14 @@ export function ContactUs() {
 						{/* Bản đồ nhúng Google Maps trực quan */}
 						<div className="relative aspect-video w-full rounded-xl overflow-hidden border border-[#C49B83]/30 shadow-md group">
 							<iframe
-								src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3919.513274106203!2d106.6990264!3d10.7719707!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31752f40a3b0813b%3A0x8d7a163ec1623d6a!2zQ2jhu6MgQuG6v24gVGjDoG5o!5e0!3m2!1svi!2svn!4v1716612345678!5m2!1svi!2svn"
+								src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d692.6899093231182!2d106.62639276160782!3d10.853653643009181!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31752a20d8555e69%3A0x743b1e9558fb89e0!2sQTSC%209%20Building!5e0!3m2!1svi!2s!4v1782786735429!5m2!1svi!2s"
 								width="100%"
 								height="100%"
 								style={{ border: 0 }}
 								allowFullScreen={true}
 								loading="lazy"
 								referrerPolicy="no-referrer-when-downgrade"
-								title="SoulFlow Atelier Map"
+								title="SouFlow Atelier Map"
 								className="h-full w-full object-cover transition-all duration-300 dark:invert-90 dark:hue-rotate-180"
 							/>
 						</div>

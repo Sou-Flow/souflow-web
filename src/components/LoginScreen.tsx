@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { z } from "zod";
-import { soulFlowRoutes } from "@/lib/soulflow/routes";
+import { soulFlowRoutes } from "@/lib/souflow/routes";
 import { authService } from "@/services/authService";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -30,8 +30,17 @@ export function LoginScreen() {
 		defaultValues: { username: "", password: "", rememberMe: false },
 	});
 	const [showPassword, setShowPassword] = useState(false);
+	const [capsLockActive, setCapsLockActive] = useState(false);
 	const setUser = useAuthStore((state) => state.setUser);
 	const router = useRouter();
+
+	const handlePasswordKeyUp = (e: React.KeyboardEvent<HTMLInputElement>) => {
+		if (e.getModifierState("CapsLock")) {
+			setCapsLockActive(true);
+		} else {
+			setCapsLockActive(false);
+		}
+	};
 	const onSubmit = async (data: LoginFormValues) => {
 		const toastId = toast.loading("Đang đăng nhập...");
 		try {
@@ -49,7 +58,7 @@ export function LoginScreen() {
 			setUser(userData);
 
 			toast.success(
-				`Đăng nhập thành công!, Chào mừng ${userName} đã trở lại với SoulFlow!`,
+				`Đăng nhập thành công!, Chào mừng ${userName} đã trở lại với SouFlow!`,
 				{ id: toastId },
 			);
 			router.push(soulFlowRoutes.home);
@@ -66,7 +75,7 @@ export function LoginScreen() {
 				<div className="absolute inset-0 z-0">
 					<Image
 						src="/images/login-bg.jpg"
-						alt="SoulFlow Botanical Artistry"
+						alt="SouFlow Botanical Artistry"
 						className="w-full h-full object-cover transform scale-105 hover:scale-100 transition-transform duration-3000 ease-out"
 						fill
 						sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 100vw"
@@ -85,7 +94,7 @@ export function LoginScreen() {
 							Flower Shop Portal
 						</span>
 						<h2 className="font-serif text-[#C49B83] text-5xl font-light text-primary tracking-tight">
-							SoulFlow
+							SouFlow
 						</h2>
 						<p className="font-sans text-md text-secondary max-w-sm mt-6 italic font-light leading-relaxed">
 							&quot;Bất kỳ ai cũng có thể tìm thấy sự bình yên trong thiên
@@ -96,7 +105,7 @@ export function LoginScreen() {
 					<div className="flex items-center gap-4">
 						<span className="w-12 h-px bg-primary/40 block"></span>
 						<span className="font-sans text-xs uppercase tracking-[0.3em] font-medium text-primary">
-							SoulFlow - Where Nature Meets Elegance
+							SouFlow - Where Nature Meets Elegance
 						</span>
 					</div>
 				</div>
@@ -107,7 +116,7 @@ export function LoginScreen() {
 				{/* Logo trên thiết bị di động */}
 				<div className="md:hidden mb-8">
 					<h2 className="font-serif text-3xl text-primary tracking-tight">
-						SoulFlow
+						SouFlow
 					</h2>
 				</div>
 
@@ -118,7 +127,7 @@ export function LoginScreen() {
 						</h3>
 						<p className="font-sans text-sm text-secondary/80">
 							Vui lòng đăng nhập vào tài khoản của bạn để tiếp tục trải nghiệm
-							những sản phẩm và dịch vụ tuyệt vời từ SoulFlow.
+							những sản phẩm và dịch vụ tuyệt vời từ SouFlow.
 						</p>
 					</header>
 
@@ -159,12 +168,8 @@ export function LoginScreen() {
 								</label>
 								<button
 									type="button"
-									className="lowercase text-[11px] font-sans tracking-normal hover:text-primary transition-colors text-primary/70"
-									onClick={() =>
-										console.log(
-											"Tính năng đặt lại mật khẩu đã được gửi đến email đăng ký.",
-										)
-									}
+									className="lowercase text-xs font-medium font-sans tracking-normal hover:text-primary hover:underline hover:scale-105 underline-offset-2 transition-all duration-200 text-primary/80"
+									onClick={() => router.push(soulFlowRoutes.forgotPassword)}
 								>
 									Quên mật khẩu?
 								</button>
@@ -176,6 +181,7 @@ export function LoginScreen() {
 									type={showPassword ? "text" : "password"}
 									placeholder="••••••••"
 									{...register("password")}
+									onKeyUp={handlePasswordKeyUp}
 									className="pl-7 pr-4 text-sm placeholder-secondary/30 border-0 w-full bg-white/5 py-2.5 px-0 focus:border-primary transition-all focus:outline-none placeholder-secondary/30 text-sf-fg"
 								/>
 								<button
@@ -190,6 +196,11 @@ export function LoginScreen() {
 									)}
 								</button>
 							</div>
+							{capsLockActive && (
+								<p className="text-amber-500 text-xs mt-1 font-medium">
+									⚠️ Caps Lock đang bật
+								</p>
+							)}
 							{errors.password && (
 								<p className="text-red-500 text-xs mt-1">
 									{errors.password.message}

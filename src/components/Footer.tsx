@@ -2,7 +2,7 @@
 
 import { ShieldCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { soulFlowRoutes } from "@/lib/soulflow/routes";
+import { soulFlowRoutes } from "@/lib/souflow/routes";
 
 export function Footer() {
 	return (
@@ -11,7 +11,7 @@ export function Footer() {
 				<div className="grid grid-cols-1 gap-8 md:grid-cols-12">
 					<div className="space-y-3 md:col-span-3">
 						<span className="font-sans font-bold text-2xl tracking-[0.25em] text-sf-fg">
-							SOULFLOW
+							SOUFLOW
 						</span>
 						<p className="text-sm text-sf-fg-muted font-light leading-relaxed">
 							Một không gian hoa tinh tế và nghệ thuật lưu giữ vẻ đẹp thiên
@@ -87,7 +87,7 @@ export function Footer() {
 				</div>
 
 				<div className="mt-2 border-t-2 border-sf-border pt-3 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-sf-fg-muted">
-					<p>© 2026 SoulFlow Flower Vietnam. All rights reserved.</p>
+					<p>© 2026 SouFlow Flower Vietnam. All rights reserved.</p>
 					<div className="flex gap-4">
 						<Link
 							href={soulFlowRoutes.privacy}

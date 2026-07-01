@@ -14,15 +14,24 @@ export interface AuthResponseDTO {
 	role: string;
 }
 
-export interface UserResponseDTO {
-	id: number; // BE trả id chứ không phải pk
-	username: string;
-	fullName: string;
+export interface ResetPasswordDTO {
 	email: string;
-	phoneNumber: string;
+	otp: string;
+	newPassword: string;
+}
+
+export interface UserResponseDTO {
+	pk: number; // BE trả pk chứ không phải id
+	username: string;
+	fullName?: string;
+	fullname?: string;
+	email: string;
+	phoneNumber?: string;
+	phone?: string;
 	address: string;
 	photo: string | null;
-	roleCode: string; // BE trả chuỗi (vd: "CUSTOMER") chứ không phải số rolePk
+	roleCode?: string; // BE trả chuỗi (vd: "CUSTOMER") chứ không phải số rolePk
+	roleResponse?: Record<string, unknown>;
 	createdDate: string; // BE trả createdDate (có chữ d)
 }
 
@@ -49,14 +58,15 @@ export interface UpdateProfileRequestDTO {
 // 4. Hàm Mapper nắn dữ liệu
 export const mapUserResponseToFE = (dto: UserResponseDTO): UserFE => {
 	return {
-		id: dto.id,
+		id: dto.pk,
 		username: dto.username,
-		fullName: dto.fullName,
+		fullName: dto.fullName || dto.fullname || "",
 		email: dto.email,
 		avatar: dto.photo || "/images/avatar.png", // Fallback ảnh
-		phone: dto.phoneNumber,
+		phone: dto.phoneNumber || dto.phone || "",
 		address: dto.address,
-		roleCode: dto.roleCode,
+		// biome-ignore lint/suspicious/noExplicitAny: skip
+		roleCode: dto.roleCode || (dto.roleResponse as any)?.code || "CUSTOMER",
 		createDate: dto.createdDate,
 		activated: true,
 	};

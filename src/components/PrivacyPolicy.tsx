@@ -10,7 +10,7 @@ export function PrivacyPolicy() {
 					<ShieldCheck className="h-10 w-10 text-[#C49B83]" />
 				</div>
 				<span className="text-xs font-bold tracking-widest text-[#C49B83] uppercase block">
-					SoulFlow Legal
+					SouFlow Legal
 				</span>
 				<h1 className="font-serif text-3xl sm:text-4xl font-light text-sf-fg">
 					Chính Sách Bảo Mật

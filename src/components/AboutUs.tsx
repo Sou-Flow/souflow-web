@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { soulFlowRoutes } from "@/lib/soulflow/routes"; // Giữ nguyên route của bạn
+import { soulFlowRoutes } from "@/lib/souflow/routes"; // Giữ nguyên route của bạn
 
 export function AboutUs() {
 	const coreValues = [
@@ -140,7 +140,7 @@ export function AboutUs() {
 						đến trái tim.&quot;
 					</blockquote>
 					<p className="text-xs uppercase tracking-[0.2em] font-bold text-[#C49B83]">
-						— Founder of SoulFlow
+						— Founder of SouFlow
 					</p>
 				</div>
 			</section>

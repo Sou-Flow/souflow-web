@@ -18,7 +18,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { soulFlowRoutes } from "@/lib/soulflow/routes";
+import { soulFlowRoutes } from "@/lib/souflow/routes";
 import { categoryService } from "@/services/categoryService";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cart-store";
@@ -120,7 +120,7 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 							{/* Brand text */}
 							<div className="leading-tight">
 								<span className="block font-serif md:text-lg text-base font-semibold tracking-[0.28em] text-sf-fg">
-									SOULFLOW
+									SOUFLOW
 								</span>
 							</div>
 						</Link>

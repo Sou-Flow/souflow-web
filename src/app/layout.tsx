@@ -5,7 +5,7 @@ import { BoutiqueProviders } from "@/providers/SoulflowProviders";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import "./globals.css";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { SoulFlowShell } from "@/components/SoulFlowShell";
+import { SouFlowShell } from "@/components/SouFlowShell";
 import { AuthProvider } from "@/providers/AuthProviders";
 import TanStackProvider from "@/providers/TanStackProvider";
 
@@ -20,9 +20,9 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-	title: "SoulFlow",
+	title: "SouFlow",
 	description:
-		"SoulFlow - Nơi kết nối tâm hồn và thiên nhiên. Khám phá bộ sưu tập thiết kế hoa độc đáo.",
+		"SouFlow - Nơi kết nối tâm hồn và thiên nhiên. Khám phá bộ sưu tập thiết kế hoa độc đáo.",
 };
 
 export default function RootLayout({
@@ -42,7 +42,7 @@ export default function RootLayout({
 						<ThemeProvider>
 							<BoutiqueProviders>
 								<ErrorBoundary>
-									<SoulFlowShell>{children}</SoulFlowShell>
+									<SouFlowShell>{children}</SouFlowShell>
 								</ErrorBoundary>
 							</BoutiqueProviders>
 							<Toaster

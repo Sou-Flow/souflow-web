@@ -13,23 +13,25 @@ import { motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { soulFlowRoutes } from "@/lib/soulflow/routes";
+import { soulFlowRoutes } from "@/lib/souflow/routes";
 import { categoryService } from "@/services/categoryService";
 import { productService } from "@/services/productService";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cart-store";
 import { useCatalogStore } from "@/store/catalog-store";
 import { useCategoryStore } from "@/store/category-store";
+import { PriceFilter } from "./PriceFilter";
 
 export function FlowerCatalog() {
 	const [sortBy, setSortBy] = useState<string>("featured");
 	const [currentPage, setCurrentPage] = useState<number>(1);
 	const [addingItems, setAddingItems] = useState<Record<number, boolean>>({});
-	const itemsPerPage = 20;
+	const itemsPerPage = 12;
 	const { selectedCategory, setSelectedCategory } = useCategoryStore();
-	const { searchQuery, setSearchQuery } = useCatalogStore();
+	const { searchQuery, setSearchQuery, minPrice, maxPrice, setPriceRange } =
+		useCatalogStore();
 	const { addToCart, cart } = useCartStore();
 	const { user } = useAuthStore();
 	const router = useRouter();
@@ -42,13 +44,41 @@ export function FlowerCatalog() {
 		},
 	});
 
-	const { data: flowers = [] } = useQuery({
-		queryKey: ["flowers"],
+	const { data: pageData = { content: [], totalPages: 1 } } = useQuery({
+		queryKey: [
+			"flowers",
+			currentPage,
+			itemsPerPage,
+			searchQuery,
+			selectedCategory,
+			sortBy,
+			minPrice,
+			maxPrice,
+		],
 		queryFn: async () => {
-			const rawData = await productService.getAllFlower();
-			return rawData;
+			// Map sort option to BE sortOrder
+			let sortOrder = "DESC";
+			if (sortBy === "price-low") sortOrder = "PRICE_ASC";
+			if (sortBy === "price-high") sortOrder = "PRICE_DESC";
+			if (sortBy === "popular") sortOrder = "SALES_DESC";
+
+			return await productService.getPaginatedFlowers(
+				currentPage - 1, // BE is 0-indexed
+				itemsPerPage,
+				searchQuery.trim() || undefined,
+				selectedCategory || undefined,
+				sortOrder,
+				undefined,
+				minPrice || undefined,
+				maxPrice || undefined,
+			);
 		},
 	});
+
+	const paginatedFlowers = pageData.content;
+	const totalPages = pageData.totalPages;
+	// Giữ lại alias cho filteredFlowers.length kiểm tra empty state
+	const filteredFlowers = pageData.content;
 
 	const isMounted = useRef(false);
 
@@ -59,52 +89,7 @@ export function FlowerCatalog() {
 		} else {
 			isMounted.current = true;
 		}
-	}, [selectedCategory, searchQuery, sortBy]);
-
-	const filteredFlowers = useMemo(() => {
-		let result = Array.isArray(flowers) ? [...flowers] : [];
-
-		if (selectedCategory !== null) {
-			result = result.filter((f) => f.categoryId === Number(selectedCategory));
-		}
-
-		if (searchQuery.trim()) {
-			const q = searchQuery.toLowerCase().trim();
-			result = result.filter(
-				(f) =>
-					// Đề phòng trường hợp nameVn hoặc descriptionVn bị null từ DB
-					(f.nameVn?.toLowerCase() || "").includes(q) ||
-					(f.descriptionVn?.toLowerCase() || "").includes(q),
-			);
-		}
-
-		if (sortBy === "price-low") {
-			result.sort((a, b) => a.price - b.price);
-		} else if (sortBy === "price-high") {
-			result.sort((a, b) => b.price - a.price);
-		} else if (sortBy === "popular") {
-			result.sort((a, b) => b.totalSales - a.totalSales);
-		}
-
-		// Đẩy sản phẩm hết hàng xuống cuối cùng
-		result.sort((a, b) => {
-			const aInStock = a.stockQuantity > 0 ? 1 : 0;
-			const bInStock = b.stockQuantity > 0 ? 1 : 0;
-			return bInStock - aInStock;
-		});
-
-		return result;
-	}, [flowers, selectedCategory, searchQuery, sortBy]);
-
-	const paginatedFlowers = useMemo(() => {
-		const startIndex = (currentPage - 1) * itemsPerPage;
-		return filteredFlowers.slice(startIndex, startIndex + itemsPerPage);
-	}, [filteredFlowers, currentPage]);
-
-	const totalPages = Math.max(
-		1,
-		Math.ceil(filteredFlowers.length / itemsPerPage),
-	);
+	}, [selectedCategory, searchQuery, sortBy, minPrice, maxPrice]);
 
 	const getCategoryName = (catId: number) => {
 		const match = categories?.find((c) => c.id === catId);
@@ -129,36 +114,65 @@ export function FlowerCatalog() {
 				</div>
 
 				{/* Filter and utilities */}
-				<div className="flex flex-col sm:flex-row items-center gap-4">
-					{searchQuery && (
-						<span className="text-xs text-sf-fg-muted bg-sf-surface px-3 py-1 rounded-md">
-							Tìm kiếm:{" "}
-							<strong className="text-sf-accent">
-								&quot;{searchQuery}&quot;
-							</strong>
-							<button
-								type="button"
-								onClick={() => setSearchQuery("")}
-								className="ml-2 hover:text-red-500 font-bold"
-							>
-								×
-							</button>
-						</span>
-					)}
+				<div className="flex flex-col items-end gap-4">
+					<div className="flex flex-col sm:flex-row items-center gap-4">
+						{searchQuery && (
+							<span className="text-xs text-sf-fg-muted bg-sf-surface px-3 py-1 rounded-md">
+								Tìm kiếm:{" "}
+								<strong className="text-sf-accent">
+									&quot;{searchQuery}&quot;
+								</strong>
+								<button
+									type="button"
+									onClick={() => setSearchQuery("")}
+									className="ml-2 hover:text-red-500 font-bold"
+								>
+									×
+								</button>
+							</span>
+						)}
 
-					<div className="flex items-center gap-2">
-						<SlidersHorizontal className="h-4 w-4 text-sf-accent" />
-						<select
-							id="catalog-sort-select"
-							value={sortBy}
-							onChange={(e) => setSortBy(e.target.value)}
-							className="rounded-lg border border-sf-border bg-sf-bg-elevated py-1.5 px-3 text-xs text-sf-fg focus:border-sf-accent outline-none cursor-pointer"
-						>
-							<option value="featured">Sắp xếp: Khuyên dùng</option>
-							<option value="price-low">Giá: Thấp đến Cao</option>
-							<option value="price-high">Giá: Cao đến Thấp</option>
-							<option value="popular">Yêu thích nhất</option>
-						</select>
+						{(minPrice !== null || maxPrice !== null) && (
+							<span className="text-xs text-sf-fg-muted bg-sf-surface px-3 py-1 rounded-md">
+								Giá:{" "}
+								<strong className="text-sf-accent">
+									{minPrice ? `${minPrice.toLocaleString("vi-VN")}đ` : "0đ"} -{" "}
+									{maxPrice ? `${maxPrice.toLocaleString("vi-VN")}đ` : "Max"}
+								</strong>
+								<button
+									type="button"
+									onClick={() => {
+										setPriceRange(null, null);
+									}}
+									className="ml-2 hover:text-red-500 font-bold"
+								>
+									×
+								</button>
+							</span>
+						)}
+
+						<div className="flex items-center gap-2">
+							<PriceFilter
+								minPrice={minPrice}
+								maxPrice={maxPrice}
+								onFilter={(min, max) => setPriceRange(min, max)}
+								maxLimit={5000000}
+							/>
+							<div className="flex items-center gap-2">
+								<SlidersHorizontal className="h-4 w-4 text-sf-accent" />
+								<select
+									id="catalog-sort-select"
+									value={sortBy}
+									onChange={(e) => setSortBy(e.target.value)}
+									className="rounded-lg border border-sf-border bg-sf-bg-elevated py-1.5 px-3 text-xs text-sf-fg focus:border-sf-accent outline-none cursor-pointer"
+								>
+									<option value="featured">Sắp xếp: Khuyên dùng</option>
+									<option value="price-low">Giá: Thấp đến Cao</option>
+									<option value="price-high">Giá: Cao đến Thấp</option>
+									<option value="popular">Yêu thích nhất</option>
+								</select>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -200,10 +214,7 @@ export function FlowerCatalog() {
 			</div>
 
 			{/* Main Grid View */}
-			<motion.div
-				layout
-				className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-			>
+			<motion.div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
 				{paginatedFlowers.map((flower, index) => {
 					const cartItem = cart.find((i) => i.product.id === flower.id);
 					const currentCartQty = cartItem ? cartItem.quantity : 0;
@@ -216,7 +227,6 @@ export function FlowerCatalog() {
 						<motion.div
 							id={`flower-card-${flower.code}`}
 							key={flower.id || flower.code || `flower-${index}`}
-							layout
 							transition={{ duration: 0.4 }}
 							className="group relative cursor-pointer flex flex-col h-full bg-sf-bg-elevated border border-sf-border rounded-xl p-3 overflow-hidden shadow-sm hover:shadow-lg hover:border-sf-accent transition-all duration-300"
 						>
@@ -228,7 +238,7 @@ export function FlowerCatalog() {
 								)}
 							>
 								<Image
-									src="/images/about-us-main1.avif"
+									src={flower.imageUrl || "/images/about-us-main1.avif"}
 									alt={flower.nameVn}
 									className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
 									referrerPolicy="no-referrer"

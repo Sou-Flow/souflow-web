@@ -14,7 +14,8 @@ export const commentService = {
 			const rawResponse: ApiResponse<CommentResponseDTO[]> =
 				await axiosClient.get(`/products/by-code/${productCode}/comments`);
 
-			const rawList = rawResponse.data;
+			const rawList =
+				(rawResponse as unknown as Record<string, unknown>).data ?? rawResponse;
 			if (!Array.isArray(rawList)) {
 				return [];
 			}
@@ -30,26 +31,40 @@ export const commentService = {
 	},
 
 	addComment: async (
-		productCode: string,
+		productPk: number,
 		content: string,
 	): Promise<CommentFE | null> => {
 		try {
 			const rawResponse: ApiResponse<CommentResponseDTO> =
-				await axiosClient.post(`/products/by-code/${productCode}/comments`, {
+				await axiosClient.post(`/user/comment`, {
+					productPk,
 					content,
 				});
 
-			if (!rawResponse.data) return null;
-			return mapCommentResponseToFE(rawResponse.data);
+			const actualData =
+				(rawResponse as unknown as Record<string, unknown>).data ?? rawResponse;
+			if (
+				!actualData &&
+				!(rawResponse as unknown as Record<string, unknown>).pk
+			)
+				return null;
+			const data = actualData;
+			return mapCommentResponseToFE(data as CommentResponseDTO);
 		} catch (error) {
 			console.error("Lỗi khi thêm bình luận:", error);
 			throw error;
 		}
 	},
 
-	addReply: async (commentId: number, content: string): Promise<void> => {
+	addReply: async (commentPk: number, content: string): Promise<unknown> => {
 		try {
-			await axiosClient.post(`/comments/${commentId}/replies`, { content });
+			const rawResponse = await axiosClient.post(`/user/reply`, {
+				commentPk,
+				content,
+			});
+			const actualData =
+				(rawResponse as unknown as Record<string, unknown>).data ?? rawResponse;
+			return actualData;
 		} catch (error) {
 			console.error("Lỗi khi trả lời bình luận:", error);
 			throw error;

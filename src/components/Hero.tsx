@@ -3,11 +3,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Filter, Leaf, Plus, Sparkles } from "lucide-react";
 import { motion } from "motion/react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { soulFlowRoutes } from "@/lib/soulflow/routes";
+import { soulFlowRoutes } from "@/lib/souflow/routes";
 import { categoryService } from "@/services/categoryService";
 import { productService } from "@/services/productService";
 import { useAuthStore } from "@/store/auth-store";
@@ -46,7 +47,7 @@ export function Hero() {
 		if (!flowers || flowers.length === 0) return [];
 
 		// Giả định property chứa giá trị số nguyên của bạn là 'price'
-		const budgetFlowers = flowers.filter((f) => f.price < 400000);
+		const budgetFlowers = flowers.filter((f) => f.price < 500000);
 
 		// Randomize (xáo trộn) mảng và lấy 3 phần tử đầu
 		// eslint-disable-next-line react-hooks/purity
@@ -144,8 +145,13 @@ export function Hero() {
 					>
 						<div className="relative aspect-4/5 w-full h-110 overflow-hidden rounded-xl">
 							<div className="absolute inset-0 bg-sf-surface" />{" "}
-							{/* Placeholder background */}
-							{/* Chỗ này sau có hình thật thì mở tag Image ra xài */}
+							{/* Main Hero Image */}
+							<Image
+								src="/images/about-us-main1.avif"
+								alt="Hero Image"
+								fill
+								className="object-cover"
+							/>
 							<div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
 							<div className="absolute bottom-6 left-10 z-10">
 								<span className="text-base uppercase tracking-widest text-rose-500 font-bold drop-shadow-sm">
@@ -256,8 +262,12 @@ export function Hero() {
 												)}
 												className={`relative block aspect-square w-full overflow-hidden rounded-lg bg-sf-surface items-center justify-center text-sf-fg-muted text-xs ${availableStock <= 0 ? "grayscale opacity-70" : ""}`}
 											>
-												{/* Placeholder cho ảnh, mốt có link ảnh thật thì nhét thẻ <Image> vào đây */}
-												<span>Image Placeholder</span>
+												<Image
+													src={flower.imageUrl || "/images/about-us-main1.avif"}
+													alt={flower.nameVn}
+													fill
+													className="object-cover group-hover:scale-105 transition-transform duration-500"
+												/>
 												{availableStock <= 0 && (
 													<div className="absolute inset-0 flex items-center justify-center bg-black/30">
 														<span className="bg-sf-fg text-sf-bg px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
@@ -383,8 +393,12 @@ export function Hero() {
 								className="group cursor-pointer overflow-hidden rounded-xl border border-sf-border bg-sf-bg-elevated p-4 shadow-sm hover:shadow-md transition-all duration-300"
 							>
 								<div className="relative aspect-16/10 w-full overflow-hidden rounded-lg bg-sf-surface flex items-center justify-center text-sf-fg-muted">
-									{/* Thay thẻ <span> thành <Image src={flower.imageUrl} ... /> khi bạn có ảnh từ backend */}
-									<span>Image Placeholder</span>
+									<Image
+										src={flower.imageUrl || "/images/about-us-main1.avif"}
+										alt={flower.nameVn}
+										fill
+										className="object-cover group-hover:scale-105 transition-transform duration-500"
+									/>
 
 									<span className="absolute top-3 right-3 rounded-full bg-black/80 backdrop-blur-md px-3 py-1 text-xs font-bold text-white tracking-widest">
 										{flower.formattedPrice}

@@ -14,7 +14,7 @@ export const useLocationStore = create<LocationState>((set) => ({
 
 	fetchLocationData: async () => {
 		try {
-			const response = await fetch("/data/locations.json");
+			const response = await fetch("/data/ghn-locations.json");
 			if (!response.ok) throw new Error("Failed to load locations");
 			const data = await response.json();
 			if (Array.isArray(data)) {

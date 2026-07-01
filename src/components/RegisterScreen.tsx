@@ -5,9 +5,10 @@ import axios from "axios";
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
-import { soulFlowRoutes } from "@/lib/soulflow/routes";
+import { soulFlowRoutes } from "@/lib/souflow/routes";
 import { authService } from "@/services/authService";
 import { useLocationStore } from "@/store/location-store";
 import { encodeAddress } from "@/utils/addressUtils";
@@ -38,6 +39,16 @@ export function RegisterScreen() {
 			city: "",
 		},
 	});
+
+	const [capsLockOn, setCapsLockOn] = useState(false);
+
+	const handleKeyUp = (e: React.KeyboardEvent<HTMLInputElement>) => {
+		if (e.getModifierState("CapsLock")) {
+			setCapsLockOn(true);
+		} else {
+			setCapsLockOn(false);
+		}
+	};
 
 	const { locationData } = useLocationStore();
 
@@ -82,9 +93,8 @@ export function RegisterScreen() {
 				username: data.username,
 				email: data.email,
 				password: data.password,
-				confirmPassword: data.confirmPassword,
-				phoneNumber: data.phoneNumber,
-				fullName: data.fullName,
+				phone: data.phoneNumber,
+				fullname: data.fullName,
 				address: finalAddress,
 			};
 
@@ -116,7 +126,7 @@ export function RegisterScreen() {
 			<section className="lg:col-span-6 space-y-8 text-center lg:text-left ml-30 mb-60">
 				<div className="space-y-4">
 					<span className="text-primary font-semibold text-xs uppercase tracking-[0.3em] block">
-						Bắt đầu hành trình của bạn với SoulFlow
+						Bắt đầu hành trình của bạn với SouFlow
 					</span>
 					<h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-light text-sf-heading leading-tight select-none">
 						Nơi những loài <br />
@@ -124,7 +134,7 @@ export function RegisterScreen() {
 						Chuyện.
 					</h1>
 					<p className="font-sans text-sm sm:text-base text-secondary/80 max-w-md mx-auto lg:mx-0 leading-relaxed font-light">
-						Tại SoulFlow, chúng tôi tin rằng mỗi bông hoa đều có một câu chuyện
+						Tại SouFlow, chúng tôi tin rằng mỗi bông hoa đều có một câu chuyện
 						để kể. Hãy cùng chúng tôi khám phá vẻ đẹp của thiên nhiên và tạo nên
 						những kỷ niệm đáng nhớ qua từng cánh hoa.
 					</p>
@@ -154,7 +164,7 @@ export function RegisterScreen() {
 							Tạo Tài Khoản Mới
 						</h2>
 						<p className="font-sans text-base text-secondary/80 text-sf-fg font-light">
-							Chúng tôi rất vui được chào đón bạn đến với cộng đồng SoulFlow!
+							Chúng tôi rất vui được chào đón bạn đến với cộng đồng SouFlow!
 							Hãy điền thông tin bên dưới để bắt đầu hành trình khám phá vẻ đẹp
 							của thiên nhiên cùng chúng tôi.
 						</p>
@@ -414,6 +424,7 @@ export function RegisterScreen() {
 										type="password"
 										placeholder="••••••••"
 										{...register("password")}
+										onKeyUp={handleKeyUp}
 										className="w-full bg-white/5 border-0 border-b border-outline-variant/60 py-2.5 px-0 text-sm focus:border-primary transition-all focus:outline-none placeholder-secondary/30 text-sf-fg"
 										required
 									/>
@@ -435,6 +446,7 @@ export function RegisterScreen() {
 										type="password"
 										placeholder="••••••••"
 										{...register("confirmPassword")}
+										onKeyUp={handleKeyUp}
 										className="w-full bg-white/5 border-0 border-b border-outline-variant/60 py-2.5 px-0 text-sm focus:border-primary transition-all focus:outline-none placeholder-secondary/30 text-sf-fg"
 										required
 									/>
@@ -445,6 +457,12 @@ export function RegisterScreen() {
 									)}
 								</div>
 							</div>
+
+							{capsLockOn && (
+								<div className="text-xs text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded-md font-semibold mt-2">
+									⚠️ Cảnh báo: Caps Lock đang bật!
+								</div>
+							)}
 						</div>
 
 						{/* Điều hướng nhận thư Bản tin */}

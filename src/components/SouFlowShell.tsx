@@ -6,11 +6,11 @@ import { CartDrawer } from "@/components/CartDrawer";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 
-type SoulFlowShellProps = {
+type SouFlowShellProps = {
 	children: ReactNode;
 };
 
-export function SoulFlowShell({ children }: SoulFlowShellProps) {
+export function SouFlowShell({ children }: SouFlowShellProps) {
 	const _pathname = usePathname();
 	const [isCartOpen, setIsCartOpen] = useState(false);
 

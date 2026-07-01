@@ -4,9 +4,6 @@ import { useAuthStore } from "@/store/auth-store";
 
 const axiosClient = axios.create({
 	baseURL: process.env.NEXT_PUBLIC_API_URL,
-	headers: {
-		"Content-Type": "application/json",
-	},
 	// Thêm cái timeout để lỡ Backend sập thì FE không bị treo quay đều mãi
 	timeout: 10000,
 });
@@ -20,6 +17,19 @@ axiosClient.interceptors.request.use(
 			// Nhét token vào chuẩn Bearer của JWT
 			config.headers.Authorization = `Bearer ${token}`;
 		}
+
+		// Tự động set Content-Type
+		if (config.data instanceof FormData) {
+			// Để trình duyệt tự set multipart/form-data với boundary
+			if (config.headers) {
+				delete config.headers["Content-Type"];
+			}
+		} else {
+			if (config.headers && !config.headers["Content-Type"]) {
+				config.headers["Content-Type"] = "application/json";
+			}
+		}
+
 		return config;
 	},
 	(error) => {

@@ -4,7 +4,7 @@
 
 // 1. Dữ liệu thô BE trả về
 export interface CommentResponseDTO {
-	id: number; // Map từ 'pk'
+	pk: number; // Map từ 'pk'
 	content: string;
 	createdDate: string;
 	productId: number; // Map từ 'product_pk'
@@ -31,7 +31,7 @@ export const mapCommentResponseToFE = (
 	replies: ReplyFE[] = [],
 ): CommentFE => {
 	return {
-		id: dto.id,
+		id: dto.pk,
 		content: dto.content,
 		createdDate: dto.createdDate,
 		productId: dto.productId,
@@ -46,7 +46,7 @@ export const mapCommentResponseToFE = (
 
 // 1. Dữ liệu thô BE trả về
 export interface ReplyResponseDTO {
-	id: number; // Map từ 'pk'
+	pk: number; // Map từ 'pk'
 	content: string;
 	createdDate: string;
 	commentId: number; // Map từ 'comment_pk'
@@ -69,7 +69,7 @@ export interface ReplyFE {
 // 3. Hàm Mapper
 export const mapReplyResponseToFE = (dto: ReplyResponseDTO): ReplyFE => {
 	return {
-		id: dto.id,
+		id: dto.pk,
 		content: dto.content,
 		createdDate: dto.createdDate,
 		commentId: dto.commentId,

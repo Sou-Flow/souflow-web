@@ -13,39 +13,105 @@ export const productService = {
 		try {
 			// 1. Gọi API, thêm query param t để bypass cache của backend nếu backend cấu hình cache theo URL
 			const rawResponse: ApiResponse<ProductResponseDTO[]> =
-				await axiosClient.get("/products", {
-					params: { t: Date.now() },
+				await axiosClient.get("/product", {
+					params: { t: Date.now(), pageSize: 100 },
 				});
 
-			// Lấy chính xác cái mảng dữ liệu nằm bên trong property 'data' của ApiResponse
-			const rawList = rawResponse.data;
+			// CÁCH SỬA LỖI Ở ĐÂY: Thêm : any
+			// biome-ignore lint/suspicious/noExplicitAny: skip
+			const actualData: any =
+				(rawResponse as unknown as Record<string, unknown>).data ?? rawResponse;
 
-			// Chắc cú kiểm tra xem nó có phải là mảng không
-			if (!Array.isArray(rawList)) {
+			// Hỗ trợ cả Array và PageResponse (phân trang có .content)
+			let rawList: ProductResponseDTO[] = [];
+			if (Array.isArray(actualData)) {
+				rawList = actualData;
+			} else if (
+				actualData &&
+				typeof actualData === "object" &&
+				Array.isArray(actualData.content) // Giờ TS sẽ cho qua dòng này
+			) {
+				rawList = actualData.content;
+			} else {
 				return [];
 			}
 
 			// 2. Chạy qua máy xay Mapper để gọt data thô (BE) thành data sạch (FE)
 			return rawList.map(mapProductResponseToFE);
 		} catch (error) {
-			console.warn("⚠️ API '/products' lỗi hoặc BE chưa chạy.", error);
+			console.warn("⚠️ API '/product' lỗi hoặc BE chưa chạy.", error);
 			// Lấy danh sách lỗi thì trả về MẢNG RỖNG, tuyệt đối không dùng notFound() ở đây
 			return [];
+		}
+	},
+
+	getPaginatedFlowers: async (
+		pageNumber: number,
+		pageSize: number,
+		keyword?: string,
+		categoryPk?: number,
+		sortOrder?: string,
+		sortBy?: string,
+		minPrice?: number,
+		maxPrice?: number,
+	): Promise<{ content: ProductFE[]; totalPages: number }> => {
+		try {
+			const params: Record<string, unknown> = {
+				pageNumber,
+				pageSize,
+				t: Date.now(),
+			};
+			if (keyword) params.keyword = keyword;
+			if (categoryPk) params.categoryPk = categoryPk;
+			if (sortOrder) params.sortOrder = sortOrder;
+			if (sortBy) params.sortBy = sortBy;
+			if (minPrice !== undefined && minPrice !== null)
+				params.minPrice = minPrice;
+			if (maxPrice !== undefined && maxPrice !== null)
+				params.maxPrice = maxPrice;
+
+			const rawResponse = await axiosClient.get("/product", { params });
+
+			// CÁCH SỬA LỖI Ở ĐÂY TƯƠNG TỰ: Thêm : any
+			// biome-ignore lint/suspicious/noExplicitAny: skip
+			const actualData: any =
+				(rawResponse as unknown as Record<string, unknown>).data ?? rawResponse;
+
+			if (
+				actualData &&
+				typeof actualData === "object" &&
+				Array.isArray(actualData.content) // Và dòng này nữa
+			) {
+				return {
+					content: actualData.content.map(mapProductResponseToFE),
+					totalPages: actualData.totalPages || 1, // Kể cả gọi totalPages cũng không bị lỗi nữa
+				};
+			}
+			return { content: [], totalPages: 1 };
+		} catch (error) {
+			console.warn("⚠️ API '/product' lỗi khi lấy phân trang.", error);
+			return { content: [], totalPages: 1 };
 		}
 	},
 
 	getFlowerByCode: async (code: string): Promise<ProductFE | null> => {
 		try {
 			const rawResponse: ApiResponse<ProductResponseDTO> =
-				await axiosClient.get(`/products/by-code/${code}`);
+				await axiosClient.get(`/product/by-code/${code}`, {
+					params: { t: Date.now() },
+				});
 
-			if (!rawResponse.data) return null;
+			// Ở đây vì gọi thẳng cho 1 object, nên không bị lỗi .content, nhưng cứ thêm : any cho đồng bộ
+			// biome-ignore lint/suspicious/noExplicitAny: skip
+			const actualData: any =
+				(rawResponse as unknown as Record<string, unknown>).data ?? rawResponse;
+			if (!actualData) return null;
 
 			// 2. Dùng Mapper gọt data cho 1 sản phẩm
-			return mapProductResponseToFE(rawResponse.data);
+			return mapProductResponseToFE(actualData);
 		} catch (error) {
 			console.warn(
-				`⚠️ API '/products/by-code/${code}' lỗi hoặc BE chưa chạy.`,
+				`⚠️ API '/product/by-code/${code}' lỗi hoặc BE chưa chạy.`,
 				error,
 			);
 			// Lấy chi tiết bị lỗi thì trả về null (Để bên giao diện check == null thì mới gọi notFound() đá qua trang 404)
