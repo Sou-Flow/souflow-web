@@ -1,10 +1,10 @@
-name: Next.js CI with Bun
+name: Next.js CI with NPM
 
 on:
   push:
-    branches: ["main", "develop"]
+    branches: ["develop", "main"]
   pull_request:
-    branches: ["main", "develop"]
+    branches: ["develop", "main"]
 
 jobs:
   build:
@@ -14,16 +14,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Khai báo cho GitHub biết dự án này dùng Bun
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version: '20'
+          cache: 'npm'
 
-      # Cài đặt thư viện bằng Bun
       - name: Install dependencies
-        run: bun install
+        run: npm ci
 
-      # Chạy thử lệnh build để kiểm tra xem code có lỗi gì không
       - name: Build Next.js
-        run: bun run build
+        run: npm run build
