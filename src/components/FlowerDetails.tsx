@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { soulFlowRoutes } from "@/lib/souflow/routes";
@@ -63,6 +63,7 @@ const _MOCK_COMMENTS: CommentType[] = [
 
 export function FlowerDetails({ productId }: FlowerDetailsProps) {
 	const router = useRouter();
+	const pathname = usePathname();
 	const { user } = useAuthStore();
 	//const { addToCart } = CartFE();
 
@@ -176,7 +177,7 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 		if (!newComment.trim()) return;
 		if (!user) {
 			toast.error("Vui lòng đăng nhập để bình luận");
-			router.push("/login");
+			router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
 			return;
 		}
 		if (!fetchedFlower) return;
@@ -208,7 +209,7 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 		if (!replyContent.trim()) return;
 		if (!user) {
 			toast.error("Vui lòng đăng nhập để trả lời");
-			router.push("/login");
+			router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
 			return;
 		}
 		try {
@@ -401,7 +402,7 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 								if (!fetchedFlower.isAvailable || availableStock <= 0) return;
 								if (!user) {
 									toast.error("Vui lòng đăng nhập để thêm vào giỏ hàng");
-									router.push("/login");
+									router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
 									return;
 								}
 								setIsAddingToCart(true);
