@@ -288,7 +288,9 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 
 	let formattedDate = String(user.createDate);
 	if (formattedDate.includes("-")) {
-		const parts = formattedDate.split("T")[0].split("-");
+		// Remove time part if exists (either after T or space)
+		const dateOnly = formattedDate.split("T")[0].split(" ")[0];
+		const parts = dateOnly.split("-");
 		if (parts.length === 3) {
 			// Check if format is YYYY-MM-DD
 			if (parts[0].length === 4) {
@@ -298,6 +300,8 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 			else if (parts[2].length === 4) {
 				formattedDate = `${parts[0]}/${parts[1]}/${parts[2]}`;
 			}
+		} else {
+			formattedDate = dateOnly;
 		}
 	} else if (Array.isArray(user.createDate)) {
 		const [year, month, day] = user.createDate;
