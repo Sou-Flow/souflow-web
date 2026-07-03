@@ -287,7 +287,9 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 	};
 
 	const dateStr = String(user.createDate);
-	const formattedDate = `${dateStr.slice(7, 9)}/${dateStr.slice(5, 6)}/${dateStr.slice(0, 4)}`;
+	const formattedDate = dateStr.length >= 10 
+		? `${dateStr.slice(8, 10)}/${dateStr.slice(5, 7)}/${dateStr.slice(0, 4)}` 
+		: dateStr;
 
 	return (
 		<div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 bg-sf-bg-elevated transition-colors duration-300">
