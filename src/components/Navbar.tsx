@@ -366,7 +366,7 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 										<span className="hidden lg:flex items-center gap-1.5 text-sm font-bold tracking-widest text-sf-fg uppercase">
 											{user.roleCode === "ADMIN" ? (
 												<>
-													SoulFlow Shop <Crown className="h-4 w-4 text-sf-accent" />
+													SouFlow Shop <Crown className="h-4 w-4 text-sf-accent" />
 												</>
 											) : (
 												user.fullName
@@ -466,7 +466,7 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 											/>
 											<span className="flex items-center gap-1.5">
 												{user.roleCode === "ADMIN" ? (
-													<>SoulFlow Shop <Crown className="h-4 w-4 text-sf-accent" /></>
+													<>SouFlow Shop <Crown className="h-4 w-4 text-sf-accent" /></>
 												) : (
 													user.fullName ? user.fullName.split(" ")[0] : "User"
 												)}
