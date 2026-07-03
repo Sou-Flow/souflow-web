@@ -215,7 +215,7 @@ export function CheckoutForm() {
 			address: fullAddress,
 			city: cityName || "",
 			district: selectedDistrict || "",
-			paymentMethod,
+			paymentMethod: paymentMethod as "COD" | "SEPAY",
 			shippingFee,
 		};
 
