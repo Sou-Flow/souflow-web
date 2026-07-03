@@ -10,6 +10,8 @@ import {
 	type ContactFormValues,
 	contactValidator,
 } from "../validations/contact.validator";
+import { useAuthStore } from "@/store/auth-store";
+import { useEffect } from "react";
 
 export function ContactUs() {
 	const {
@@ -20,6 +22,18 @@ export function ContactUs() {
 	} = useForm<ContactFormValues>({
 		resolver: zodResolver(contactValidator),
 	});
+
+	const { user } = useAuthStore();
+
+	useEffect(() => {
+		if (user) {
+			reset({
+				name: user.fullName || "",
+				email: user.email || "",
+				tel: user.phone || "",
+			});
+		}
+	}, [user, reset]);
 
 	// Xử lý gửi Form Liên hệ
 	const onSubmit = async (data: ContactFormValues) => {
