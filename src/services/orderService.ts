@@ -13,18 +13,20 @@ export const orderService = {
 			// axiosClient đã được setup với baseURL là http://localhost:8080/api
 			// (nếu cấu hình NEXT_PUBLIC_API_URL trong .env)
 			const rawResponse: ApiResponse<OrderResponseDTO> = await axiosClient.post(
-				"/orders",
+				"/user/order",
 				payload,
 			);
 
-			if (!rawResponse.data) {
+			const actualData =
+				(rawResponse as unknown as Record<string, unknown>).data ?? rawResponse;
+			if (!actualData) {
 				throw new Error(
 					"Tạo đơn hàng thành công nhưng không có dữ liệu trả về.",
 				);
 			}
 
 			// Map qua FE
-			return mapOrderResponseToFE(rawResponse.data);
+			return mapOrderResponseToFE(actualData);
 		} catch (error) {
 			console.error("Lỗi khi gọi API tạo đơn:", error);
 			throw error;
@@ -35,9 +37,15 @@ export const orderService = {
 		try {
 			// Gọi API lấy lịch sử đơn hàng của user đang đăng nhập (token tự động được gắn ở interceptor)
 			const rawResponse: ApiResponse<OrderResponseDTO[]> =
-				await axiosClient.get("/orders");
+				await axiosClient.get("/user/order", {
+					params: { pageSize: 100 },
+				});
 
-			const rawList = rawResponse.data;
+			const actualData =
+				(rawResponse as unknown as Record<string, unknown>).data ?? rawResponse;
+			const rawList = Array.isArray(actualData)
+				? actualData
+				: (actualData as unknown as Record<string, unknown>)?.content || [];
 
 			if (!Array.isArray(rawList)) {
 				return [];
@@ -45,7 +53,7 @@ export const orderService = {
 
 			return rawList.map(mapOrderResponseToFE);
 		} catch (error) {
-			console.warn("⚠️ API '/orders' lỗi hoặc chưa có auth.", error);
+			console.warn("⚠️ API '/user/order' lỗi hoặc chưa có auth.", error);
 			return [];
 		}
 	},
@@ -53,16 +61,18 @@ export const orderService = {
 	getOrderByCode: async (code: string): Promise<OrderFE | null> => {
 		try {
 			const rawResponse: ApiResponse<OrderResponseDTO> = await axiosClient.get(
-				`/orders/by-code/${code}`,
+				`/user/order/by-code/${code}`,
 				{ params: { t: Date.now() } },
 			);
 
-			if (!rawResponse.data) return null;
+			const actualData =
+				(rawResponse as unknown as Record<string, unknown>).data ?? rawResponse;
+			if (!actualData) return null;
 
-			return mapOrderResponseToFE(rawResponse.data);
+			return mapOrderResponseToFE(actualData);
 		} catch (error) {
 			console.warn(
-				`⚠️ API '/orders/by-code/${code}' lỗi hoặc đơn hàng không tồn tại.`,
+				`⚠️ API '/user/order/by-code/${code}' lỗi hoặc đơn hàng không tồn tại.`,
 				error,
 			);
 			return null;
@@ -72,13 +82,29 @@ export const orderService = {
 	updateOrderStatus: async (code: string, status: string): Promise<OrderFE> => {
 		try {
 			const rawResponse: ApiResponse<OrderResponseDTO> = await axiosClient.put(
-				`/orders/by-code/${code}/status`,
+				`/user/order/by-code/${code}/status`,
 				null,
 				{ params: { status } },
 			);
-			return mapOrderResponseToFE(rawResponse.data);
-		} catch (error) {
-			console.error(`Lỗi cập nhật trạng thái đơn ${code}:`, error);
+			const actualData =
+				(rawResponse as unknown as Record<string, unknown>).data ?? rawResponse;
+			return mapOrderResponseToFE(actualData);
+		} catch (error: unknown) {
+			console.warn(
+				`⚠️ Backend sập khi cập nhật trạng thái đơn ${code}: ${error instanceof Error ? error.message : error}`,
+			);
+			throw error;
+		}
+	},
+
+	deleteOrder: async (pk: string | number): Promise<boolean> => {
+		try {
+			await axiosClient.delete(`/user/order/${pk}`);
+			return true;
+		} catch (error: unknown) {
+			console.warn(
+				`⚠️ Lỗi khi gọi DELETE /user/order/${pk}: ${error instanceof Error ? error.message : error}`,
+			);
 			throw error;
 		}
 	},

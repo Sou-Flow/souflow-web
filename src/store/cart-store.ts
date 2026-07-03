@@ -4,10 +4,7 @@ import { create } from "zustand";
 import { cartService } from "@/services/cartService";
 import { discountService } from "@/services/discountService";
 import { productService } from "@/services/productService";
-import {
-	type CartItemResponseDTO,
-	mapCartItemResponseToFE,
-} from "@/types/cart.type";
+import { mapCartItemResponseToFE } from "@/types/cart.type";
 import type { DiscountFE } from "@/types/discount.type";
 import type { CartItemFE } from "@/types/order.type";
 import type { ProductFE } from "@/types/product.type";
@@ -63,22 +60,45 @@ export const useCartStore = create<CartState>()((set, get) => ({
 				} catch (_e) {}
 			}
 
-			// Lọc giỏ hàng chưa hết hạn và không nằm trong blacklist
 			const activeCarts = (carts ?? []).filter((c) => {
-				const cId = Number(c.id); // CartResponse.id = carts.pk (numeric)
+				// biome-ignore lint/suspicious/noExplicitAny: skip
+				const cId = Number(c.pk || (c as any).id || (c as any).cartId);
 				return !c.expired && !deadCarts.includes(cId);
 			});
 
 			if (activeCarts.length > 0) {
 				// Chọn giỏ hàng mới nhất
 				const currentCart = activeCarts[activeCarts.length - 1];
-				const mappedItems: CartItemFE[] = (currentCart.items ?? []).map(
-					(item: CartItemResponseDTO) => mapCartItemResponseToFE(item),
+				// biome-ignore lint/suspicious/noExplicitAny: skip
+				const rawItems =
+					(currentCart as any).items ||
+					(currentCart as any).itemResponses ||
+					[];
+				const mappedItems: CartItemFE[] = rawItems.map(
+					// biome-ignore lint/suspicious/noExplicitAny: skip
+					(item: any) => mapCartItemResponseToFE(item),
 				);
 
+				const deduplicatedItems: CartItemFE[] = [];
+				for (const item of mappedItems) {
+					const existing = deduplicatedItems.find(
+						(i) => i.product.id === item.product.id,
+					);
+					if (existing) {
+						existing.quantity += item.quantity;
+					} else {
+						deduplicatedItems.push(item);
+					}
+				}
+
 				set({
-					cartId: currentCart.id, // carts.pk — dùng trong URL /carts/{id}/items
-					cart: mappedItems,
+					cartId: Number(
+						// biome-ignore lint/suspicious/noExplicitAny: skip
+						currentCart.pk ||
+							(currentCart as any).id ||
+							(currentCart as any).cartId,
+					),
+					cart: deduplicatedItems,
 					isLoading: false,
 				});
 
@@ -87,7 +107,7 @@ export const useCartStore = create<CartState>()((set, get) => ({
 			} else {
 				const newCart = await cartService.createCart();
 				if (newCart) {
-					set({ cartId: newCart.id, cart: [], isLoading: false });
+					set({ cartId: newCart.pk, cart: [], isLoading: false });
 				} else {
 					set({ isLoading: false });
 				}
@@ -130,18 +150,84 @@ export const useCartStore = create<CartState>()((set, get) => ({
 		}
 
 		try {
-			// BE xử lý cả thêm mới lẫn tăng số lượng thông qua cùng một endpoint POST
-			await cartService.addItemToCart(
+			// Lấy giỏ hàng hiện tại và thêm/cập nhật sản phẩm, gộp các item bị trùng
+			const currentItems: {
+				pk: number | null;
+				productId: number;
+				quantity: number;
+			}[] = [];
+			for (const item of get().cart) {
+				const existing = currentItems.find(
+					(i) => i.productId === item.product.id,
+				);
+				if (existing) {
+					existing.quantity += item.quantity;
+				} else {
+					currentItems.push({
+						pk: item.itemPk || null,
+						productId: item.product.id,
+						quantity: item.quantity,
+					});
+				}
+			}
+
+			const existingItemIndex = currentItems.findIndex(
+				(i) => i.productId === Number(product.id),
+			);
+			if (existingItemIndex >= 0) {
+				currentItems[existingItemIndex].quantity += quantity;
+			} else {
+				currentItems.push({
+					pk: null,
+					productId: Number(product.id),
+					quantity,
+				});
+			}
+
+			// Gửi toàn bộ giỏ hàng lên BE
+			const updatedCartDTO = await cartService.saveCart(
 				activeCartId,
-				Number(product.id),
-				quantity,
+				currentItems,
 			);
 
-			// Fetch lại giỏ hàng từ backend để chắc chắn đồng bộ `itemPk`
-			await fetchCart();
+			// Tối ưu hóa: Dùng trực tiếp dữ liệu trả về từ BE thay vì gọi thêm 2 API fetchCart và revalidateCart
+			// biome-ignore lint/suspicious/noExplicitAny: skip
+			const rawItems =
+				(updatedCartDTO as any)?.items ||
+				(updatedCartDTO as any)?.itemResponses;
+			if (rawItems) {
+				const mappedItems = rawItems.map((item: Record<string, unknown>) => {
+					const mapped = mapCartItemResponseToFE(item);
+					// Preserve existing product details to prevent UI flicker
+					const existingItem = get().cart.find(
+						(i) => i.product.id === mapped.product.id,
+					);
+					if (existingItem) {
+						mapped.product = existingItem.product;
+					} else if (mapped.product.id === product.id) {
+						// For the newly added item, preserve the product details passed into addToCart
+						mapped.product = product;
+					}
+					return mapped;
+				});
 
-			// Gọi đồng bộ lại tồn kho để đảm bảo giao diện hiển thị đúng tình trạng hiện tại
-			await get().revalidateCart();
+				// Deduplicate in case backend returns duplicated rows
+				const deduplicatedItems: CartItemFE[] = [];
+				for (const item of mappedItems) {
+					const existing = deduplicatedItems.find(
+						(i) => i.product.id === item.product.id,
+					);
+					if (existing) {
+						existing.quantity += item.quantity;
+					} else {
+						deduplicatedItems.push(item);
+					}
+				}
+
+				set({ cart: deduplicatedItems });
+				// Đồng bộ lại chi tiết sản phẩm (hình ảnh, tồn kho thật) từ BE
+				await get().revalidateCart();
+			}
 
 			toast.success(`Đã thêm ${product.nameVn} vào giỏ hàng!`, { id: toastId });
 		} catch (error: unknown) {
@@ -162,11 +248,9 @@ export const useCartStore = create<CartState>()((set, get) => ({
 
 					if (newCartId) {
 						set({ cartId: newCartId });
-						await cartService.addItemToCart(
-							newCartId,
-							Number(product.id),
-							quantity,
-						);
+						await cartService.saveCart(newCartId, [
+							{ pk: null, productId: Number(product.id), quantity: quantity },
+						]);
 						await fetchCart();
 						toast.success(`Đã thêm ${product.nameVn} vào giỏ hàng!`, {
 							id: toastId,
@@ -201,9 +285,54 @@ export const useCartStore = create<CartState>()((set, get) => ({
 
 		const toastId = toast.loading("Đang xóa sản phẩm...");
 		try {
-			// BE yêu cầu DELETE /carts/{cartId}/items/{itemId} (với itemId là items.pk chứ không phải products.pk)
-			await cartService.removeItemFromCart(cartId, currentItem.itemPk);
-			set({ cart: cart.filter((item) => item.product.id !== productId) });
+			// BE yêu cầu lưu lại toàn bộ giỏ hàng với danh sách items mới
+			const currentItems: {
+				pk: number | null;
+				productId: number;
+				quantity: number;
+			}[] = [];
+			for (const item of cart.filter((item) => item.product.id !== productId)) {
+				const existing = currentItems.find(
+					(i) => i.productId === item.product.id,
+				);
+				if (existing) {
+					existing.quantity += item.quantity;
+				} else {
+					currentItems.push({
+						pk: item.itemPk || null,
+						productId: item.product.id,
+						quantity: item.quantity,
+					});
+				}
+			}
+
+			const updatedCartDTO = await cartService.saveCart(cartId, currentItems);
+			// biome-ignore lint/suspicious/noExplicitAny: skip
+			const rawItems =
+				(updatedCartDTO as any)?.items ||
+				(updatedCartDTO as any)?.itemResponses;
+			if (rawItems) {
+				const mappedItems = rawItems.map((item: Record<string, unknown>) =>
+					mapCartItemResponseToFE(item),
+				);
+
+				const deduplicatedItems: CartItemFE[] = [];
+				for (const item of mappedItems) {
+					const existing = deduplicatedItems.find(
+						(i) => i.product.id === item.product.id,
+					);
+					if (existing) {
+						existing.quantity += item.quantity;
+					} else {
+						deduplicatedItems.push(item);
+					}
+				}
+
+				set({ cart: deduplicatedItems });
+				await get().revalidateCart();
+			} else {
+				set({ cart: cart.filter((item) => item.product.id !== productId) });
+			}
 			toast.success("Đã xóa sản phẩm khỏi giỏ hàng", { id: toastId });
 		} catch (error: unknown) {
 			const err = error as { response?: { status?: number } };
@@ -247,27 +376,80 @@ export const useCartStore = create<CartState>()((set, get) => ({
 
 		if (delta === 0) return;
 
-		if (delta > 0) {
-			// Tăng số lượng: gọi POST với delta dương (quantity >= 1, pass validation)
+		if (delta > 0 || delta < 0) {
 			try {
-				await cartService.addItemToCart(cartId, productId, delta);
-				set({
-					cart: cart.map((item) =>
-						item.product.id === productId ? { ...item, quantity } : item,
-					),
-				});
+				const currentItems: {
+					pk: number | null;
+					productId: number;
+					quantity: number;
+				}[] = [];
+				for (const item of cart) {
+					const existing = currentItems.find(
+						(i) => i.productId === item.product.id,
+					);
+					const itemQty =
+						item.product.id === productId ? quantity : item.quantity;
+
+					if (existing) {
+						// Nếu đang xử lý sản phẩm trùng ID, ta gán luôn quantity mới để đè lên rác cũ
+						if (item.product.id === productId) {
+							existing.quantity = quantity;
+						} else {
+							existing.quantity += itemQty;
+						}
+					} else {
+						currentItems.push({
+							pk: item.itemPk || null,
+							productId: item.product.id,
+							quantity: itemQty,
+						});
+					}
+				}
+
+				const updatedCartDTO = await cartService.saveCart(cartId, currentItems);
+				// biome-ignore lint/suspicious/noExplicitAny: skip
+				const rawItems =
+					(updatedCartDTO as any)?.items ||
+					(updatedCartDTO as any)?.itemResponses;
+				if (rawItems) {
+					const mappedItems = rawItems.map((item: Record<string, unknown>) => {
+						const mapped = mapCartItemResponseToFE(item);
+						// Preserve existing product details (image, stockQuantity, etc.) to prevent UI flicker
+						const existingItem = get().cart.find(
+							(i) => i.product.id === mapped.product.id,
+						);
+						if (existingItem) {
+							mapped.product = existingItem.product;
+						}
+						return mapped;
+					});
+
+					const deduplicatedItems: CartItemFE[] = [];
+					for (const item of mappedItems) {
+						const existing = deduplicatedItems.find(
+							(i) => i.product.id === item.product.id,
+						);
+						if (existing) {
+							existing.quantity += item.quantity;
+						} else {
+							deduplicatedItems.push(item);
+						}
+					}
+
+					set({ cart: deduplicatedItems });
+					// Call revalidateCart asynchronously without blocking, though we just preserved the state
+					get().revalidateCart();
+				} else {
+					set({
+						cart: cart.map((item) =>
+							item.product.id === productId ? { ...item, quantity } : item,
+						),
+					});
+				}
 			} catch (error: unknown) {
-				console.error("Lỗi tăng số lượng:", error);
+				console.error("Lỗi cập nhật số lượng:", error);
 				toast.error("Không thể cập nhật số lượng!", { id: "update-error" });
 			}
-		} else {
-			// Giảm số lượng: Backend không có PUT, chỉ cập nhật local state
-			// Đảm bảo UI phản hồi ngay, số liệu sẽ đồng bộ khi refresh
-			set({
-				cart: cart.map((item) =>
-					item.product.id === productId ? { ...item, quantity } : item,
-				),
-			});
 		}
 	},
 
@@ -330,14 +512,14 @@ export const useCartStore = create<CartState>()((set, get) => ({
 
 			if (newCartId) {
 				set({ cartId: newCartId });
-				// Thêm lại từng sản phẩm vào giỏ hàng mới
-				for (const item of cart) {
-					await cartService.addItemToCart(
-						newCartId,
-						Number(item.product.id),
-						item.quantity,
-					);
-				}
+				// Thêm lại từng sản phẩm vào giỏ hàng mới bằng cách lưu toàn bộ giỏ
+				const currentItems = cart.map((item) => ({
+					pk: null,
+					productId: Number(item.product.id),
+					quantity: item.quantity,
+				}));
+				await cartService.saveCart(newCartId, currentItems);
+
 				// Đồng bộ lại với backend
 				await get().fetchCart();
 			}

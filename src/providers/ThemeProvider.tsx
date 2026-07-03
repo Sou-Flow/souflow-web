@@ -17,7 +17,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 			attribute="class"
 			defaultTheme="light"
 			enableSystem={false}
-			storageKey="soulflow-theme"
+			storageKey="souflow-theme"
 			themes={["light", "dark"]}
 			disableTransitionOnChange={false}
 		>

@@ -11,6 +11,7 @@ export const soulFlowRoutes = {
 	terms: "/terms",
 	login: "/login",
 	register: "/register",
+	forgotPassword: "/forgot-password",
 } as const;
 
-export type SoulFlowRouteKey = keyof typeof soulFlowRoutes;
+export type SouFlowRouteKey = keyof typeof soulFlowRoutes;

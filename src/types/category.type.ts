@@ -9,13 +9,14 @@ export interface CategoryRequestDTO {
 
 // 2. Dữ liệu thô BE trả về
 export interface CategoryResponseDTO {
-	id: number; // BE trả id (Map từ 'pk' trong DB)
-	businessId: string; // BE trả code (Map từ 'id' trong DB - VARCHAR)
+	pk: number; // BE trả pk (Map từ 'pk' trong DB)
+	businessId?: string; // BE trả code (Map từ 'id' trong DB - VARCHAR)
+	code?: string;
 	nameVn: string;
 	nameEng: string;
 	descriptionVn: string | null;
 	descriptionEng: string | null;
-	delIf: boolean; // BE tự convert BIT sang boolean
+	delIf?: boolean; // BE tự convert BIT sang boolean
 }
 
 // 3. Dữ liệu sạch cho FE xài
@@ -34,8 +35,8 @@ export const mapCategoryResponseToFE = (
 	dto: CategoryResponseDTO,
 ): CategoryFE => {
 	return {
-		id: dto.id,
-		code: dto.businessId,
+		id: Number(dto.pk),
+		code: dto.code || dto.businessId || String(dto.pk),
 		nameVn: dto.nameVn,
 		nameEng: dto.nameEng,
 		descriptionVn: dto.descriptionVn || "", // Fallback chuỗi rỗng nếu BE trả null

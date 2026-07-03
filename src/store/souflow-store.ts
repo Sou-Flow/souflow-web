@@ -13,9 +13,9 @@ import type {
 	Order,
 	UserProfile,
 	VietnamCity,
-} from "@/types/soulflow";
+} from "@/types/souflow";
 
-interface SoulFlowStoreState {
+interface SouFlowStoreState {
 	cart: CartItem[];
 	addToCart: (flower: Flower, size: FlowerSize) => void;
 	removeFromCart: (cartItemId: string) => void;
@@ -155,7 +155,7 @@ const defaultOrders: Order[] = [
 // 	};
 // }
 
-export const useSoulFlowStore = create<SoulFlowStoreState>()(
+export const useSouFlowStore = create<SouFlowStoreState>()(
 	persist((set, get) => ({
 		cart: [],
 		addToCart: (flower) => {

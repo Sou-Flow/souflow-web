@@ -5,7 +5,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 <!-- END:nextjs-agent-rules -->
 ## Custom Project Rules (Flower Shop)
 
-- **Package Manager:** Strictly use `bun` (never use `npm` or `yarn`).
+- **Package Manager:** Strictly use `npm` (never use `bun` or `yarn`).
 - **Linter & Formatter:** Use `@biomejs/biome`. Do not generate ESLint or Prettier configurations.
 - **State Management:** Use `zustand`. Do not use Redux or Context API for global state.
 - **Forms & Validation:** Use `react-hook-form` combined with `zod`.

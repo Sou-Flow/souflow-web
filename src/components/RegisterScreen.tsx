@@ -5,11 +5,13 @@ import axios from "axios";
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
-import { soulFlowRoutes } from "@/lib/soulflow/routes";
+import { soulFlowRoutes } from "@/lib/souflow/routes";
 import { authService } from "@/services/authService";
 import { useLocationStore } from "@/store/location-store";
+import type { District, Ward } from "@/types/location.type";
 import { encodeAddress } from "@/utils/addressUtils";
 import {
 	type RegisterFormData,
@@ -39,6 +41,16 @@ export function RegisterScreen() {
 		},
 	});
 
+	const [capsLockOn, setCapsLockOn] = useState(false);
+
+	const handleKeyUp = (e: React.KeyboardEvent<HTMLInputElement>) => {
+		if (e.getModifierState("CapsLock")) {
+			setCapsLockOn(true);
+		} else {
+			setCapsLockOn(false);
+		}
+	};
+
 	const { locationData } = useLocationStore();
 
 	// Watch city & district để render
@@ -55,19 +67,13 @@ export function RegisterScreen() {
 
 			const distList = cityObj?.districts || [];
 			const distObj = distList.find(
-				// biome-ignore lint/suspicious/noExplicitAny: skip
-				(d: any) =>
-					d === data.district ||
-					(typeof d === "object" && String(d.code) === String(data.district)),
+				(d: District) => String(d.code) === String(data.district),
 			);
 			const districtName = distObj ? distObj.name || distObj : data.district;
 
 			const wardList = distObj?.wards || [];
 			const wardObj = wardList.find(
-				// biome-ignore lint/suspicious/noExplicitAny: skip
-				(w: any) =>
-					w === data.ward ||
-					(typeof w === "object" && String(w.code) === String(data.ward)),
+				(w: Ward) => String(w.code) === String(data.ward),
 			);
 			const wardName = wardObj ? wardObj.name || wardObj : data.ward;
 
@@ -82,9 +88,8 @@ export function RegisterScreen() {
 				username: data.username,
 				email: data.email,
 				password: data.password,
-				confirmPassword: data.confirmPassword,
-				phoneNumber: data.phoneNumber,
-				fullName: data.fullName,
+				phone: data.phoneNumber,
+				fullname: data.fullName,
 				address: finalAddress,
 			};
 
@@ -116,7 +121,7 @@ export function RegisterScreen() {
 			<section className="lg:col-span-6 space-y-8 text-center lg:text-left ml-30 mb-60">
 				<div className="space-y-4">
 					<span className="text-primary font-semibold text-xs uppercase tracking-[0.3em] block">
-						Bắt đầu hành trình của bạn với SoulFlow
+						Bắt đầu hành trình của bạn với SouFlow
 					</span>
 					<h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-light text-sf-heading leading-tight select-none">
 						Nơi những loài <br />
@@ -124,7 +129,7 @@ export function RegisterScreen() {
 						Chuyện.
 					</h1>
 					<p className="font-sans text-sm sm:text-base text-secondary/80 max-w-md mx-auto lg:mx-0 leading-relaxed font-light">
-						Tại SoulFlow, chúng tôi tin rằng mỗi bông hoa đều có một câu chuyện
+						Tại SouFlow, chúng tôi tin rằng mỗi bông hoa đều có một câu chuyện
 						để kể. Hãy cùng chúng tôi khám phá vẻ đẹp của thiên nhiên và tạo nên
 						những kỷ niệm đáng nhớ qua từng cánh hoa.
 					</p>
@@ -154,9 +159,9 @@ export function RegisterScreen() {
 							Tạo Tài Khoản Mới
 						</h2>
 						<p className="font-sans text-base text-secondary/80 text-sf-fg font-light">
-							Chúng tôi rất vui được chào đón bạn đến với cộng đồng SoulFlow!
-							Hãy điền thông tin bên dưới để bắt đầu hành trình khám phá vẻ đẹp
-							của thiên nhiên cùng chúng tôi.
+							Chúng tôi rất vui được chào đón bạn đến với cộng đồng SouFlow! Hãy
+							điền thông tin bên dưới để bắt đầu hành trình khám phá vẻ đẹp của
+							thiên nhiên cùng chúng tôi.
 						</p>
 					</div>
 
@@ -258,7 +263,7 @@ export function RegisterScreen() {
 							</div>
 
 							{/* Address: 4 Fields */}
-							<div className="space-y-4 border-t border-outline-variant/30 pt-4 mt-2">
+							<div className="space-y-4 border-outline-variant/30 pt-4 mt-2">
 								<h3 className="text-xs uppercase tracking-widest font-bold text-sf-fg">
 									Địa chỉ giao hàng
 								</h3>
@@ -338,14 +343,13 @@ export function RegisterScreen() {
 											{/* Lấy selected city thông qua register() - sẽ được fix trong render */}
 											{locationData
 												?.find((c) => String(c.code) === String(watchCity))
-												// biome-ignore lint/suspicious/noExplicitAny: skip
-												?.districts?.map((d: any) => (
+												?.districts?.map((d: District) => (
 													<option
-														key={d.code || d}
-														value={d.code || d}
+														key={d.code}
+														value={d.code}
 														className="text-black"
 													>
-														{d.name || d}
+														{d.name}
 													</option>
 												))}
 										</select>
@@ -376,19 +380,17 @@ export function RegisterScreen() {
 										{locationData
 											?.find((c) => String(c.code) === String(watchCity))
 											?.districts?.find(
-												// biome-ignore lint/suspicious/noExplicitAny: skip
-												(d: any) =>
+												(d: District) =>
 													String(d.code) === String(watchDistrict) ||
 													d.name === watchDistrict,
 											)
-											// biome-ignore lint/suspicious/noExplicitAny: skip
-											?.wards?.map((w: any) => (
+											?.wards?.map((w: Ward) => (
 												<option
-													key={w.code || w}
-													value={w.code || w}
+													key={w.code}
+													value={w.code}
 													className="text-black"
 												>
-													{w.name || w}
+													{w.name}
 												</option>
 											))}
 									</select>
@@ -414,6 +416,7 @@ export function RegisterScreen() {
 										type="password"
 										placeholder="••••••••"
 										{...register("password")}
+										onKeyUp={handleKeyUp}
 										className="w-full bg-white/5 border-0 border-b border-outline-variant/60 py-2.5 px-0 text-sm focus:border-primary transition-all focus:outline-none placeholder-secondary/30 text-sf-fg"
 										required
 									/>
@@ -435,6 +438,7 @@ export function RegisterScreen() {
 										type="password"
 										placeholder="••••••••"
 										{...register("confirmPassword")}
+										onKeyUp={handleKeyUp}
 										className="w-full bg-white/5 border-0 border-b border-outline-variant/60 py-2.5 px-0 text-sm focus:border-primary transition-all focus:outline-none placeholder-secondary/30 text-sf-fg"
 										required
 									/>
@@ -445,6 +449,12 @@ export function RegisterScreen() {
 									)}
 								</div>
 							</div>
+
+							{capsLockOn && (
+								<div className="text-xs text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded-md font-semibold mt-2">
+									⚠️ Cảnh báo: Caps Lock đang bật!
+								</div>
+							)}
 						</div>
 
 						{/* Điều hướng nhận thư Bản tin */}

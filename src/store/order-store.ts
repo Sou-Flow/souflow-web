@@ -17,7 +17,9 @@ interface OrderState {
 		city: string;
 		district: string;
 		paymentMethod: "SEPAY" | "COD";
+		shippingFee?: number;
 	}) => Promise<OrderFE>;
+	clearOrderState: () => void;
 }
 
 export const useOrderStore = create<OrderState>()(
@@ -25,6 +27,7 @@ export const useOrderStore = create<OrderState>()(
 		(set, _get) => ({
 			orders: defaultOrders,
 			isPlacingOrder: false,
+			clearOrderState: () => set({ orders: [] }),
 
 			placeOrder: async (details) => {
 				set({ isPlacingOrder: true });
@@ -49,13 +52,12 @@ export const useOrderStore = create<OrderState>()(
 							useCartStore.setState({ cartId });
 
 							// Đồng bộ hàng đang có ở local lên BE
-							for (const item of currentCart) {
-								await cartService.addItemToCart(
-									cartId,
-									Number(item.product.id),
-									item.quantity,
-								);
-							}
+							const itemsToSave = currentCart.map((item) => ({
+								pk: null,
+								productId: Number(item.product.id),
+								quantity: item.quantity,
+							}));
+							await cartService.saveCart(cartId, itemsToSave);
 						}
 					}
 
@@ -64,10 +66,14 @@ export const useOrderStore = create<OrderState>()(
 
 					const payload: OrderRequestDTO = {
 						fullname: details.recipientName,
-						phoneNumber: details.recipientPhone,
+						phone: details.recipientPhone,
 						address: fullAddress,
-						cartId: cartId,
 						paymentMethod: details.paymentMethod,
+						shippingFee: details.shippingFee,
+						orderDetailRequests: currentCart.map((item) => ({
+							productPk: Number(item.product.id),
+							quantity: item.quantity,
+						})),
 					};
 
 					// 4. Gọi API thật đẩy xuống Spring Boot
@@ -88,7 +94,7 @@ export const useOrderStore = create<OrderState>()(
 			},
 		}),
 		{
-			name: "soulflow-order-storage",
+			name: "souflow-order-storage",
 			partialize: (state) => ({ orders: state.orders }), // CHỈ lưu orders, không lưu isPlacingOrder để tránh kẹt loading
 		},
 	),

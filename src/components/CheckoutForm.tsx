@@ -19,28 +19,21 @@ import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { z } from "zod";
-import { soulFlowRoutes } from "@/lib/soulflow/routes";
+import { soulFlowRoutes } from "@/lib/souflow/routes";
 import { orderService } from "@/services/orderService";
+import { shippingService } from "@/services/shippingService";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cart-store";
 import { useDiscountStore } from "@/store/discount-store";
 import { useLocationStore } from "@/store/location-store";
 import { useOrderStore } from "@/store/order-store";
+import type { District, Ward } from "@/types/location.type";
 import type { OrderFE } from "@/types/order.type";
 import { decodeAddress, encodeAddress } from "@/utils/addressUtils";
-
-const checkoutSchema = z.object({
-	fullName: z.string().min(2, "Họ và tên phải có ít nhất 2 ký tự"),
-	phone: z
-		.string()
-		.regex(/^(84|0)(3|5|7|8|9)[0-9]{8}$/, "Số điện thoại không hợp lệ"),
-	address: z.string().min(5, "Số nhà, tên đường phải có ít nhất 5 ký tự"),
-	ward: z.string().min(1, "Vui lòng nhập Phường/Xã"),
-	city: z.string().min(1, "Vui lòng chọn Tỉnh/Thành phố"),
-	district: z.string().min(1, "Vui lòng chọn Quận/Huyện"),
-});
-
-type CheckoutFormValues = z.infer<typeof checkoutSchema>;
+import {
+	type CheckoutFormValues,
+	checkoutValidator,
+} from "@/validations/checkout.validator";
 
 export function CheckoutForm() {
 	const router = useRouter();
@@ -49,7 +42,7 @@ export function CheckoutForm() {
 	const { user } = useAuthStore(); // Mở comment này khi bạn có auth store
 
 	const { placeOrder, isPlacingOrder } = useOrderStore();
-	const { cart, clearCart } = useCartStore(); // Lấy thêm clearCart
+	const { cart, clearCart, updateCartQuantity } = useCartStore(); // Lấy thêm clearCart và updateCartQuantity
 	const { locationData } = useLocationStore();
 	const { appliedDiscount, clearDiscount } = useDiscountStore(); // Lấy thêm clearDiscount
 
@@ -61,7 +54,7 @@ export function CheckoutForm() {
 		watch,
 		formState: { errors, isSubmitting },
 	} = useForm<CheckoutFormValues>({
-		resolver: zodResolver(checkoutSchema),
+		resolver: zodResolver(checkoutValidator),
 		defaultValues: {
 			fullName: "",
 			phone: "",
@@ -137,31 +130,77 @@ export function CheckoutForm() {
 	const discount = appliedDiscount
 		? (subtotal * appliedDiscount.percentage) / 100
 		: 0;
-	const shippingFee = 0; // Tạm thời comment phí ship: subtotal > 0 ? 30000 : 0;
+
+	const [shippingFee, setShippingFee] = useState(0);
+	const [_isCalculatingShip, setIsCalculatingShip] = useState(false);
+
+	const selectedWard = watch("ward");
+
+	useEffect(() => {
+		if (selectedCity && selectedDistrict && selectedWard) {
+			const fetchFee = async () => {
+				setIsCalculatingShip(true);
+				const cityObj = (locationData || []).find(
+					(c) => String(c.code) === String(selectedCity),
+				);
+				const distObj = cityObj?.districts?.find(
+					(d) => String(d.code) === String(selectedDistrict),
+				);
+				const wardObj = distObj?.wards?.find(
+					(w) => String(w.code) === String(selectedWard),
+				);
+
+				if (distObj?.id && wardObj?.code) {
+					try {
+						const fee = await shippingService.calculateFee({
+							toDistrictId: distObj.id,
+							toWardCode: String(wardObj.code),
+							insuranceValue: subtotal,
+						});
+						setShippingFee(fee);
+					} catch (_error) {
+						setShippingFee(30000); // Fallback
+					} finally {
+						setIsCalculatingShip(false);
+					}
+				} else {
+					setIsCalculatingShip(false);
+				}
+			};
+			fetchFee();
+		} else {
+			setShippingFee(0);
+		}
+	}, [selectedCity, selectedDistrict, selectedWard, locationData, subtotal]);
+
 	const total = subtotal - discount + shippingFee;
 
-	// === 5. XỬ LÝ NHẤN ĐẶT HÀNG ===
-	const onSubmit = async (data: CheckoutFormValues) => {
+	// === 4.5. POPUP XÁC NHẬN THANH TOÁN ===
+	const [showConfirmPopup, setShowConfirmPopup] = useState(false);
+	const [pendingOrderData, setPendingOrderData] = useState<CheckoutFormValues | null>(null);
+
+	const onPreSubmit = (data: CheckoutFormValues) => {
 		if (!paymentMethod) {
 			toast.error("Vui lòng chọn phương thức thanh toán!");
 			return;
 		}
+		setPendingOrderData(data);
+		setShowConfirmPopup(true);
+	};
 
-		const cityObj = (locationData || []).find(
+	// === 5. XỬ LÝ NHẤN ĐẶT HÀNG CHÍNH THỨC ===
+	const onSubmit = async (data: CheckoutFormValues) => {		const cityObj = (locationData || []).find(
 			(c) => String(c.code) === String(selectedCity),
 		);
 		const cityName = cityObj ? cityObj.name : selectedCity;
 		const distObj = cityObj?.districts?.find(
-			// biome-ignore lint/suspicious/noExplicitAny: skip
-			(d: any) =>
-				d === selectedDistrict || String(d.code) === String(selectedDistrict),
+			(d: District) => String(d.code) === String(selectedDistrict),
 		);
-		const districtName = distObj?.name || distObj || selectedDistrict;
+		const districtName = distObj?.name || selectedDistrict;
 		const wardObj = distObj?.wards?.find(
-			// biome-ignore lint/suspicious/noExplicitAny: skip
-			(w: any) => w === data.ward || String(w.code) === String(data.ward),
+			(w: Ward) => String(w.code) === String(data.ward),
 		);
-		const wardName = wardObj?.name || wardObj || data.ward;
+		const wardName = wardObj?.name || data.ward;
 
 		const fullAddress = encodeAddress(
 			data.address,
@@ -176,7 +215,8 @@ export function CheckoutForm() {
 			address: fullAddress,
 			city: cityName || "",
 			district: selectedDistrict || "",
-			paymentMethod,
+			paymentMethod: paymentMethod as "COD" | "SEPAY",
+			shippingFee,
 		};
 
 		try {
@@ -186,22 +226,40 @@ export function CheckoutForm() {
 			// CHÈN DÒNG NÀY ĐỂ KIỂM TRA:
 			console.log("=== ĐÃ TẠO ĐƠN THÀNH CÔNG. DATA THỰC TẾ LÀ: ===", newOrder);
 
+			// Đảm bảo có items và hình ảnh để hiển thị hoá đơn
+			if (!newOrder.items || newOrder.items.length === 0) {
+				newOrder.items = cart.map((item) => ({
+					productNameVn: item.product.nameVn,
+					productNameEng: item.product.nameEng,
+					productPrice: item.product.price,
+					quantity: item.quantity,
+					subtotal: item.quantity * item.product.price,
+					productImage: item.product.imageUrl || item.product.images?.[0],
+				}));
+			} else {
+				// Nếu BE có trả về items nhưng thiếu ảnh, tự đắp ảnh từ giỏ hàng vào
+				newOrder.items.forEach((item, idx) => {
+					if (!item.productImage && cart[idx]) {
+						item.productImage =
+							cart[idx].product.imageUrl || cart[idx].product.images?.[0];
+					}
+				});
+			}
+
 			setPlacedOrderDetails(newOrder);
 
-			// Chia luồng giao diện dựa trên status thực tế BE trả về (yêu cầu mới)
-			if (newOrder.status === "PENDING" || paymentMethod === "COD") {
-				// COD hoặc PENDING thì không cần quét mã, cho qua trang Success luôn
+			// Chia luồng giao diện dựa trên phương thức thanh toán
+			if (paymentMethod === "SEPAY") {
+				// SEPAY thì chuyển sang màn chờ quét mã
+				setOrderStatus("WAITING_PAYMENT");
+			} else {
+				// COD thì không cần quét mã, cho qua trang Success luôn
 				setOrderStatus("SUCCESS");
+				queryClient.removeQueries({ queryKey: ["flowers"] });
+				queryClient.removeQueries({ queryKey: ["flower"] });
+				queryClient.removeQueries({ queryKey: ["orderHistory"] });
 				clearCart();
 				clearDiscount();
-				queryClient.invalidateQueries({ queryKey: ["flowers"] });
-				queryClient.invalidateQueries({ queryKey: ["flower"] });
-			} else if (
-				newOrder.status === "WAITING_PAYMENT" ||
-				paymentMethod === "SEPAY"
-			) {
-				// SEPAY hoặc WAITING_PAYMENT thì chuyển sang màn chờ quét mã
-				setOrderStatus("WAITING_PAYMENT");
 			}
 		} catch (error: unknown) {
 			console.error("Lỗi đặt hàng:", error);
@@ -255,13 +313,31 @@ export function CheckoutForm() {
 						(placedOrderDetails.businessId || placedOrderDetails.id) as string,
 					);
 
-					if (res && (res.status === "PAID" || res.status === "COMPLETED")) {
+					if (
+						res &&
+						["PAID", "COMPLETED", "SUCCESS", "PAID_SEPAY"].includes(res.status)
+					) {
 						clearInterval(interval);
 						toast.success("Thanh toán thành công!");
+						queryClient.removeQueries({ queryKey: ["flowers"] });
+						queryClient.removeQueries({ queryKey: ["flower"] });
+						queryClient.removeQueries({ queryKey: ["orderHistory"] });
+
+						if (!res.items || res.items.length === 0) {
+							res.items = placedOrderDetails.items;
+						} else if (placedOrderDetails.items) {
+							// Đắp lại ảnh từ placedOrderDetails nếu backend trả về thiếu ảnh
+							res.items.forEach((resItem, idx) => {
+								if (!resItem.productImage && placedOrderDetails.items?.[idx]) {
+									resItem.productImage =
+										placedOrderDetails.items[idx].productImage;
+								}
+							});
+						}
+
 						clearCart();
 						clearDiscount();
-						queryClient.invalidateQueries({ queryKey: ["flowers"] });
-						queryClient.invalidateQueries({ queryKey: ["flower"] });
+						setPlacedOrderDetails(res);
 						setOrderStatus("SUCCESS");
 					}
 				} catch (error) {
@@ -276,31 +352,36 @@ export function CheckoutForm() {
 		placedOrderDetails,
 		clearCart,
 		clearDiscount,
-		queryClient.invalidateQueries,
+		queryClient.removeQueries,
 	]);
 
 	const handleCancelOrder = useCallback(async () => {
 		if (!placedOrderDetails) return;
 		try {
-			// Truyền trực tiếp chuỗi ID
+			// Yêu cầu từ Backend mới nhất: Gọi API PUT với status=CANCELLED
 			await orderService.updateOrderStatus(
 				(placedOrderDetails.businessId || placedOrderDetails.id) as string,
-				"CANCELED",
+				"CANCELLED",
 			);
 
-			// Xóa cache của products để lấy lại số lượng tồn kho mới được hoàn trả
-			queryClient.invalidateQueries({ queryKey: ["flowers"] });
-			queryClient.invalidateQueries({ queryKey: ["flower"] });
+			// Xóa cache để lấy lại số lượng tồn kho mới được hoàn trả
+			queryClient.removeQueries({ queryKey: ["flowers"] });
+			queryClient.removeQueries({ queryKey: ["flower"] });
 
-			toast.error("Đã hủy giao dịch thanh toán!");
-			setOrderStatus("CANCELED");
-		} catch (error) {
-			console.error("Lỗi khi hủy đơn:", error);
-			toast.error("Không thể hủy đơn lúc này.");
+			toast.success("Đã hủy thanh toán và hoàn trả tồn kho!");
+		} catch (error: unknown) {
+			console.warn(
+				"⚠️ Lỗi khi hủy đơn:",
+				error instanceof Error ? error.message : String(error),
+			);
+			toast.error("Không thể hủy đơn trên server, vui lòng thử lại sau.");
+		} finally {
+			// LUÔN LUÔN quay lại form IDLE, giữ nguyên giỏ hàng
+			setOrderStatus("IDLE");
+			setPlacedOrderDetails(null);
 		}
-	}, [placedOrderDetails, queryClient.invalidateQueries]);
+	}, [placedOrderDetails, queryClient.removeQueries]);
 
-	// === 6.1. EFFECT ĐẾM NGƯỢC THỜI GIAN QR ===
 	// === 6.1. EFFECT ĐẾM NGƯỢC THỜI GIAN QR ===
 	useEffect(() => {
 		let timer: NodeJS.Timeout;
@@ -355,8 +436,9 @@ export function CheckoutForm() {
 
 	// CHẶN 2: MÀN HÌNH CHỜ THANH TOÁN QR CODE (SEPAY)
 	if (orderStatus === "WAITING_PAYMENT" && placedOrderDetails) {
+		const orderId = placedOrderDetails.businessId || placedOrderDetails.id;
 		// Link tạo QR tự động của SePay theo thiết lập của bạn
-		const qrCodeUrl = `https://qr.sepay.vn/img?bank=VPBank&acc=AGBSPE74K58LCEU9&template=compact&amount=${placedOrderDetails.total}&des=${placedOrderDetails.businessId || placedOrderDetails.id}&showinfo=true&fullacc=true&holder=DANG%20HUY%20HOANG&store=C%E1%BB%ADa%20H%C3%A0ng%20B%C3%A1n%20Hoa%20SouFlow`;
+		const qrCodeUrl = `https://qr.sepay.vn/img?bank=VPBank&acc=AGBSPE74K58LCEU9&template=compact&amount=${placedOrderDetails.total}&des=SF${orderId}&showinfo=true&fullacc=true&holder=DANG%20HUY%20HOANG&store=C%E1%BB%ADa%20H%C3%A0ng%20B%C3%A1n%20Hoa%20SouFlow`;
 
 		return (
 			<div className="mx-auto max-w-2xl px-4 py-16 text-center">
@@ -533,7 +615,7 @@ export function CheckoutForm() {
 							Đặt Hàng Thành Công
 						</span>
 						<h1 className="font-serif text-3xl font-light text-sf-fg">
-							Cảm ơn bạn đã tin tưởng SoulFlow!
+							Cảm ơn bạn đã tin tưởng SouFlow!
 						</h1>
 						<p className="text-xs text-[#666666] dark:text-[#A0A0A0] max-w-md mx-auto leading-relaxed">
 							Đơn{" "}
@@ -562,13 +644,30 @@ export function CheckoutForm() {
 										<div
 											// biome-ignore lint/suspicious/noArrayIndexKey: no unique ID
 											key={`item-${idx}`}
-											className="flex justify-between text-xs"
+											className="flex justify-between items-center text-xs pb-3 border-b border-sf-border last:border-0 last:pb-0"
 										>
-											<div className="text-sf-fg-muted truncate mr-4">
-												{item.quantity}x{" "}
-												{item.productNameVn ||
-													item.productNameEng ||
-													"Sản phẩm"}
+											<div className="flex items-center gap-3 mr-4">
+												{item.productImage ? (
+													<div className="w-10 h-10 rounded-md overflow-hidden shrink-0 border border-sf-border bg-sf-surface">
+														<Image
+															src={item.productImage}
+															alt={item.productNameVn || "Product"}
+															width={40}
+															height={40}
+															className="w-full h-full object-cover"
+														/>
+													</div>
+												) : (
+													<div className="w-10 h-10 rounded-md shrink-0 border border-sf-border bg-sf-surface flex items-center justify-center">
+														<ShoppingBag className="w-4 h-4 text-sf-fg-muted opacity-50" />
+													</div>
+												)}
+												<div className="text-sf-fg-muted line-clamp-2">
+													{item.quantity}x{" "}
+													{item.productNameVn ||
+														item.productNameEng ||
+														"Sản phẩm"}
+												</div>
 											</div>
 											<div className="font-medium whitespace-nowrap">
 												{Number(
@@ -582,6 +681,11 @@ export function CheckoutForm() {
 							)}
 
 						<div className="grid grid-cols-2 gap-y-2.5">
+							<div className="text-sf-fg-muted">Mã Đơn Hàng:</div>
+							<div className="text-right font-medium">
+								{placedOrderDetails.businessId || placedOrderDetails.id}
+							</div>
+
 							<div className="text-sf-fg-muted">Phương Thức:</div>
 							<div className="text-right font-medium uppercase">
 								{paymentMethod || placedOrderDetails.paymentMethod}
@@ -590,6 +694,14 @@ export function CheckoutForm() {
 							<div className="text-sf-fg-muted">Người Nhận:</div>
 							<div className="text-right font-medium">
 								{placedOrderDetails.fullname}
+							</div>
+
+							<div className="text-sf-fg-muted">Phí Vận Chuyển:</div>
+							<div className="text-right font-medium">
+								{Number(placedOrderDetails.shippingFee || 0).toLocaleString(
+									"vi-VN",
+								)}{" "}
+								đ
 							</div>
 
 							<div className="border-t border-dashed pt-2.5 font-bold">
@@ -635,7 +747,7 @@ export function CheckoutForm() {
 				</div>
 			) : (
 				<form
-					onSubmit={handleSubmit(onSubmit)}
+					onSubmit={handleSubmit(onPreSubmit)}
 					className="grid grid-cols-1 gap-10 lg:grid-cols-12 items-start"
 				>
 					{/* CỘT TRÁI: THÔNG TIN VÀ PHƯƠNG THỨC TT */}
@@ -729,13 +841,11 @@ export function CheckoutForm() {
 											(locationData || []).find(
 												(c) => String(c.code) === String(selectedCity),
 											)?.districts || []
-										)
-											// biome-ignore lint/suspicious/noExplicitAny: skip
-											.map((d: any) => (
-												<option key={d.code || d} value={d.code || d}>
-													{d.name || d}
-												</option>
-											))}
+										).map((d: District) => (
+											<option key={d.code} value={d.code}>
+												{d.name}
+											</option>
+										))}
 									</select>
 									{errors.district && (
 										<p className="text-red-500 text-[10px] mt-1">
@@ -763,18 +873,15 @@ export function CheckoutForm() {
 											(locationData || [])
 												.find((c) => String(c.code) === String(selectedCity))
 												?.districts?.find(
-													// biome-ignore lint/suspicious/noExplicitAny: skip
-													(d: any) =>
+													(d: District) =>
 														String(d.code) === String(selectedDistrict) ||
 														d.name === selectedDistrict,
 												)?.wards || []
-										)
-											// biome-ignore lint/suspicious/noExplicitAny: skip
-											.map((w: any) => (
-												<option key={w.code || w} value={w.code || w}>
-													{w.name || w}
-												</option>
-											))}
+										).map((w: Ward) => (
+											<option key={w.code} value={w.code}>
+												{w.name}
+											</option>
+										))}
 									</select>
 									{errors.ward && (
 										<p className="text-red-500 text-[10px] mt-1">
@@ -853,35 +960,80 @@ export function CheckoutForm() {
 							Của Bạn
 						</h2>
 
-						<div className="space-y-4 max-h-55 overflow-y-auto pr-2 scrollbar-none">
+						<div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-sf-border scrollbar-track-transparent">
 							{cart.map((item) => (
 								<div
 									key={item.product.id}
 									className="flex gap-3 justify-between items-start text-xs border-b border-sf-border pb-3"
 								>
-									<div className="flex gap-2">
-										{/* <div className="relative h-10 w-10 rounded-sm overflow-hidden bg-sf-bg">
+									<div className="flex gap-3">
+										<div className="relative h-12 w-12 rounded-lg overflow-hidden bg-sf-bg shrink-0 border border-sf-border">
 											<Image
-												src={item.product.image}
-												alt={item.product.name}
-												className="h-10 w-10 rounded-sm object-cover grayscale-1/10 shrink-0"
+												src={
+													item.product.imageUrl ||
+													item.product.images?.[0] ||
+													"/placeholder.png"
+												}
+												alt={item.product.nameVn}
+												className="object-cover"
 												referrerPolicy="no-referrer"
 												fill
-												sizes="40px"
+												sizes="48px"
 											/>
-										</div> */}
-										<div>
+										</div>
+										<div className="flex flex-col justify-between py-0.5">
 											<h4 className="font-serif font-semibold text-sf-fg line-clamp-1 leading-tight">
 												{item.product.nameVn}
 											</h4>
+											{/* Controls số lượng */}
+											<div className="flex items-center gap-2 mt-2">
+												<button
+													type="button"
+													disabled={item.quantity <= 1}
+													onClick={(e) => {
+														e.preventDefault();
+														updateCartQuantity(
+															item.product.id,
+															item.quantity - 1,
+														);
+													}}
+													className="h-5 w-5 rounded border border-sf-border bg-sf-surface hover:bg-sf-bg flex items-center justify-center disabled:opacity-50 transition-colors"
+												>
+													-
+												</button>
+												<span className="w-3 text-center text-[11px] font-medium">
+													{item.quantity}
+												</span>
+												<button
+													type="button"
+													disabled={item.quantity >= item.product.stockQuantity}
+													onClick={(e) => {
+														e.preventDefault();
+														updateCartQuantity(
+															item.product.id,
+															item.quantity + 1,
+														);
+													}}
+													className="h-5 w-5 rounded border border-sf-border bg-sf-surface hover:bg-sf-bg flex items-center justify-center disabled:opacity-50 transition-colors"
+												>
+													+
+												</button>
+											</div>
 										</div>
 									</div>
-									<span className="font-bold text-sf-fg">
-										{(item.product.price * item.quantity).toLocaleString(
-											"vi-VN",
-										)}{" "}
-										đ
-									</span>
+									<div className="flex flex-col items-end gap-1">
+										<span className="font-bold text-sf-fg">
+											{(item.product.price * item.quantity).toLocaleString(
+												"vi-VN",
+											)}{" "}
+											đ
+										</span>
+										{item.quantity > 1 && (
+											<span className="text-[10px] text-sf-fg-muted">
+												{item.product.price.toLocaleString("vi-VN")} đ/sp
+											</span>
+										)}
+									</div>
 								</div>
 							))}
 						</div>
@@ -927,6 +1079,45 @@ export function CheckoutForm() {
 						</button>
 					</div>
 				</form>
+			)}
+
+			{/* POPUP XÁC NHẬN THANH TOÁN */}
+			{showConfirmPopup && (
+				<div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+					<motion.div
+						initial={{ opacity: 0, scale: 0.95 }}
+						animate={{ opacity: 1, scale: 1 }}
+						className="bg-sf-bg-elevated w-full max-w-sm rounded-2xl p-6 shadow-2xl border border-sf-border text-center space-y-4"
+					>
+						<h3 className="font-serif text-2xl font-semibold text-sf-fg">
+							Xác Nhận Đặt Hàng
+						</h3>
+						<p className="text-sm text-sf-fg-muted">
+							Bạn có chắc chắn muốn tiến hành thanh toán cho đơn hàng này không?
+						</p>
+						<div className="flex gap-3 justify-center pt-4">
+							<button
+								type="button"
+								onClick={() => setShowConfirmPopup(false)}
+								className="px-6 py-2 rounded-full border border-sf-border text-sf-fg text-xs font-bold uppercase tracking-widest hover:bg-sf-surface transition-colors"
+							>
+								Huỷ
+							</button>
+							<button
+								type="button"
+								onClick={() => {
+									setShowConfirmPopup(false);
+									if (pendingOrderData) {
+										onSubmit(pendingOrderData);
+									}
+								}}
+								className="px-6 py-2 rounded-full bg-[#1A1A1A] text-white text-xs font-bold uppercase tracking-widest hover:bg-[#C49B83] transition-colors"
+							>
+								Chắc chắn
+							</button>
+						</div>
+					</motion.div>
+				</div>
 			)}
 		</div>
 	);

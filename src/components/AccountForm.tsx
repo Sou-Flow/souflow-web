@@ -1,57 +1,53 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { Client } from "@stomp/stompjs";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle, Shield, ShoppingBag, User, X } from "lucide-react";
 import Image from "next/image";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import SockJS from "sockjs-client";
 import { authService } from "@/services/authService";
 import { orderService } from "@/services/orderService";
 import { useAuthStore } from "@/store/auth-store";
 import { useLocationStore } from "@/store/location-store";
 import type { UserFE } from "@/types/auth.type";
+import type { District, Ward } from "@/types/location.type";
+// 1. IMPORT CÁC TYPE VÀ MAPPER CHUẨN TỪ FILE KIỂU DỮ LIỆU CỦA BẠN
+import {
+	mapOrderResponseToFE,
+	type OrderDetailFE,
+	type OrderFE,
+} from "@/types/order.type";
 import { decodeAddress, encodeAddress } from "@/utils/addressUtils";
-
-interface OrderItemFE {
-	product?: {
-		nameVn?: string;
-		nameEng?: string;
-		name?: string;
-		image?: string;
-		price?: number;
-	};
-	productNameVn?: string;
-	productNameEng?: string;
-	productImage?: string;
-	productPrice?: number;
-	price?: number;
-	quantity: number;
-	subtotal?: number;
-}
-
-interface OrderFE {
-	id: string;
-	businessId?: string;
-	createdDate: number[] | string;
-	status: string;
-	total: number;
-	fullname: string;
-	phoneNumber: string;
-	address: string;
-	paymentMethod: string;
-	orderDetails?: OrderItemFE[];
-	orderItems?: OrderItemFE[];
-	items?: OrderItemFE[];
-	details?: OrderItemFE[];
-	data?: {
-		details?: OrderItemFE[];
-	};
-}
 
 interface AccountFormProps {
 	initialUser: UserFE;
 }
+
+const translateStatus = (status: string) => {
+	switch (status) {
+		case "PENDING":
+			return "Chờ xử lý";
+		case "WAITING_PAYMENT":
+			return "Chờ thanh toán";
+		case "PAID":
+			return "Đã thanh toán";
+		case "PROCESSING":
+			return "Đang xử lý";
+		case "SHIPPED":
+			return "Đang giao hàng";
+		case "DELIVERED":
+			return "Đã giao hàng";
+		case "CANCELLED":
+			return "Đã hủy";
+		case "SUCCESS":
+			return "Đã thanh toán";
+		default:
+			return status;
+	}
+};
 
 export default function AccountForm({ initialUser }: AccountFormProps) {
 	// Theme state
@@ -59,14 +55,12 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 	const [mounted, setMounted] = useState(false);
 
 	useEffect(() => {
-		// eslint-disable-next-line react-hooks/set-state-in-effect
 		setMounted(true);
 	}, []);
 
-	// Lưu user vào local state để khi update thông tin thì header (tên, avatar) tự đổi theo
 	const [user, setUser] = useState<UserFE>(initialUser);
 
-	// Personal Info Form State - Hứng data mượt mà không cần useEffect!
+	// Personal Info Form State
 	const [fullName, setFullName] = useState(user.fullName || "");
 	const [email, setEmail] = useState(user.email || "");
 	const [phoneNumber, setPhoneNumber] = useState(user.phone || "");
@@ -74,6 +68,8 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 	// Security Password State
 	const [oldPassword, setOldPassword] = useState("");
 	const [newPassword, setNewPassword] = useState("");
+	const [confirmPassword, setConfirmPassword] = useState("");
+	const [capsLockOn, setCapsLockOn] = useState(false);
 	const [updateFeedback, setUpdateFeedback] = useState(false);
 	const [passwordFeedback, setPasswordFeedback] = useState(false);
 
@@ -84,7 +80,7 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 	const [district, setDistrict] = useState("");
 	const [ward, setWard] = useState("");
 
-	// Decode address when user or locationData is available
+	// Decode address
 	useEffect(() => {
 		if (user.address && locationData && locationData.length > 0) {
 			const decoded = decodeAddress(user.address, locationData);
@@ -93,25 +89,49 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 			setDistrict(String(decoded.districtCode) || "");
 			setWard(String(decoded.wardCode) || "");
 		} else if (user.address && (!locationData || locationData.length <= 3)) {
-			// Tạm dùng default locations
 			const decoded = decodeAddress(user.address, []);
 			setStreet(decoded.street || "");
 		}
 	}, [user.address, locationData]);
 
-	// Popup Order State
+	// Popup Order State - Sử dụng Type chuẩn OrderFE từ file của bạn
 	const [selectedOrder, setSelectedOrder] = useState<OrderFE | null>(null);
 	const [isLoadingOrderDetails, setIsLoadingOrderDetails] = useState(false);
 
-	const handleViewOrderDetails = async (order: OrderFE) => {
+	// 2. BỌC USECALLBACK VÀ DÙNG HÀM MAPPER ĐỂ KHỚP KIỂU DỮ LIỆU SẠCH
+	const handleViewOrderDetails = useCallback(async (order: OrderFE) => {
 		setSelectedOrder(order);
 		setIsLoadingOrderDetails(true);
 		try {
-			const details = await orderService.getOrderByCode(
-				order.businessId || order.id,
-			);
-			if (details) {
-				setSelectedOrder(details);
+			const lookupId = order.businessId || order.id;
+			const rawDetails = await orderService.getOrderByCode(lookupId);
+
+			if (rawDetails) {
+				// Đi qua mapper của bạn để làm sạch dữ liệu từ API chi tiết về chuẩn OrderFE
+				const cleanDetails = mapOrderResponseToFE(rawDetails);
+
+				// Kế thừa lại danh sách items nếu API chi tiết bị thiếu nhưng danh sách tổng quát lại có
+				if (
+					(!cleanDetails.items || cleanDetails.items.length === 0) &&
+					order.items &&
+					order.items.length > 0
+				) {
+					cleanDetails.items = order.items;
+				}
+
+				// Bảo lưu hoặc bù đắp ảnh sản phẩm từ danh sách tổng quát nếu cần
+				if (order.items && cleanDetails.items) {
+					cleanDetails.items = cleanDetails.items.map((detailItem) => {
+						const matchedItem = order.items.find(
+							(i) => i.productNameVn === detailItem.productNameVn,
+						);
+						if (!detailItem.productImage && matchedItem?.productImage) {
+							detailItem.productImage = matchedItem.productImage;
+						}
+						return detailItem;
+					});
+				}
+				setSelectedOrder(cleanDetails);
 			}
 		} catch (error) {
 			console.error("Failed to load order details:", error);
@@ -119,22 +139,89 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 		} finally {
 			setIsLoadingOrderDetails(false);
 		}
-	};
+	}, []);
 
+	const queryClient = useQueryClient();
+
+	// 3. MAP DANH SÁCH ĐƠN HÀNG THÔ TỪ API THÀNH MẢNG ORDERFE[] CHUẨN
 	const {
 		data: orders,
 		isLoading,
 		isError,
-	} = useQuery({
-		queryKey: ["orderHistory"], // Key để định danh cache cho mớ dữ liệu này
-		queryFn: () => orderService.getMyOrders(), // Hàm gọi API thật
-		staleTime: 1000 * 60 * 5, // Dữ liệu được coi là "mới" trong 5 phút, F5 không cần gọi lại API
+	} = useQuery<OrderFE[]>({
+		queryKey: ["orderHistory"],
+		queryFn: async () => {
+			const res = await orderService.getMyOrders();
+			if (Array.isArray(res)) {
+				return res.map(mapOrderResponseToFE); // Chuyển đổi dữ liệu thô sang dữ liệu sạch
+			}
+			return [];
+		},
+		staleTime: 0,
 	});
+
+	// Ref để lưu trữ state hiện tại mà không làm re-trigger WebSocket
+	const selectedOrderRef = useRef(selectedOrder);
+	useEffect(() => {
+		selectedOrderRef.current = selectedOrder;
+	}, [selectedOrder]);
+
+	// WebSocket Subscription cho Order Realtime
+	useEffect(() => {
+		if (!user?.username) return;
+
+		const socketUrl = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/ws`;
+
+		const client = new Client({
+			webSocketFactory: () => new SockJS(socketUrl),
+			reconnectDelay: 5000,
+			onConnect: () => {
+				console.log("Connected to STOMP WebSocket for notifications");
+				client.subscribe(
+					`/topic/user.notifications.${user.username}`,
+					(message) => {
+						try {
+							const payload = JSON.parse(message.body);
+							const statusVn =
+								payload.message || "Trạng thái đơn hàng vừa được cập nhật!";
+							toast.success(statusVn);
+
+							queryClient.invalidateQueries({ queryKey: ["orderHistory"] });
+
+							if (selectedOrderRef.current && payload.referenceId) {
+								const currentId =
+									selectedOrderRef.current.businessId ||
+									selectedOrderRef.current.id;
+								if (String(currentId) === String(payload.referenceId)) {
+									setSelectedOrder((prev) =>
+										prev
+											? { ...prev, status: payload.status || prev.status }
+											: prev,
+									);
+								}
+							}
+						} catch {
+							toast.success("Trạng thái đơn hàng vừa được cập nhật!");
+							queryClient.invalidateQueries({ queryKey: ["orderHistory"] });
+						}
+					},
+				);
+			},
+			onStompError: (frame) => {
+				console.error("Broker reported error: " + frame.headers.message);
+			},
+		});
+
+		client.activate();
+
+		return () => {
+			if (client.active) client.deactivate();
+		};
+	}, [user?.username, queryClient]);
 
 	const handleUpdateProfile = (e: React.FormEvent) => {
 		e.preventDefault();
 
-		// Encode address
 		const cityObj = (locationData || []).find(
 			(c) => String(c.code) === String(city),
 		);
@@ -142,16 +229,12 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 
 		const distList = cityObj?.districts || [];
 		const distObj = distList.find(
-			// biome-ignore lint/suspicious/noExplicitAny: skip
-			(d: any) => String(d.code) === String(district) || d === district,
+			(d: District) => String(d.code) === String(district),
 		);
 		const districtName = distObj ? distObj.name || distObj : district;
 
 		const wardList = distObj?.wards || [];
-		const wardObj = wardList.find(
-			// biome-ignore lint/suspicious/noExplicitAny: skip
-			(w: any) => String(w.code) === String(ward) || w === ward,
-		);
+		const wardObj = wardList.find((w: Ward) => String(w.code) === String(ward));
 		const wardName = wardObj ? wardObj.name || wardObj : ward;
 
 		const finalAddress = encodeAddress(
@@ -178,30 +261,37 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 				};
 				setUser(updatedProfile);
 				useAuthStore.getState().updateUser(updatedProfile);
-
 				setUpdateFeedback(true);
 				setTimeout(() => setUpdateFeedback(false), 3000);
 			});
 		toast.success("Cập nhật thành công!");
 	};
 
+	const handleKeyUp = (e: React.KeyboardEvent<HTMLInputElement>) => {
+		setCapsLockOn(!!e.getModifierState("CapsLock"));
+	};
+
 	const handleChangePassword = (e: React.FormEvent) => {
 		e.preventDefault();
+		if (newPassword !== confirmPassword) {
+			toast.error("Mật khẩu nhập lại không khớp!");
+			return;
+		}
 		authService.changePassword(oldPassword, newPassword).then(() => {
 			setOldPassword("");
 			setNewPassword("");
+			setConfirmPassword("");
 			setPasswordFeedback(true);
 			setTimeout(() => setPasswordFeedback(false), 3000);
 		});
 	};
 
 	const dateStr = String(user.createDate);
-
 	const formattedDate = `${dateStr.slice(7, 9)}/${dateStr.slice(5, 6)}/${dateStr.slice(0, 4)}`;
 
 	return (
 		<div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 bg-sf-bg-elevated transition-colors duration-300">
-			{/* Header Profile Summary cards */}
+			{/* Header Profile Summary */}
 			<div className="flex flex-col md:flex-row items-center gap-6 mb-12 p-6 rounded-2xl bg-sf-bg-elevated border border-sf-border shadow-sm">
 				<Image
 					src={user.avatar || "/default-avatar.png"}
@@ -222,7 +312,6 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 					</p>
 				</div>
 
-				{/* Global Dark Mode settings button */}
 				<div className="flex flex-col items-center md:items-end gap-1 border-t md:border-t-0 md:border-l border-sf-border pt-4 md:pt-0 md:pl-6">
 					<span className="text-sm text-[#888888] uppercase tracking-widest block font-bold">
 						Giao diện
@@ -244,11 +333,9 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 				</div>
 			</div>
 
-			{/* Màn hình chính */}
 			<div className="grid grid-cols-1 gap-10 lg:grid-cols-12 items-start">
-				{/* Left Side Content - Profile Form */}
+				{/* Profile Form */}
 				<div className="lg:col-span-7 space-y-8">
-					{/* Thông Tin Cá Nhân */}
 					<div className="bg-sf-bg-elevated p-8 rounded-2xl border border-sf-border shadow-xs space-y-6">
 						<h2 className="font-serif text-2xl font-light text-sf-fg flex items-center gap-3 pb-4 border-b border-sf-border">
 							<User className="h-6 w-6 text-[#C49B83]" />
@@ -272,7 +359,6 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 										className="w-full text-sm rounded-lg border border-sf-border bg-sf-surface text-sf-fg p-3 outline-none focus:border-[#C49B83] transition-colors"
 									/>
 								</div>
-
 								<div className="space-y-2">
 									<label
 										htmlFor="phoneNumber"
@@ -282,7 +368,7 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 									</label>
 									<input
 										id="phoneNumber"
-										type="tel"
+										type="text"
 										required
 										value={phoneNumber}
 										onChange={(e) => setPhoneNumber(e.target.value)}
@@ -308,12 +394,10 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 								/>
 							</div>
 
-							{/* Address Section */}
 							<div className="pt-4 border-t border-sf-border space-y-5">
 								<h3 className="text-sm font-bold uppercase tracking-widest text-[#C49B83]">
 									Địa Chỉ Giao Hàng
 								</h3>
-
 								<div className="space-y-2">
 									<label
 										htmlFor="street"
@@ -331,7 +415,7 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 									/>
 								</div>
 
-								<div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+								<div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
 									<div className="space-y-2">
 										<label
 											htmlFor="city"
@@ -348,9 +432,9 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 												setDistrict("");
 												setWard("");
 											}}
-											className="w-full text-sm rounded-lg border border-sf-border bg-sf-surface text-sf-fg p-3 outline-none focus:border-[#C49B83] transition-colors"
+											className="w-full text-sm rounded-lg border border-sf-border bg-sf-surface text-sf-fg p-3 outline-none focus:border-[#C49B83]"
 										>
-											<option value="">Chọn Tỉnh/Thành phố</option>
+											<option value="">Chọn Tỉnh/TP</option>
 											{(locationData || []).map((c) => (
 												<option key={c.code} value={c.code}>
 													{c.name}
@@ -374,51 +458,48 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 												setDistrict(e.target.value);
 												setWard("");
 											}}
-											className="w-full text-sm rounded-lg border border-sf-border bg-sf-surface text-sf-fg p-3 outline-none focus:border-[#C49B83] transition-colors"
+											className="w-full text-sm rounded-lg border border-sf-border bg-sf-surface text-sf-fg p-3 outline-none focus:border-[#C49B83]"
 										>
 											<option value="">Chọn Quận/Huyện</option>
 											{(locationData || [])
 												.find((c) => String(c.code) === String(city))
-												// biome-ignore lint/suspicious/noExplicitAny: skip
-												?.districts?.map((d: any) => (
-													<option key={d.code || d} value={d.code || d}>
-														{d.name || d}
+												?.districts?.map((d: District) => (
+													<option key={d.code} value={d.code}>
+														{d.name}
 													</option>
 												))}
 										</select>
 									</div>
-								</div>
 
-								<div className="space-y-2">
-									<label
-										htmlFor="ward"
-										className="text-[10px] font-bold uppercase tracking-widest text-sf-fg-muted"
-									>
-										Phường/Xã
-									</label>
-									<select
-										id="ward"
-										required
-										value={ward}
-										onChange={(e) => setWard(e.target.value)}
-										className="w-full text-sm rounded-lg border border-sf-border bg-sf-surface text-sf-fg p-3 outline-none focus:border-[#C49B83] transition-colors"
-									>
-										<option value="">Chọn Phường/Xã</option>
-										{(locationData || [])
-											.find((c) => String(c.code) === String(city))
-											?.districts?.find(
-												// biome-ignore lint/suspicious/noExplicitAny: skip
-												(d: any) =>
-													String(d.code) === String(district) ||
-													d.name === district,
-											)
-											// biome-ignore lint/suspicious/noExplicitAny: skip
-											?.wards?.map((w: any) => (
-												<option key={w.code || w} value={w.code || w}>
-													{w.name || w}
-												</option>
-											))}
-									</select>
+									<div className="space-y-2">
+										<label
+											htmlFor="ward"
+											className="text-[10px] font-bold uppercase tracking-widest text-sf-fg-muted"
+										>
+											Phường/Xã
+										</label>
+										<select
+											id="ward"
+											required
+											value={ward}
+											onChange={(e) => setWard(e.target.value)}
+											className="w-full text-sm rounded-lg border border-sf-border bg-sf-surface text-sf-fg p-3 outline-none focus:border-[#C49B83]"
+										>
+											<option value="">Chọn Phường/Xã</option>
+											{(locationData || [])
+												.find((c) => String(c.code) === String(city))
+												?.districts?.find(
+													(d: District) =>
+														String(d.code) === String(district) ||
+														d.name === district,
+												)
+												?.wards?.map((w: Ward) => (
+													<option key={w.code} value={w.code}>
+														{w.name}
+													</option>
+												))}
+										</select>
+									</div>
 								</div>
 							</div>
 
@@ -438,7 +519,7 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 						</form>
 					</div>
 
-					{/* Bảo Mật */}
+					{/* Security */}
 					<div className="bg-sf-surface p-8 rounded-2xl border border-sf-border shadow-xs space-y-6">
 						<h2 className="font-serif text-2xl font-light text-sf-fg flex items-center gap-3 pb-4 border-b border-sf-border">
 							<Shield className="h-6 w-6 text-[#C49B83]" />
@@ -459,6 +540,8 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 										required
 										value={oldPassword}
 										onChange={(e) => setOldPassword(e.target.value)}
+										onKeyUp={handleKeyUp}
+										placeholder="Nhập mật khẩu cũ"
 										className="w-full text-xs rounded-lg border border-sf-border text-sf-fg p-3 outline-none focus:border-[#C49B83]"
 									/>
 								</div>
@@ -475,10 +558,34 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 										required
 										value={newPassword}
 										onChange={(e) => setNewPassword(e.target.value)}
-										placeholder="Minimum 8 characters"
+										onKeyUp={handleKeyUp}
+										placeholder="Nhập mật khẩu mới"
 										className="w-full text-xs rounded-lg border border-sf-border text-sf-fg p-3 outline-none focus:border-[#C49B83]"
 									/>
 								</div>
+								<div className="space-y-2 sm:col-span-2">
+									<label
+										htmlFor="confirmPassword"
+										className="text-[10px] font-bold uppercase tracking-widest text-[#C49B83]"
+									>
+										Nhập Lại Mật Khẩu
+									</label>
+									<input
+										id="confirmPassword"
+										type="password"
+										required
+										value={confirmPassword}
+										onChange={(e) => setConfirmPassword(e.target.value)}
+										onKeyUp={handleKeyUp}
+										placeholder="Nhập lại mật khẩu mới"
+										className="w-full text-xs rounded-lg border border-sf-border text-sf-fg p-3 outline-none focus:border-[#C49B83]"
+									/>
+								</div>
+								{capsLockOn && (
+									<div className="sm:col-span-2 text-xs text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded-md font-semibold">
+										⚠️ Cảnh báo: Caps Lock đang bật!
+									</div>
+								)}
 							</div>
 
 							<div className="flex items-center justify-between pt-2">
@@ -525,17 +632,43 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 								</p>
 							</div>
 						) : (
-							<div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+							<div className="space-y-4 max-h-125 overflow-y-auto pr-2 custom-scrollbar">
 								{orders.map((order) => {
-									const orderDate = Array.isArray(order.createdDate)
-										? new Date(
-												order.createdDate[0],
-												order.createdDate[1] - 1,
-												order.createdDate[2],
-												order.createdDate[3] || 0,
-												order.createdDate[4] || 0,
-											)
-										: new Date(order.createdDate || Date.now());
+									let orderDate: Date;
+									if (Array.isArray(order.createdDate)) {
+										orderDate = new Date(
+											order.createdDate[0],
+											order.createdDate[1] - 1,
+											order.createdDate[2],
+											order.createdDate[3] || 0,
+											order.createdDate[4] || 0,
+										);
+									} else if (
+										typeof order.createdDate === "string" &&
+										order.createdDate.includes("-")
+									) {
+										// Xử lý format dd-MM-yyyy HH:mm:ss
+										const parts = order.createdDate.split(" ");
+										const dateParts = parts[0].split("-");
+										const timeParts = parts[1]
+											? parts[1].split(":")
+											: ["0", "0", "0"];
+										if (dateParts.length === 3 && dateParts[0].length === 2) {
+											// format: dd-MM-yyyy
+											orderDate = new Date(
+												Number(dateParts[2]),
+												Number(dateParts[1]) - 1,
+												Number(dateParts[0]),
+												Number(timeParts[0]),
+												Number(timeParts[1]),
+												Number(timeParts[2] || 0),
+											);
+										} else {
+											orderDate = new Date(order.createdDate);
+										}
+									} else {
+										orderDate = new Date(order.createdDate || Date.now());
+									}
 
 									return (
 										<div
@@ -557,16 +690,19 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 												</div>
 												<span
 													className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full ${
-														order.status === "PENDING"
+														order.status === "PENDING" ||
+														order.status === "WAITING_PAYMENT"
 															? "bg-amber-100 text-amber-700 dark:bg-amber-900/30"
-															: order.status === "SUCCESS"
+															: order.status === "SUCCESS" ||
+																	order.status === "PAID" ||
+																	order.status === "DELIVERED"
 																? "bg-green-100 text-green-700 dark:bg-green-900/30"
-																: "bg-sf-bg-elevated text-sf-fg"
+																: order.status === "CANCELLED"
+																	? "bg-red-100 text-red-700 dark:bg-red-900/30"
+																	: "bg-sf-bg-elevated text-sf-fg"
 													}`}
 												>
-													{order.status === "PENDING"
-														? "Chờ xử lý"
-														: order.status}
+													{translateStatus(order.status)}
 												</span>
 											</div>
 											<div className="flex justify-between items-end border-t border-dashed border-sf-border pt-3 mt-2">
@@ -633,7 +769,7 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 									</div>
 									<div className="flex justify-between">
 										<span className="text-sf-fg-muted">Địa chỉ:</span>
-										<span className="font-medium text-sf-fg text-right max-w-[200px]">
+										<span className="font-medium text-sf-fg text-right max-w-50">
 											{selectedOrder.address
 												?.split("||")
 												.map((s) => s.trim())
@@ -644,6 +780,15 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 										<span className="text-sf-fg-muted">Thanh toán:</span>
 										<span className="font-medium text-sf-fg uppercase">
 											{selectedOrder.paymentMethod}
+										</span>
+									</div>
+									<div className="flex justify-between">
+										<span className="text-sf-fg-muted">Phí vận chuyển:</span>
+										<span className="font-medium text-sf-fg">
+											{Number(selectedOrder.shippingFee || 0).toLocaleString(
+												"vi-VN",
+											)}{" "}
+											đ
 										</span>
 									</div>
 								</div>
@@ -661,71 +806,46 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 										</div>
 									) : (
 										(() => {
-											const orderItems =
-												selectedOrder.data?.details ||
-												selectedOrder.details ||
-												selectedOrder.orderDetails ||
-												selectedOrder.orderItems ||
-												selectedOrder.items ||
-												[];
+											const orderItems = selectedOrder.items || [];
 											return orderItems.length > 0 ? (
-												orderItems.map((item: OrderItemFE, idx: number) => {
-													const productName =
-														item.productNameVn ||
-														item.productNameEng ||
-														item.product?.nameVn ||
-														item.product?.nameEng ||
-														item.product?.name ||
-														"Sản phẩm";
-													const productImage =
-														item.productImage || item.product?.image;
-													const productPrice =
-														item.productPrice ||
-														item.price ||
-														item.product?.price ||
-														0;
-													const subtotal =
-														item.subtotal || productPrice * item.quantity || 0;
-
-													return (
-														<div
-															// biome-ignore lint/suspicious/noArrayIndexKey: No unique ID available
-															key={`item-${idx}`}
-															className="flex justify-between items-center border-b border-sf-border pb-3 last:border-0 last:pb-0"
-														>
-															<div className="flex gap-3 items-center">
-																<div className="w-10 h-10 bg-sf-bg rounded-md flex items-center justify-center border border-sf-border overflow-hidden">
-																	{productImage ? (
-																		<Image
-																			src={productImage}
-																			alt="product"
-																			width={40}
-																			height={40}
-																			className="w-full h-full object-cover"
-																		/>
-																	) : (
-																		<ShoppingBag className="w-4 h-4 text-sf-fg-muted opacity-50" />
-																	)}
-																</div>
-																<div>
-																	<p className="font-medium text-sf-fg">
-																		{productName}
-																	</p>
-																	<p className="text-sf-fg-muted">
-																		SL: {item.quantity} x{" "}
-																		{Number(productPrice).toLocaleString(
-																			"vi-VN",
-																		)}{" "}
-																		đ
-																	</p>
-																</div>
+												orderItems.map((item: OrderDetailFE, idx: number) => (
+													// biome-ignore lint/suspicious/noArrayIndexKey: Match logic cũ
+													<div
+														key={`item-${idx}`}
+														className="flex justify-between items-center border-b border-sf-border pb-3 last:border-0 last:pb-0"
+													>
+														<div className="flex gap-3 items-center">
+															<div className="w-10 h-10 bg-sf-bg rounded-md flex items-center justify-center border border-sf-border overflow-hidden">
+																{item.productImage ? (
+																	<Image
+																		src={item.productImage}
+																		alt="product"
+																		width={40}
+																		height={40}
+																		className="w-full h-full object-cover"
+																	/>
+																) : (
+																	<ShoppingBag className="w-4 h-4 text-sf-fg-muted opacity-50" />
+																)}
 															</div>
-															<span className="font-bold text-sf-fg">
-																{Number(subtotal).toLocaleString("vi-VN")} đ
-															</span>
+															<div>
+																<p className="font-medium text-sf-fg">
+																	{item.productNameVn}
+																</p>
+																<p className="text-sf-fg-muted">
+																	SL: {item.quantity} x{" "}
+																	{Number(item.productPrice).toLocaleString(
+																		"vi-VN",
+																	)}{" "}
+																	đ
+																</p>
+															</div>
 														</div>
-													);
-												})
+														<span className="font-bold text-sf-fg">
+															{Number(item.subtotal).toLocaleString("vi-VN")} đ
+														</span>
+													</div>
+												))
 											) : (
 												<p className="text-sf-fg-muted italic text-center py-2">
 													Không tải được danh sách sản phẩm.
