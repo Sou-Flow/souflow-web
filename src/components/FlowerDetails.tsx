@@ -218,7 +218,9 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 			);
 			if (saved) {
 				const newReply = {
-					id: String((saved as { pk?: string | number }).pk || crypto.randomUUID()),
+					id: String(
+						(saved as { pk?: string | number }).pk || crypto.randomUUID(),
+					),
 					author: user.fullName || user.username || "Admin",
 					content: replyContent,
 					timestamp: "Vừa xong",

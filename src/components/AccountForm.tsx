@@ -13,6 +13,7 @@ import { orderService } from "@/services/orderService";
 import { useAuthStore } from "@/store/auth-store";
 import { useLocationStore } from "@/store/location-store";
 import type { UserFE } from "@/types/auth.type";
+import type { District, Ward } from "@/types/location.type";
 // 1. IMPORT CÁC TYPE VÀ MAPPER CHUẨN TỪ FILE KIỂU DỮ LIỆU CỦA BẠN
 import {
 	mapOrderResponseToFE,
@@ -227,17 +228,13 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 		const cityName = cityObj ? cityObj.name : city;
 
 		const distList = cityObj?.districts || [];
-		// biome-ignore lint/suspicious/noExplicitAny: skip
 		const distObj = distList.find(
-			(d: any) => String(d.code) === String(district) || d === district,
+			(d: District) => String(d.code) === String(district),
 		);
 		const districtName = distObj ? distObj.name || distObj : district;
 
 		const wardList = distObj?.wards || [];
-		// biome-ignore lint/suspicious/noExplicitAny: skip
-		const wardObj = wardList.find(
-			(w: any) => String(w.code) === String(ward) || w === ward,
-		);
+		const wardObj = wardList.find((w: Ward) => String(w.code) === String(ward));
 		const wardName = wardObj ? wardObj.name || wardObj : ward;
 
 		const finalAddress = encodeAddress(
@@ -466,10 +463,9 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 											<option value="">Chọn Quận/Huyện</option>
 											{(locationData || [])
 												.find((c) => String(c.code) === String(city))
-												// biome-ignore lint/suspicious/noExplicitAny: skip
-												?.districts?.map((d: any) => (
-													<option key={d.code || d} value={d.code || d}>
-														{d.name || d}
+												?.districts?.map((d: District) => (
+													<option key={d.code} value={d.code}>
+														{d.name}
 													</option>
 												))}
 										</select>
@@ -493,14 +489,13 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 											{(locationData || [])
 												.find((c) => String(c.code) === String(city))
 												?.districts?.find(
-													(d: any) =>
+													(d: District) =>
 														String(d.code) === String(district) ||
 														d.name === district,
 												)
-												// biome-ignore lint/suspicious/noExplicitAny: skip
-												?.wards?.map((w: any) => (
-													<option key={w.code || w} value={w.code || w}>
-														{w.name || w}
+												?.wards?.map((w: Ward) => (
+													<option key={w.code} value={w.code}>
+														{w.name}
 													</option>
 												))}
 										</select>

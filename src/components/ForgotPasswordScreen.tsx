@@ -16,36 +16,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
-import { z } from "zod";
 import { soulFlowRoutes } from "@/lib/souflow/routes";
 import { authService } from "@/services/authService";
-
-// Validation schema for Step 1: Email
-const emailSchema = z.object({
-	email: z
-		.string()
-		.min(1, "Vui lòng nhập Email")
-		.email("Định dạng email không hợp lệ"),
-});
-type EmailFormValues = z.infer<typeof emailSchema>;
-
-// Mật khẩu mạnh: Ít nhất 8 ký tự, có cả chữ cái và số
-const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d).{8,}$/;
-
-// Validation schema for Step 3: New Passwords
-const newPasswordSchema = z
-	.object({
-		newPassword: z
-			.string()
-			.min(8, "Mật khẩu mới phải có ít nhất 8 ký tự")
-			.regex(passwordRegex, "Mật khẩu phải bao gồm cả chữ cái và số"),
-		confirmPassword: z.string().min(8, "Vui lòng xác nhận lại mật khẩu"),
-	})
-	.refine((data) => data.newPassword === data.confirmPassword, {
-		message: "Mật khẩu xác nhận không khớp",
-		path: ["confirmPassword"],
-	});
-type NewPasswordFormValues = z.infer<typeof newPasswordSchema>;
+import {
+	type EmailFormValues,
+	emailValidator,
+	type NewPasswordFormValues,
+	newPasswordValidator,
+} from "@/validations/auth.validator";
 
 export function ForgotPasswordScreen() {
 	const router = useRouter();
@@ -64,12 +42,12 @@ export function ForgotPasswordScreen() {
 
 	// Form hooks
 	const emailForm = useForm<EmailFormValues>({
-		resolver: zodResolver(emailSchema),
+		resolver: zodResolver(emailValidator),
 		defaultValues: { email: "" },
 	});
 
 	const passwordForm = useForm<NewPasswordFormValues>({
-		resolver: zodResolver(newPasswordSchema),
+		resolver: zodResolver(newPasswordValidator),
 		defaultValues: { newPassword: "", confirmPassword: "" },
 	});
 

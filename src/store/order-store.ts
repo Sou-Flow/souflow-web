@@ -19,6 +19,7 @@ interface OrderState {
 		paymentMethod: "SEPAY" | "COD";
 		shippingFee?: number;
 	}) => Promise<OrderFE>;
+	clearOrderState: () => void;
 }
 
 export const useOrderStore = create<OrderState>()(
@@ -26,6 +27,7 @@ export const useOrderStore = create<OrderState>()(
 		(set, _get) => ({
 			orders: defaultOrders,
 			isPlacingOrder: false,
+			clearOrderState: () => set({ orders: [] }),
 
 			placeOrder: async (details) => {
 				set({ isPlacingOrder: true });

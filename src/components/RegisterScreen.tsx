@@ -11,6 +11,7 @@ import toast from "react-hot-toast";
 import { soulFlowRoutes } from "@/lib/souflow/routes";
 import { authService } from "@/services/authService";
 import { useLocationStore } from "@/store/location-store";
+import type { District, Ward } from "@/types/location.type";
 import { encodeAddress } from "@/utils/addressUtils";
 import {
 	type RegisterFormData,
@@ -66,19 +67,13 @@ export function RegisterScreen() {
 
 			const distList = cityObj?.districts || [];
 			const distObj = distList.find(
-				// biome-ignore lint/suspicious/noExplicitAny: skip
-				(d: any) =>
-					d === data.district ||
-					(typeof d === "object" && String(d.code) === String(data.district)),
+				(d: District) => String(d.code) === String(data.district),
 			);
 			const districtName = distObj ? distObj.name || distObj : data.district;
 
 			const wardList = distObj?.wards || [];
 			const wardObj = wardList.find(
-				// biome-ignore lint/suspicious/noExplicitAny: skip
-				(w: any) =>
-					w === data.ward ||
-					(typeof w === "object" && String(w.code) === String(data.ward)),
+				(w: Ward) => String(w.code) === String(data.ward),
 			);
 			const wardName = wardObj ? wardObj.name || wardObj : data.ward;
 
@@ -164,9 +159,9 @@ export function RegisterScreen() {
 							Tạo Tài Khoản Mới
 						</h2>
 						<p className="font-sans text-base text-secondary/80 text-sf-fg font-light">
-							Chúng tôi rất vui được chào đón bạn đến với cộng đồng SouFlow!
-							Hãy điền thông tin bên dưới để bắt đầu hành trình khám phá vẻ đẹp
-							của thiên nhiên cùng chúng tôi.
+							Chúng tôi rất vui được chào đón bạn đến với cộng đồng SouFlow! Hãy
+							điền thông tin bên dưới để bắt đầu hành trình khám phá vẻ đẹp của
+							thiên nhiên cùng chúng tôi.
 						</p>
 					</div>
 
@@ -268,7 +263,7 @@ export function RegisterScreen() {
 							</div>
 
 							{/* Address: 4 Fields */}
-							<div className="space-y-4 border-t border-outline-variant/30 pt-4 mt-2">
+							<div className="space-y-4 border-outline-variant/30 pt-4 mt-2">
 								<h3 className="text-xs uppercase tracking-widest font-bold text-sf-fg">
 									Địa chỉ giao hàng
 								</h3>
@@ -348,14 +343,13 @@ export function RegisterScreen() {
 											{/* Lấy selected city thông qua register() - sẽ được fix trong render */}
 											{locationData
 												?.find((c) => String(c.code) === String(watchCity))
-												// biome-ignore lint/suspicious/noExplicitAny: skip
-												?.districts?.map((d: any) => (
+												?.districts?.map((d: District) => (
 													<option
-														key={d.code || d}
-														value={d.code || d}
+														key={d.code}
+														value={d.code}
 														className="text-black"
 													>
-														{d.name || d}
+														{d.name}
 													</option>
 												))}
 										</select>
@@ -386,19 +380,17 @@ export function RegisterScreen() {
 										{locationData
 											?.find((c) => String(c.code) === String(watchCity))
 											?.districts?.find(
-												// biome-ignore lint/suspicious/noExplicitAny: skip
-												(d: any) =>
+												(d: District) =>
 													String(d.code) === String(watchDistrict) ||
 													d.name === watchDistrict,
 											)
-											// biome-ignore lint/suspicious/noExplicitAny: skip
-											?.wards?.map((w: any) => (
+											?.wards?.map((w: Ward) => (
 												<option
-													key={w.code || w}
-													value={w.code || w}
+													key={w.code}
+													value={w.code}
 													className="text-black"
 												>
-													{w.name || w}
+													{w.name}
 												</option>
 											))}
 									</select>

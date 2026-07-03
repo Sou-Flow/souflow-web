@@ -15,6 +15,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import { useDebounce } from "@/hooks/use-debounce";
 import { soulFlowRoutes } from "@/lib/souflow/routes";
 import { categoryService } from "@/services/categoryService";
 import { productService } from "@/services/productService";
@@ -44,12 +45,15 @@ export function FlowerCatalog() {
 		},
 	});
 
+	// Áp dụng Debounce cho search query (đợi 500ms sau khi ngừng gõ)
+	const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
 	const { data: pageData = { content: [], totalPages: 1 } } = useQuery({
 		queryKey: [
 			"flowers",
 			currentPage,
 			itemsPerPage,
-			searchQuery,
+			debouncedSearchQuery, // Lắng nghe biến debounced thay vì biến gốc
 			selectedCategory,
 			sortBy,
 			minPrice,
@@ -62,10 +66,13 @@ export function FlowerCatalog() {
 			if (sortBy === "price-high") sortOrder = "PRICE_DESC";
 			if (sortBy === "popular") sortOrder = "SALES_DESC";
 
+			// Xử lý tiếng Việt: Chuẩn hóa Unicode (NFC) để fix lỗi gõ chữ ư, ụ, ử bị sai mã từ Unikey/Mac
+			const normalizedQuery = debouncedSearchQuery.trim().normalize("NFC");
+
 			return await productService.getPaginatedFlowers(
 				currentPage - 1, // BE is 0-indexed
 				itemsPerPage,
-				searchQuery.trim() || undefined,
+				normalizedQuery || undefined,
 				selectedCategory || undefined,
 				sortOrder,
 				undefined,

@@ -11,14 +11,10 @@ import { z } from "zod";
 import { soulFlowRoutes } from "@/lib/souflow/routes";
 import { authService } from "@/services/authService";
 import { useAuthStore } from "@/store/auth-store";
-
-const loginSchema = z.object({
-	username: z.string().min(1, "Vui lòng nhập Username"),
-	password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
-	rememberMe: z.boolean().optional(),
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
+import {
+	type LoginFormValues,
+	loginValidator,
+} from "@/validations/auth.validator";
 
 export function LoginScreen() {
 	const {
@@ -26,7 +22,7 @@ export function LoginScreen() {
 		handleSubmit,
 		formState: { errors, isSubmitting },
 	} = useForm<LoginFormValues>({
-		resolver: zodResolver(loginSchema),
+		resolver: zodResolver(loginValidator),
 		defaultValues: { username: "", password: "", rememberMe: false },
 	});
 	const [showPassword, setShowPassword] = useState(false);

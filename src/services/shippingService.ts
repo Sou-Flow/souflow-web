@@ -38,7 +38,10 @@ export const shippingService = {
 
 			// Axios interceptor đã bóc vỏ `response.data` rồi
 			// Nên response ở đây chính là cục JSON trả về từ BE
-			const data = response as unknown as { data?: { total?: number }; total?: number };
+			const data = response as unknown as {
+				data?: { total?: number };
+				total?: number;
+			};
 
 			if (data?.data && typeof data.data.total === "number") {
 				return data.data.total;

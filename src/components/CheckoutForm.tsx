@@ -27,21 +27,13 @@ import { useCartStore } from "@/store/cart-store";
 import { useDiscountStore } from "@/store/discount-store";
 import { useLocationStore } from "@/store/location-store";
 import { useOrderStore } from "@/store/order-store";
+import type { District, Ward } from "@/types/location.type";
 import type { OrderFE } from "@/types/order.type";
 import { decodeAddress, encodeAddress } from "@/utils/addressUtils";
-
-const checkoutSchema = z.object({
-	fullName: z.string().min(2, "Họ và tên phải có ít nhất 2 ký tự"),
-	phone: z
-		.string()
-		.regex(/^(84|0)(3|5|7|8|9)[0-9]{8}$/, "Số điện thoại không hợp lệ"),
-	address: z.string().min(5, "Số nhà, tên đường phải có ít nhất 5 ký tự"),
-	ward: z.string().min(1, "Vui lòng nhập Phường/Xã"),
-	city: z.string().min(1, "Vui lòng chọn Tỉnh/Thành phố"),
-	district: z.string().min(1, "Vui lòng chọn Quận/Huyện"),
-});
-
-type CheckoutFormValues = z.infer<typeof checkoutSchema>;
+import {
+	type CheckoutFormValues,
+	checkoutValidator,
+} from "@/validations/checkout.validator";
 
 export function CheckoutForm() {
 	const router = useRouter();
@@ -62,7 +54,7 @@ export function CheckoutForm() {
 		watch,
 		formState: { errors, isSubmitting },
 	} = useForm<CheckoutFormValues>({
-		resolver: zodResolver(checkoutSchema),
+		resolver: zodResolver(checkoutValidator),
 		defaultValues: {
 			fullName: "",
 			phone: "",
@@ -183,28 +175,32 @@ export function CheckoutForm() {
 
 	const total = subtotal - discount + shippingFee;
 
-	// === 5. XỬ LÝ NHẤN ĐẶT HÀNG ===
-	const onSubmit = async (data: CheckoutFormValues) => {
+	// === 4.5. POPUP XÁC NHẬN THANH TOÁN ===
+	const [showConfirmPopup, setShowConfirmPopup] = useState(false);
+	const [pendingOrderData, setPendingOrderData] = useState<CheckoutFormValues | null>(null);
+
+	const onPreSubmit = (data: CheckoutFormValues) => {
 		if (!paymentMethod) {
 			toast.error("Vui lòng chọn phương thức thanh toán!");
 			return;
 		}
+		setPendingOrderData(data);
+		setShowConfirmPopup(true);
+	};
 
-		const cityObj = (locationData || []).find(
+	// === 5. XỬ LÝ NHẤN ĐẶT HÀNG CHÍNH THỨC ===
+	const onSubmit = async (data: CheckoutFormValues) => {		const cityObj = (locationData || []).find(
 			(c) => String(c.code) === String(selectedCity),
 		);
 		const cityName = cityObj ? cityObj.name : selectedCity;
 		const distObj = cityObj?.districts?.find(
-			// biome-ignore lint/suspicious/noExplicitAny: skip
-			(d: any) =>
-				d === selectedDistrict || String(d.code) === String(selectedDistrict),
+			(d: District) => String(d.code) === String(selectedDistrict),
 		);
-		const districtName = distObj?.name || distObj || selectedDistrict;
+		const districtName = distObj?.name || selectedDistrict;
 		const wardObj = distObj?.wards?.find(
-			// biome-ignore lint/suspicious/noExplicitAny: skip
-			(w: any) => w === data.ward || String(w.code) === String(data.ward),
+			(w: Ward) => String(w.code) === String(data.ward),
 		);
-		const wardName = wardObj?.name || wardObj || data.ward;
+		const wardName = wardObj?.name || data.ward;
 
 		const fullAddress = encodeAddress(
 			data.address,
@@ -386,7 +382,6 @@ export function CheckoutForm() {
 		}
 	}, [placedOrderDetails, queryClient.removeQueries]);
 
-	// === 6.1. EFFECT ĐẾM NGƯỢC THỜI GIAN QR ===
 	// === 6.1. EFFECT ĐẾM NGƯỢC THỜI GIAN QR ===
 	useEffect(() => {
 		let timer: NodeJS.Timeout;
@@ -752,7 +747,7 @@ export function CheckoutForm() {
 				</div>
 			) : (
 				<form
-					onSubmit={handleSubmit(onSubmit)}
+					onSubmit={handleSubmit(onPreSubmit)}
 					className="grid grid-cols-1 gap-10 lg:grid-cols-12 items-start"
 				>
 					{/* CỘT TRÁI: THÔNG TIN VÀ PHƯƠNG THỨC TT */}
@@ -846,13 +841,11 @@ export function CheckoutForm() {
 											(locationData || []).find(
 												(c) => String(c.code) === String(selectedCity),
 											)?.districts || []
-										)
-											// biome-ignore lint/suspicious/noExplicitAny: skip
-											.map((d: any) => (
-												<option key={d.code || d} value={d.code || d}>
-													{d.name || d}
-												</option>
-											))}
+										).map((d: District) => (
+											<option key={d.code} value={d.code}>
+												{d.name}
+											</option>
+										))}
 									</select>
 									{errors.district && (
 										<p className="text-red-500 text-[10px] mt-1">
@@ -880,18 +873,15 @@ export function CheckoutForm() {
 											(locationData || [])
 												.find((c) => String(c.code) === String(selectedCity))
 												?.districts?.find(
-													// biome-ignore lint/suspicious/noExplicitAny: skip
-													(d: any) =>
+													(d: District) =>
 														String(d.code) === String(selectedDistrict) ||
 														d.name === selectedDistrict,
 												)?.wards || []
-										)
-											// biome-ignore lint/suspicious/noExplicitAny: skip
-											.map((w: any) => (
-												<option key={w.code || w} value={w.code || w}>
-													{w.name || w}
-												</option>
-											))}
+										).map((w: Ward) => (
+											<option key={w.code} value={w.code}>
+												{w.name}
+											</option>
+										))}
 									</select>
 									{errors.ward && (
 										<p className="text-red-500 text-[10px] mt-1">
@@ -1089,6 +1079,45 @@ export function CheckoutForm() {
 						</button>
 					</div>
 				</form>
+			)}
+
+			{/* POPUP XÁC NHẬN THANH TOÁN */}
+			{showConfirmPopup && (
+				<div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+					<motion.div
+						initial={{ opacity: 0, scale: 0.95 }}
+						animate={{ opacity: 1, scale: 1 }}
+						className="bg-sf-bg-elevated w-full max-w-sm rounded-2xl p-6 shadow-2xl border border-sf-border text-center space-y-4"
+					>
+						<h3 className="font-serif text-2xl font-semibold text-sf-fg">
+							Xác Nhận Đặt Hàng
+						</h3>
+						<p className="text-sm text-sf-fg-muted">
+							Bạn có chắc chắn muốn tiến hành thanh toán cho đơn hàng này không?
+						</p>
+						<div className="flex gap-3 justify-center pt-4">
+							<button
+								type="button"
+								onClick={() => setShowConfirmPopup(false)}
+								className="px-6 py-2 rounded-full border border-sf-border text-sf-fg text-xs font-bold uppercase tracking-widest hover:bg-sf-surface transition-colors"
+							>
+								Huỷ
+							</button>
+							<button
+								type="button"
+								onClick={() => {
+									setShowConfirmPopup(false);
+									if (pendingOrderData) {
+										onSubmit(pendingOrderData);
+									}
+								}}
+								className="px-6 py-2 rounded-full bg-[#1A1A1A] text-white text-xs font-bold uppercase tracking-widest hover:bg-[#C49B83] transition-colors"
+							>
+								Chắc chắn
+							</button>
+						</div>
+					</motion.div>
+				</div>
 			)}
 		</div>
 	);

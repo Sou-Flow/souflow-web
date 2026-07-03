@@ -29,3 +29,34 @@ export const registerValidator = z
 	});
 
 export type RegisterFormData = z.infer<typeof registerValidator>;
+
+// Validation schema for Step 1: Email
+export const emailValidator = z.object({
+	email: z
+		.string()
+		.min(1, "Vui lòng nhập Email")
+		.email("Định dạng email không hợp lệ"),
+});
+export type EmailFormValues = z.infer<typeof emailValidator>;
+// Mật khẩu mạnh: Ít nhất 8 ký tự, có cả chữ cái và số
+const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d).{8,}$/;
+// Validation schema for Step 3: New Passwords
+export const newPasswordValidator = z
+	.object({
+		newPassword: z
+			.string()
+			.min(8, "Mật khẩu mới phải có ít nhất 8 ký tự")
+			.regex(passwordRegex, "Mật khẩu phải bao gồm cả chữ cái và số"),
+		confirmPassword: z.string().min(8, "Vui lòng xác nhận lại mật khẩu"),
+	})
+	.refine((data) => data.newPassword === data.confirmPassword, {
+		message: "Mật khẩu xác nhận không khớp",
+		path: ["confirmPassword"],
+	});
+export type NewPasswordFormValues = z.infer<typeof newPasswordValidator>;
+export const loginValidator = z.object({
+	username: z.string().min(1, "Vui lòng nhập Username"),
+	password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
+	rememberMe: z.boolean().optional(),
+});
+export type LoginFormValues = z.infer<typeof loginValidator>;
