@@ -7,6 +7,7 @@ import {
 	ChevronLeft,
 	ChevronRight,
 	CornerDownRight,
+	Crown,
 	MessageSquare,
 	Send,
 	ShoppingBag,
@@ -53,7 +54,7 @@ const _MOCK_COMMENTS: CommentType[] = [
 		replies: [
 			{
 				id: "r1",
-				author: "Admin SouFlow",
+				author: "SoulFlow Shop",
 				content: "Cảm ơn bạn đã tin tưởng ủng hộ shop ạ!",
 				timestamp: "1 ngày trước",
 			},
@@ -190,7 +191,7 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 				setComments([
 					{
 						id: String(saved.id),
-						author: user.fullName || user.username || "Khách",
+						author: user.roleCode === "ADMIN" ? "SoulFlow Shop" : (user.fullName || user.username || "Khách"),
 						content: saved.content,
 						timestamp: "Vừa xong",
 						replies: [],
@@ -222,7 +223,7 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 					id: String(
 						(saved as { pk?: string | number }).pk || crypto.randomUUID(),
 					),
-					author: user.fullName || user.username || "Admin",
+					author: user.roleCode === "ADMIN" ? "SoulFlow Shop" : (user.fullName || user.username || "Admin"),
 					content: replyContent,
 					timestamp: "Vừa xong",
 				};
@@ -467,8 +468,15 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 								<div className="p-5 rounded-2xl border border-[#C49B83]/20 bg-[#C49B83]/5">
 									<div className="flex justify-between items-start mb-2">
 										<div className="flex items-center gap-2">
-											<span className="font-bold text-sm text-sf-fg">
+											<span className={`font-bold text-sm flex items-center gap-1.5 ${
+												comment.author === "SoulFlow Shop" || comment.author.toLowerCase().includes("admin")
+													? "text-[#C49B83]"
+													: "text-sf-fg"
+											}`}>
 												{comment.author}
+												{(comment.author === "SoulFlow Shop" || comment.author.toLowerCase().includes("admin")) && (
+													<Crown className="h-3.5 w-3.5" />
+												)}
 											</span>
 											<span className="text-xs text-[#A0A0A0]">
 												• {comment.timestamp}
@@ -522,8 +530,15 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 											>
 												<div className="flex justify-between items-start mb-1.5">
 													<div className="flex items-center gap-2">
-														<span className="font-bold text-sm text-sf-fg">
+														<span className={`font-bold text-sm flex items-center gap-1.5 ${
+															reply.author === "SoulFlow Shop" || reply.author.toLowerCase().includes("admin")
+																? "text-[#C49B83]"
+																: "text-sf-fg"
+														}`}>
 															{reply.author}
+															{(reply.author === "SoulFlow Shop" || reply.author.toLowerCase().includes("admin")) && (
+																<Crown className="h-3 w-3" />
+															)}
 														</span>
 														<span className="text-xs text-[#A0A0A0]">
 															• {reply.timestamp}

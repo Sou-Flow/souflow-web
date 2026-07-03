@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
 	ChevronDown,
+	Crown,
 	LogIn,
 	LogOut,
 	Menu,
@@ -362,10 +363,16 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 											priority
 										/>
 
-										<span className="hidden lg:inline text-sm font-bold tracking-widest text-sf-fg uppercase">
-											{user.fullName
-												? user.fullName.trim().split(" ").at(-1)
-												: "User"}
+										<span className="hidden lg:flex items-center gap-1.5 text-sm font-bold tracking-widest text-sf-fg uppercase">
+											{user.roleCode === "ADMIN" ? (
+												<>
+													SoulFlow Shop <Crown className="h-4 w-4 text-sf-accent" />
+												</>
+											) : (
+												user.fullName
+													? user.fullName.trim().split(" ").at(-1)
+													: "User"
+											)}
 										</span>
 									</Link>
 
@@ -457,8 +464,12 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 												blurDataURL="/images/avatar-placeholder.png"
 												loading="eager"
 											/>
-											<span>
-												{user.fullName ? user.fullName.split(" ")[0] : "User"}
+											<span className="flex items-center gap-1.5">
+												{user.roleCode === "ADMIN" ? (
+													<>SoulFlow Shop <Crown className="h-4 w-4 text-sf-accent" /></>
+												) : (
+													user.fullName ? user.fullName.split(" ")[0] : "User"
+												)}
 											</span>
 										</Link>
 
