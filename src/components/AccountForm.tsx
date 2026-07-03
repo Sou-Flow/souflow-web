@@ -286,8 +286,27 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 		});
 	};
 
-	const dateStr = String(user.createDate);
-	const formattedDate = `${dateStr.slice(7, 9)}/${dateStr.slice(5, 6)}/${dateStr.slice(0, 4)}`;
+	let formattedDate = String(user.createDate);
+	if (formattedDate.includes("-")) {
+		// Remove time part if exists (either after T or space)
+		const dateOnly = formattedDate.split("T")[0].split(" ")[0];
+		const parts = dateOnly.split("-");
+		if (parts.length === 3) {
+			// Check if format is YYYY-MM-DD
+			if (parts[0].length === 4) {
+				formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+			} 
+			// Check if format is DD-MM-YYYY
+			else if (parts[2].length === 4) {
+				formattedDate = `${parts[0]}/${parts[1]}/${parts[2]}`;
+			}
+		} else {
+			formattedDate = dateOnly;
+		}
+	} else if (Array.isArray(user.createDate)) {
+		const [year, month, day] = user.createDate;
+		formattedDate = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+	}
 
 	return (
 		<div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 bg-sf-bg-elevated transition-colors duration-300">

@@ -425,7 +425,7 @@ export function CheckoutForm() {
 					mình.
 				</p>
 				<Link
-					href={soulFlowRoutes.login}
+					href={`${soulFlowRoutes.login}?callbackUrl=/checkout`}
 					className="inline-block bg-[#1A1A1A] text-white px-8 py-3 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-[#C49B83] transition-colors"
 				>
 					Đi tới Đăng Nhập

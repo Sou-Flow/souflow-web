@@ -2,8 +2,9 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Flower, Lock, User } from "lucide-react";
+import axios from "axios";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
@@ -29,6 +30,8 @@ export function LoginScreen() {
 	const [capsLockActive, setCapsLockActive] = useState(false);
 	const setUser = useAuthStore((state) => state.setUser);
 	const router = useRouter();
+	const searchParams = useSearchParams();
+	const callbackUrl = searchParams.get("callbackUrl");
 
 	const handlePasswordKeyUp = (e: React.KeyboardEvent<HTMLInputElement>) => {
 		if (e.getModifierState("CapsLock")) {
@@ -57,9 +60,25 @@ export function LoginScreen() {
 				`Đăng nhập thành công!, Chào mừng ${userName} đã trở lại với SouFlow!`,
 				{ id: toastId },
 			);
-			router.push(soulFlowRoutes.home);
-		} catch {
-			toast.error("Sai tài khoản hoặc mật khẩu!", { id: toastId });
+
+			if (callbackUrl) {
+				router.push(callbackUrl);
+			} else {
+				router.push(soulFlowRoutes.home);
+			}
+		} catch (error) {
+			if (axios.isAxiosError(error)) {
+				const msg = String(error.response?.data?.message || error.response?.data || "");
+				if (msg.toLowerCase().includes("lock") || msg.toLowerCase().includes("khoá") || msg.toLowerCase().includes("khoa")) {
+					toast.error("Tài khoản của bạn đã bị khoá!", { id: toastId });
+				} else if (msg && typeof error.response?.data?.message === 'string') {
+					toast.error(msg, { id: toastId });
+				} else {
+					toast.error("Sai tài khoản hoặc mật khẩu!", { id: toastId });
+				}
+			} else {
+				toast.error("Sai tài khoản hoặc mật khẩu!", { id: toastId });
+			}
 		}
 	};
 
@@ -243,7 +262,7 @@ export function LoginScreen() {
 							Chưa có tài khoản?{" "}
 							<button
 								type="button"
-								onClick={() => router.push(soulFlowRoutes.register)}
+								onClick={() => router.push(`${soulFlowRoutes.register}${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ''}`)}
 								className="font-semibold text-primary hover:underline hover:cursor-pointer underline-offset-4 decoration-primary/30 transition-all ml-1 text-xs"
 							>
 								Tạo Tài Khoản

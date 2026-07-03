@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
 	ChevronDown,
+	Crown,
 	LogIn,
 	LogOut,
 	Menu,
@@ -303,7 +304,7 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 										type="button"
 										onClick={() => {
 											showToast("Chuyển đến trang đăng nhập", "success");
-											router.push(soulFlowRoutes.login);
+											router.push(`${soulFlowRoutes.login}?callbackUrl=${encodeURIComponent(pathname)}`);
 										}}
 										className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] uppercase tracking-widest font-bold transition-all cursor-pointer ${
 											pathname === soulFlowRoutes.login
@@ -325,7 +326,7 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 										type="button"
 										onClick={() => {
 											showToast("Chuyển đến trang đăng ký", "success");
-											router.push(soulFlowRoutes.register);
+											router.push(`${soulFlowRoutes.register}?callbackUrl=${encodeURIComponent(pathname)}`);
 										}}
 										className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] uppercase tracking-widest font-bold transition-all cursor-pointer ${
 											pathname === soulFlowRoutes.register
@@ -362,10 +363,16 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 											priority
 										/>
 
-										<span className="hidden lg:inline text-sm font-bold tracking-widest text-sf-fg uppercase">
-											{user.fullName
-												? user.fullName.trim().split(" ").at(-1)
-												: "User"}
+										<span className="hidden lg:flex items-center gap-1.5 text-sm font-bold tracking-widest text-sf-fg uppercase">
+											{user.roleCode === "ADMIN" ? (
+												<>
+													SouFlow Shop <Crown className="h-4 w-4 text-sf-accent" />
+												</>
+											) : (
+												user.fullName
+													? user.fullName.trim().split(" ").at(-1)
+													: "User"
+											)}
 										</span>
 									</Link>
 
@@ -457,8 +464,12 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 												blurDataURL="/images/avatar-placeholder.png"
 												loading="eager"
 											/>
-											<span>
-												{user.fullName ? user.fullName.split(" ")[0] : "User"}
+											<span className="flex items-center gap-1.5">
+												{user.roleCode === "ADMIN" ? (
+													<>SouFlow Shop <Crown className="h-4 w-4 text-sf-accent" /></>
+												) : (
+													user.fullName ? user.fullName.split(" ")[0] : "User"
+												)}
 											</span>
 										</Link>
 
@@ -480,7 +491,7 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 									// Trạng thái chưa đăng nhập
 									<div className="flex flex-col gap-1 px-2">
 										<Link
-											href={soulFlowRoutes.login}
+											href={`${soulFlowRoutes.login}?callbackUrl=${encodeURIComponent(pathname)}`}
 											onClick={() => setMobileMenuOpen(false)}
 											className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest text-sf-accent hover:bg-sf-surface"
 										>
@@ -488,7 +499,7 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 											Đăng nhập
 										</Link>
 										<Link
-											href={soulFlowRoutes.register}
+											href={`${soulFlowRoutes.register}?callbackUrl=${encodeURIComponent(pathname)}`}
 											onClick={() => setMobileMenuOpen(false)}
 											className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest text-sf-fg-muted hover:bg-sf-surface"
 										>

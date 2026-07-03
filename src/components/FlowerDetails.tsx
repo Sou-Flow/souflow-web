@@ -7,6 +7,7 @@ import {
 	ChevronLeft,
 	ChevronRight,
 	CornerDownRight,
+	Crown,
 	MessageSquare,
 	Send,
 	ShoppingBag,
@@ -14,7 +15,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { soulFlowRoutes } from "@/lib/souflow/routes";
@@ -53,7 +54,7 @@ const _MOCK_COMMENTS: CommentType[] = [
 		replies: [
 			{
 				id: "r1",
-				author: "Admin SouFlow",
+				author: "SouFlow Shop",
 				content: "Cảm ơn bạn đã tin tưởng ủng hộ shop ạ!",
 				timestamp: "1 ngày trước",
 			},
@@ -63,6 +64,7 @@ const _MOCK_COMMENTS: CommentType[] = [
 
 export function FlowerDetails({ productId }: FlowerDetailsProps) {
 	const router = useRouter();
+	const pathname = usePathname();
 	const { user } = useAuthStore();
 	//const { addToCart } = CartFE();
 
@@ -176,7 +178,7 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 		if (!newComment.trim()) return;
 		if (!user) {
 			toast.error("Vui lòng đăng nhập để bình luận");
-			router.push("/login");
+			router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
 			return;
 		}
 		if (!fetchedFlower) return;
@@ -189,7 +191,7 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 				setComments([
 					{
 						id: String(saved.id),
-						author: user.fullName || user.username || "Khách",
+						author: user.roleCode === "ADMIN" ? "SouFlow Shop" : (user.fullName || user.username || "Khách"),
 						content: saved.content,
 						timestamp: "Vừa xong",
 						replies: [],
@@ -208,7 +210,7 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 		if (!replyContent.trim()) return;
 		if (!user) {
 			toast.error("Vui lòng đăng nhập để trả lời");
-			router.push("/login");
+			router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
 			return;
 		}
 		try {
@@ -221,7 +223,7 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 					id: String(
 						(saved as { pk?: string | number }).pk || crypto.randomUUID(),
 					),
-					author: user.fullName || user.username || "Admin",
+					author: user.roleCode === "ADMIN" ? "SouFlow Shop" : (user.fullName || user.username || "Admin"),
 					content: replyContent,
 					timestamp: "Vừa xong",
 				};
@@ -401,7 +403,7 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 								if (!fetchedFlower.isAvailable || availableStock <= 0) return;
 								if (!user) {
 									toast.error("Vui lòng đăng nhập để thêm vào giỏ hàng");
-									router.push("/login");
+									router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
 									return;
 								}
 								setIsAddingToCart(true);
@@ -466,8 +468,15 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 								<div className="p-5 rounded-2xl border border-[#C49B83]/20 bg-[#C49B83]/5">
 									<div className="flex justify-between items-start mb-2">
 										<div className="flex items-center gap-2">
-											<span className="font-bold text-sm text-sf-fg">
+											<span className={`font-bold text-sm flex items-center gap-1.5 ${
+												comment.author === "SouFlow Shop" || comment.author.toLowerCase().includes("admin")
+													? "text-[#C49B83]"
+													: "text-sf-fg"
+											}`}>
 												{comment.author}
+												{(comment.author === "SouFlow Shop" || comment.author.toLowerCase().includes("admin")) && (
+													<Crown className="h-3.5 w-3.5" />
+												)}
 											</span>
 											<span className="text-xs text-[#A0A0A0]">
 												• {comment.timestamp}
@@ -521,8 +530,15 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 											>
 												<div className="flex justify-between items-start mb-1.5">
 													<div className="flex items-center gap-2">
-														<span className="font-bold text-sm text-sf-fg">
+														<span className={`font-bold text-sm flex items-center gap-1.5 ${
+															reply.author === "SouFlow Shop" || reply.author.toLowerCase().includes("admin")
+																? "text-[#C49B83]"
+																: "text-sf-fg"
+														}`}>
 															{reply.author}
+															{(reply.author === "SouFlow Shop" || reply.author.toLowerCase().includes("admin")) && (
+																<Crown className="h-3 w-3" />
+															)}
 														</span>
 														<span className="text-xs text-[#A0A0A0]">
 															• {reply.timestamp}

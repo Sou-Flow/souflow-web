@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
@@ -20,6 +20,8 @@ import {
 
 export function RegisterScreen() {
 	const router = useRouter();
+	const searchParams = useSearchParams();
+	const callbackUrl = searchParams.get("callbackUrl");
 	const {
 		register,
 		watch,
@@ -96,7 +98,7 @@ export function RegisterScreen() {
 			await authService.register(payload);
 			toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
 			setTimeout(() => {
-				router.push(soulFlowRoutes.login);
+				router.push(`${soulFlowRoutes.login}${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ''}`);
 			}, 1000);
 		} catch (error) {
 			if (axios.isAxiosError(error)) {
@@ -507,7 +509,7 @@ export function RegisterScreen() {
 							Đã là một phần của thế giới của chúng tôi?{" "}
 							<button
 								type="button"
-								onClick={() => router.push(soulFlowRoutes.login)}
+								onClick={() => router.push(`${soulFlowRoutes.login}${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ''}`)}
 								className="text-primary font-semibold hover:underline hover:cursor-pointer decoration-primary/30 underline-offset-4 transition-all"
 							>
 								Đăng nhập tại đây
