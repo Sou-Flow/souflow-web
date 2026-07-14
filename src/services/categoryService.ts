@@ -31,7 +31,8 @@ export const categoryService = {
 			}
 
 			// 2. Chạy qua máy xay Mapper để gọt data thô (BE) thành data sạch (FE)
-			return rawList.map(mapCategoryResponseToFE);
+			// Lọc bỏ những danh mục đã bị xóa (delIf = true)
+			return rawList.map(mapCategoryResponseToFE).filter((c) => c.isActive);
 		} catch {
 			console.warn("⚠️ API '/category/list' lỗi hoặc BE chưa chạy.");
 			return [];

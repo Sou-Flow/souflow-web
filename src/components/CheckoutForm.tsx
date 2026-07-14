@@ -68,10 +68,10 @@ export function CheckoutForm() {
 	const selectedCity = watch("city");
 	const selectedDistrict = watch("district");
 
-	// Rút gọn lại chỉ còn SEPAY và COD
-	const [paymentMethod, setPaymentMethod] = useState<"SEPAY" | "COD" | null>(
-		null,
-	);
+	// Rút gọn lại chỉ còn SEPAY, COD, và STORE
+	const [paymentMethod, setPaymentMethod] = useState<
+		"SEPAY" | "COD" | "STORE" | null
+	>(null);
 	// 2. Thêm cờ đánh dấu xem đã điền tự động lần nào chưa
 	const [hasAutoFilled, setHasAutoFilled] = useState(false);
 
@@ -137,6 +137,11 @@ export function CheckoutForm() {
 	const selectedWard = watch("ward");
 
 	useEffect(() => {
+		if (paymentMethod === "STORE") {
+			setShippingFee(0);
+			return;
+		}
+
 		if (selectedCity && selectedDistrict && selectedWard) {
 			const fetchFee = async () => {
 				setIsCalculatingShip(true);
@@ -171,25 +176,40 @@ export function CheckoutForm() {
 		} else {
 			setShippingFee(0);
 		}
-	}, [selectedCity, selectedDistrict, selectedWard, locationData, subtotal]);
+	}, [
+		selectedCity,
+		selectedDistrict,
+		selectedWard,
+		locationData,
+		subtotal,
+		paymentMethod,
+	]);
 
 	const total = subtotal - discount + shippingFee;
 
 	// === 4.5. POPUP XÁC NHẬN THANH TOÁN ===
 	const [showConfirmPopup, setShowConfirmPopup] = useState(false);
-	const [pendingOrderData, setPendingOrderData] = useState<CheckoutFormValues | null>(null);
+	const [pendingOrderData, setPendingOrderData] =
+		useState<CheckoutFormValues | null>(null);
 
 	const onPreSubmit = (data: CheckoutFormValues) => {
 		if (!paymentMethod) {
-			toast.error("Vui lòng chọn phương thức thanh toán!");
+			toast.error("Vui lòng chọn phương thức giao hàng / thanh toán!");
 			return;
+		}
+		if (paymentMethod !== "STORE") {
+			if (!data.address || !data.city || !data.district || !data.ward) {
+				toast.error("Vui lòng điền đầy đủ địa chỉ giao hàng!");
+				return;
+			}
 		}
 		setPendingOrderData(data);
 		setShowConfirmPopup(true);
 	};
 
 	// === 5. XỬ LÝ NHẤN ĐẶT HÀNG CHÍNH THỨC ===
-	const onSubmit = async (data: CheckoutFormValues) => {		const cityObj = (locationData || []).find(
+	const onSubmit = async (data: CheckoutFormValues) => {
+		const cityObj = (locationData || []).find(
 			(c) => String(c.code) === String(selectedCity),
 		);
 		const cityName = cityObj ? cityObj.name : selectedCity;
@@ -203,7 +223,7 @@ export function CheckoutForm() {
 		const wardName = wardObj?.name || data.ward;
 
 		const fullAddress = encodeAddress(
-			data.address,
+			String(data.address),
 			String(wardName),
 			String(districtName),
 			String(cityName),
@@ -212,11 +232,11 @@ export function CheckoutForm() {
 		const details = {
 			recipientName: data.fullName,
 			recipientPhone: data.phone,
-			address: fullAddress,
-			city: cityName || "",
-			district: selectedDistrict || "",
-			paymentMethod: paymentMethod as "COD" | "SEPAY",
-			shippingFee,
+			address: paymentMethod === "STORE" ? "Nhận tại cửa hàng" : fullAddress,
+			city: paymentMethod === "STORE" ? "Không" : cityName || "",
+			district: paymentMethod === "STORE" ? "Không" : selectedDistrict || "",
+			paymentMethod: paymentMethod as "COD" | "SEPAY" | "STORE",
+			shippingFee: paymentMethod === "STORE" ? 0 : shippingFee,
 		};
 
 		try {
@@ -798,117 +818,123 @@ export function CheckoutForm() {
 								</div>
 							</div>
 
-							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-4">
-								<div className="space-y-1">
-									<label
-										htmlFor="checkout-city"
-										className="text-sm uppercase font-bold text-[#666666]"
-									>
-										Tỉnh/Thành phố
-									</label>
-									<select
-										id="checkout-city"
-										{...register("city")}
-										className={`w-full text-xs rounded-lg border bg-sf-surface p-3 outline-none ${errors.city ? "border-red-500" : ""}`}
-									>
-										<option value="">Chọn Tỉnh/Thành phố</option>
-										{(locationData || []).map((c) => (
-											<option key={c.code} value={c.code}>
-												{c.name}
-											</option>
-										))}
-									</select>
-									{errors.city && (
-										<p className="text-red-500 text-[10px] mt-1">
-											{errors.city.message}
-										</p>
-									)}
-								</div>
-								<div className="space-y-1">
-									<label
-										htmlFor="checkout-district"
-										className="text-sm uppercase font-bold text-[#666666]"
-									>
-										Quận/Huyện
-									</label>
-									<select
-										id="checkout-district"
-										{...register("district")}
-										className={`w-full text-xs rounded-lg border bg-sf-surface p-3 outline-none ${errors.district ? "border-red-500" : ""}`}
-									>
-										<option value="">Chọn Quận/Huyện</option>
-										{(
-											(locationData || []).find(
-												(c) => String(c.code) === String(selectedCity),
-											)?.districts || []
-										).map((d: District) => (
-											<option key={d.code} value={d.code}>
-												{d.name}
-											</option>
-										))}
-									</select>
-									{errors.district && (
-										<p className="text-red-500 text-[10px] mt-1">
-											{errors.district.message}
-										</p>
-									)}
-								</div>
-							</div>
+							{paymentMethod !== "STORE" && (
+								<>
+									<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-4">
+										<div className="space-y-1">
+											<label
+												htmlFor="checkout-city"
+												className="text-sm uppercase font-bold text-[#666666]"
+											>
+												Tỉnh/Thành phố
+											</label>
+											<select
+												id="checkout-city"
+												{...register("city")}
+												className={`w-full text-xs rounded-lg border bg-sf-surface p-3 outline-none ${errors.city ? "border-red-500" : ""}`}
+											>
+												<option value="">Chọn Tỉnh/Thành phố</option>
+												{(locationData || []).map((c) => (
+													<option key={c.code} value={c.code}>
+														{c.name}
+													</option>
+												))}
+											</select>
+											{errors.city && (
+												<p className="text-red-500 text-[10px] mt-1">
+													{errors.city.message}
+												</p>
+											)}
+										</div>
+										<div className="space-y-1">
+											<label
+												htmlFor="checkout-district"
+												className="text-sm uppercase font-bold text-[#666666]"
+											>
+												Quận/Huyện
+											</label>
+											<select
+												id="checkout-district"
+												{...register("district")}
+												className={`w-full text-xs rounded-lg border bg-sf-surface p-3 outline-none ${errors.district ? "border-red-500" : ""}`}
+											>
+												<option value="">Chọn Quận/Huyện</option>
+												{(
+													(locationData || []).find(
+														(c) => String(c.code) === String(selectedCity),
+													)?.districts || []
+												).map((d: District) => (
+													<option key={d.code} value={d.code}>
+														{d.name}
+													</option>
+												))}
+											</select>
+											{errors.district && (
+												<p className="text-red-500 text-[10px] mt-1">
+													{errors.district.message}
+												</p>
+											)}
+										</div>
+									</div>
 
-							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-4">
-								<div className="space-y-1">
-									<label
-										htmlFor="checkout-ward"
-										className="text-sm uppercase font-bold text-[#666666]"
-									>
-										Phường/Xã
-									</label>
-									<select
-										id="checkout-ward"
-										{...register("ward")}
-										className={`w-full text-xs rounded-lg border bg-sf-surface p-3 outline-none ${errors.ward ? "border-red-500" : ""}`}
-									>
-										<option value="">Chọn Phường/Xã</option>
-										{(
-											(locationData || [])
-												.find((c) => String(c.code) === String(selectedCity))
-												?.districts?.find(
-													(d: District) =>
-														String(d.code) === String(selectedDistrict) ||
-														d.name === selectedDistrict,
-												)?.wards || []
-										).map((w: Ward) => (
-											<option key={w.code} value={w.code}>
-												{w.name}
-											</option>
-										))}
-									</select>
-									{errors.ward && (
-										<p className="text-red-500 text-[10px] mt-1">
-											{errors.ward.message}
-										</p>
-									)}
-								</div>
-								<div className="space-y-1">
-									<label
-										htmlFor="checkout-address"
-										className="text-sm uppercase font-bold text-[#666666]"
-									>
-										Số nhà, tên đường
-									</label>
-									<input
-										id="checkout-address"
-										{...register("address")}
-										placeholder="Nhập địa chỉ cụ thể"
-										className={`w-full text-xs rounded-lg border bg-sf-surface p-3 outline-none ${errors.address ? "border-red-500" : ""}`}
-									/>
-									{errors.address && (
-										<p className="text-red-500 text-[10px] mt-1">
-											{errors.address.message}
-										</p>
-									)}
-								</div>
-							</div>
+									<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-4">
+										<div className="space-y-1">
+											<label
+												htmlFor="checkout-ward"
+												className="text-sm uppercase font-bold text-[#666666]"
+											>
+												Phường/Xã
+											</label>
+											<select
+												id="checkout-ward"
+												{...register("ward")}
+												className={`w-full text-xs rounded-lg border bg-sf-surface p-3 outline-none ${errors.ward ? "border-red-500" : ""}`}
+											>
+												<option value="">Chọn Phường/Xã</option>
+												{(
+													(locationData || [])
+														.find(
+															(c) => String(c.code) === String(selectedCity),
+														)
+														?.districts?.find(
+															(d: District) =>
+																String(d.code) === String(selectedDistrict) ||
+																d.name === selectedDistrict,
+														)?.wards || []
+												).map((w: Ward) => (
+													<option key={w.code} value={w.code}>
+														{w.name}
+													</option>
+												))}
+											</select>
+											{errors.ward && (
+												<p className="text-red-500 text-[10px] mt-1">
+													{errors.ward.message}
+												</p>
+											)}
+										</div>
+										<div className="space-y-1">
+											<label
+												htmlFor="checkout-address"
+												className="text-sm uppercase font-bold text-[#666666]"
+											>
+												Số nhà, tên đường
+											</label>
+											<input
+												id="checkout-address"
+												{...register("address")}
+												placeholder="Nhập địa chỉ cụ thể"
+												className={`w-full text-xs rounded-lg border bg-sf-surface p-3 outline-none ${errors.address ? "border-red-500" : ""}`}
+											/>
+											{errors.address && (
+												<p className="text-red-500 text-[10px] mt-1">
+													{errors.address.message}
+												</p>
+											)}
+										</div>
+									</div>
+								</>
+							)}
 						</div>
 
 						{/* Box 2: Payment Methods (Thu gọn lại 2 cái) */}
@@ -926,8 +952,13 @@ export function CheckoutForm() {
 									},
 									{
 										id: "COD" as const,
-										label: "Thanh Toán Khi Nhận Hàng",
+										label: "Giao Hàng Tận Nơi",
 										desc: "Thanh toán bằng tiền mặt (COD).",
+									},
+									{
+										id: "STORE" as const,
+										label: "Nhận Tại Cửa Hàng",
+										desc: "Thanh toán & nhận hoa tại tiệm.",
 									},
 								].map((pay) => {
 									const isChose = paymentMethod === pay.id;

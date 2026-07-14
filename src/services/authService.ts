@@ -62,9 +62,11 @@ export const authService = {
 	},
 
 	updateProfile: async (
-		updatedData: UpdateProfileRequestDTO,
-	): Promise<void> => {
-		await axiosClient.put("/user/update-profile", updatedData);
+		updatedData: UpdateProfileRequestDTO | FormData,
+	): Promise<import("@/types/auth.type").UserResponseDTO> => {
+		const response = await axiosClient.put("/user/update-profile", updatedData);
+		// biome-ignore lint/suspicious/noExplicitAny: skip
+		return (response as any).data ?? response;
 	},
 
 	changePassword: async (

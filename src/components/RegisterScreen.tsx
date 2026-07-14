@@ -98,7 +98,9 @@ export function RegisterScreen() {
 			await authService.register(payload);
 			toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
 			setTimeout(() => {
-				router.push(`${soulFlowRoutes.login}${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ''}`);
+				router.push(
+					`${soulFlowRoutes.login}${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ""}`,
+				);
 			}, 1000);
 		} catch (error) {
 			if (axios.isAxiosError(error)) {
@@ -509,7 +511,11 @@ export function RegisterScreen() {
 							Đã là một phần của thế giới của chúng tôi?{" "}
 							<button
 								type="button"
-								onClick={() => router.push(`${soulFlowRoutes.login}${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ''}`)}
+								onClick={() =>
+									router.push(
+										`${soulFlowRoutes.login}${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ""}`,
+									)
+								}
 								className="text-primary font-semibold hover:underline hover:cursor-pointer decoration-primary/30 underline-offset-4 transition-all"
 							>
 								Đăng nhập tại đây

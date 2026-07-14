@@ -16,7 +16,7 @@ interface OrderState {
 		address: string;
 		city: string;
 		district: string;
-		paymentMethod: "SEPAY" | "COD";
+		paymentMethod: "SEPAY" | "COD" | "STORE";
 		shippingFee?: number;
 	}) => Promise<OrderFE>;
 	clearOrderState: () => void;

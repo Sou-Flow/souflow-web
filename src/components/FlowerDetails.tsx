@@ -9,6 +9,7 @@ import {
 	CornerDownRight,
 	Crown,
 	MessageSquare,
+	Palette,
 	Send,
 	ShoppingBag,
 	UserCircle2,
@@ -24,6 +25,7 @@ import { commentService } from "@/services/commentService";
 import { productService } from "@/services/productService";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cart-store";
+import { CustomOrderPopup } from "./CustomOrderPopup";
 
 type FlowerDetailsProps = {
 	productId: string;
@@ -44,23 +46,6 @@ type CommentType = {
 	timestamp: string;
 	replies: ReplyType[];
 };
-
-const _MOCK_COMMENTS: CommentType[] = [
-	{
-		id: "c1",
-		author: "Eleanor Vance",
-		content: "Hoa rất đẹp và tươi lâu! Sẽ ủng hộ shop dài dài.",
-		timestamp: "2 ngày trước",
-		replies: [
-			{
-				id: "r1",
-				author: "SouFlow Shop",
-				content: "Cảm ơn bạn đã tin tưởng ủng hộ shop ạ!",
-				timestamp: "1 ngày trước",
-			},
-		],
-	},
-];
 
 export function FlowerDetails({ productId }: FlowerDetailsProps) {
 	const router = useRouter();
@@ -114,6 +99,7 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 	const [isHoveringImage, setIsHoveringImage] = useState(false);
 	const [prevProductId, setPrevProductId] = useState(productId);
 	const [isAddingToCart, setIsAddingToCart] = useState(false);
+	const [isCustomOrderPopupOpen, setIsCustomOrderPopupOpen] = useState(false);
 	const { addToCart, cart } = useCartStore();
 
 	if (productId !== prevProductId) {
@@ -191,7 +177,10 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 				setComments([
 					{
 						id: String(saved.id),
-						author: user.roleCode === "ADMIN" ? "SouFlow Shop" : (user.fullName || user.username || "Khách"),
+						author:
+							user.roleCode === "ADMIN"
+								? "SouFlow Shop"
+								: user.fullName || user.username || "Khách",
 						content: saved.content,
 						timestamp: "Vừa xong",
 						replies: [],
@@ -223,7 +212,10 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 					id: String(
 						(saved as { pk?: string | number }).pk || crypto.randomUUID(),
 					),
-					author: user.roleCode === "ADMIN" ? "SouFlow Shop" : (user.fullName || user.username || "Admin"),
+					author:
+						user.roleCode === "ADMIN"
+							? "SouFlow Shop"
+							: user.fullName || user.username || "Admin",
 					content: replyContent,
 					timestamp: "Vừa xong",
 				};
@@ -269,10 +261,7 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 
 	const cartItem = cart.find((i) => i.product.id === fetchedFlower.id);
 	const currentCartQty = cartItem ? cartItem.quantity : 0;
-	const availableStock = Math.max(
-		0,
-		fetchedFlower.stockQuantity - currentCartQty,
-	);
+	const availableStock = fetchedFlower.stockQuantity;
 
 	return (
 		<div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 bg-sf-bg-elevated transition-colors duration-300">
@@ -397,13 +386,20 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 							disabled={
 								!fetchedFlower.isAvailable ||
 								availableStock <= 0 ||
-								isAddingToCart
+								isAddingToCart ||
+								currentCartQty >= fetchedFlower.stockQuantity
 							}
 							onClick={async () => {
 								if (!fetchedFlower.isAvailable || availableStock <= 0) return;
+								if (currentCartQty >= fetchedFlower.stockQuantity) {
+									toast.error("Đã đạt số lượng tối đa trong kho");
+									return;
+								}
 								if (!user) {
 									toast.error("Vui lòng đăng nhập để thêm vào giỏ hàng");
-									router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
+									router.push(
+										`/login?callbackUrl=${encodeURIComponent(pathname)}`,
+									);
 									return;
 								}
 								setIsAddingToCart(true);
@@ -420,12 +416,42 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 							{isAddingToCart
 								? "Đang thêm..."
 								: fetchedFlower.isAvailable && availableStock > 0
-									? "Thêm vào giỏ hàng"
+									? currentCartQty >= fetchedFlower.stockQuantity
+										? "Đã đạt giới hạn"
+										: "Thêm vào giỏ hàng"
 									: "Đã hết hàng"}
+						</button>
+					</div>
+
+					{/* Nút Đặt hoa theo yêu cầu */}
+					<div className="mt-4">
+						<button
+							type="button"
+							onClick={() => {
+								if (!user) {
+									toast.error("Vui lòng đăng nhập để đặt hoa theo yêu cầu");
+									router.push(
+										`/login?callbackUrl=${encodeURIComponent(pathname)}`,
+									);
+									return;
+								}
+								setIsCustomOrderPopupOpen(true);
+							}}
+							className="w-full flex items-center justify-center gap-2 rounded-xl border border-[#C49B83] text-[#C49B83] hover:bg-[#C49B83] hover:text-white py-4 text-xs font-bold uppercase tracking-widest transition-all duration-300 cursor-pointer"
+						>
+							<Palette className="h-4 w-4" />
+							Đặt hoa theo yêu cầu
 						</button>
 					</div>
 				</div>
 			</div>
+
+			<CustomOrderPopup
+				isOpen={isCustomOrderPopupOpen}
+				onClose={() => setIsCustomOrderPopupOpen(false)}
+				productName={fetchedFlower.nameVn}
+				productCode={fetchedFlower.code}
+			/>
 
 			{/* Đã xóa Hướng dẫn bảo quản, giữ lại Hệ thống Comment */}
 			<section className="mb-20">
@@ -468,13 +494,17 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 								<div className="p-5 rounded-2xl border border-[#C49B83]/20 bg-[#C49B83]/5">
 									<div className="flex justify-between items-start mb-2">
 										<div className="flex items-center gap-2">
-											<span className={`font-bold text-sm flex items-center gap-1.5 ${
-												comment.author === "SouFlow Shop" || comment.author.toLowerCase().includes("admin")
-													? "text-[#C49B83]"
-													: "text-sf-fg"
-											}`}>
+											<span
+												className={`font-bold text-sm flex items-center gap-1.5 ${
+													comment.author === "SouFlow Shop" ||
+													comment.author.toLowerCase().includes("admin")
+														? "text-[#C49B83]"
+														: "text-sf-fg"
+												}`}
+											>
 												{comment.author}
-												{(comment.author === "SouFlow Shop" || comment.author.toLowerCase().includes("admin")) && (
+												{(comment.author === "SouFlow Shop" ||
+													comment.author.toLowerCase().includes("admin")) && (
 													<Crown className="h-3.5 w-3.5" />
 												)}
 											</span>
@@ -530,13 +560,19 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 											>
 												<div className="flex justify-between items-start mb-1.5">
 													<div className="flex items-center gap-2">
-														<span className={`font-bold text-sm flex items-center gap-1.5 ${
-															reply.author === "SouFlow Shop" || reply.author.toLowerCase().includes("admin")
-																? "text-[#C49B83]"
-																: "text-sf-fg"
-														}`}>
+														<span
+															className={`font-bold text-sm flex items-center gap-1.5 ${
+																reply.author === "SouFlow Shop" ||
+																reply.author.toLowerCase().includes("admin")
+																	? "text-[#C49B83]"
+																	: "text-sf-fg"
+															}`}
+														>
 															{reply.author}
-															{(reply.author === "SouFlow Shop" || reply.author.toLowerCase().includes("admin")) && (
+															{(reply.author === "SouFlow Shop" ||
+																reply.author
+																	.toLowerCase()
+																	.includes("admin")) && (
 																<Crown className="h-3 w-3" />
 															)}
 														</span>

@@ -2,7 +2,14 @@
 
 import { Client } from "@stomp/stompjs";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle, Shield, ShoppingBag, User, X } from "lucide-react";
+import {
+	Camera,
+	CheckCircle,
+	Shield,
+	ShoppingBag,
+	User,
+	X,
+} from "lucide-react";
 import Image from "next/image";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -60,6 +67,11 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 
 	const [user, setUser] = useState<UserFE>(initialUser);
 
+	// Avatar State
+	const fileInputRef = useRef<HTMLInputElement>(null);
+	const [avatarFile, setAvatarFile] = useState<File | null>(null);
+	const [previewAvatar, setPreviewAvatar] = useState<string | null>(null);
+
 	// Personal Info Form State
 	const [fullName, setFullName] = useState(user.fullName || "");
 	const [email, setEmail] = useState(user.email || "");
@@ -97,6 +109,8 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 	// Popup Order State - Sử dụng Type chuẩn OrderFE từ file của bạn
 	const [selectedOrder, setSelectedOrder] = useState<OrderFE | null>(null);
 	const [isLoadingOrderDetails, setIsLoadingOrderDetails] = useState(false);
+	const [isCancelingOrder, setIsCancelingOrder] = useState<string | null>(null);
+	const [orderToCancel, setOrderToCancel] = useState<OrderFE | null>(null);
 
 	// 2. BỌC USECALLBACK VÀ DÙNG HÀM MAPPER ĐỂ KHỚP KIỂU DỮ LIỆU SẠCH
 	const handleViewOrderDetails = useCallback(async (order: OrderFE) => {
@@ -142,6 +156,30 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 	}, []);
 
 	const queryClient = useQueryClient();
+
+	const handleCancelOrder = (order: OrderFE) => {
+		setOrderToCancel(order);
+	};
+
+	const confirmCancelOrder = async () => {
+		if (!orderToCancel) return;
+		setIsCancelingOrder(orderToCancel.id);
+		try {
+			await orderService.updateOrderStatus(orderToCancel.id, "CANCELLED");
+			toast.success("Hủy đơn hàng thành công");
+			queryClient.invalidateQueries({ queryKey: ["orderHistory"] });
+			if (selectedOrder && selectedOrder.id === orderToCancel.id) {
+				setSelectedOrder((prev) =>
+					prev ? { ...prev, status: "CANCELLED" } : null,
+				);
+			}
+			setOrderToCancel(null);
+		} catch (error: unknown) {
+			toast.error("Không thể hủy đơn hàng");
+		} finally {
+			setIsCancelingOrder(null);
+		}
+	};
 
 	// 3. MAP DANH SÁCH ĐƠN HÀNG THÔ TỪ API THÀNH MẢNG ORDERFE[] CHUẨN
 	const {
@@ -244,26 +282,54 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 			String(cityName),
 		);
 
-		authService
-			.updateProfile({
+		const formData = new FormData();
+		formData.append(
+			"account",
+			new Blob(
+				[
+					JSON.stringify({
+						fullname: fullName,
+						email,
+						phone: phoneNumber,
+						address: finalAddress,
+					}),
+				],
+				{ type: "application/json" },
+			),
+		);
+		if (avatarFile) {
+			formData.append("file", avatarFile);
+		}
+
+		authService.updateProfile(formData).then((res) => {
+			const updatedProfile = {
+				...user,
 				fullName,
 				email,
-				phoneNumber,
+				phone: phoneNumber,
 				address: finalAddress,
-			})
-			.then(() => {
-				const updatedProfile = {
-					...user,
-					fullName,
-					email,
-					phone: phoneNumber,
-					address: finalAddress,
-				};
-				setUser(updatedProfile);
-				useAuthStore.getState().updateUser(updatedProfile);
-				setUpdateFeedback(true);
-				setTimeout(() => setUpdateFeedback(false), 3000);
-			});
+				avatar: (() => {
+					const isValid = (u: any) =>
+						u &&
+						typeof u === "string" &&
+						u.trim() !== "" &&
+						u !== "null" &&
+						u !== "undefined" &&
+						!u.endsWith("/null");
+					return isValid(res.url)
+						? (res.url as string)
+						: isValid(res.photo)
+							? (res.photo as string)
+							: "/images/avatar.png";
+				})(),
+			};
+			setUser(updatedProfile);
+			useAuthStore.getState().updateUser(updatedProfile);
+			setAvatarFile(null); // Reset file
+			setPreviewAvatar(null); // Reset preview
+			setUpdateFeedback(true);
+			setTimeout(() => setUpdateFeedback(false), 3000);
+		});
 		toast.success("Cập nhật thành công!");
 	};
 
@@ -295,7 +361,7 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 			// Check if format is YYYY-MM-DD
 			if (parts[0].length === 4) {
 				formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
-			} 
+			}
 			// Check if format is DD-MM-YYYY
 			else if (parts[2].length === 4) {
 				formattedDate = `${parts[0]}/${parts[1]}/${parts[2]}`;
@@ -305,21 +371,41 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 		}
 	} else if (Array.isArray(user.createDate)) {
 		const [year, month, day] = user.createDate;
-		formattedDate = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+		formattedDate = `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
 	}
 
 	return (
 		<div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 bg-sf-bg-elevated transition-colors duration-300">
 			{/* Header Profile Summary */}
 			<div className="flex flex-col md:flex-row items-center gap-6 mb-12 p-6 rounded-2xl bg-sf-bg-elevated border border-sf-border shadow-sm">
-				<Image
-					src={user.avatar || "/default-avatar.png"}
-					alt={user.fullName || "User Avatar"}
-					className="h-20 w-20 rounded-full object-cover grayscale brightness-105 border border-sf-border"
-					referrerPolicy="no-referrer"
-					width={80}
-					height={80}
-				/>
+				<div className="relative group shrink-0">
+					<img
+						src={previewAvatar || user.avatar || "/images/avatar.png"}
+						alt={user.fullName || "User Avatar"}
+						className="h-20 w-20 rounded-full object-cover grayscale brightness-105 border border-sf-border"
+						referrerPolicy="no-referrer"
+					/>
+					<button
+						type="button"
+						onClick={() => fileInputRef.current?.click()}
+						className="absolute bottom-0 right-0 p-2 bg-sf-bg border border-sf-border rounded-full hover:bg-sf-surface transition-colors shadow-sm cursor-pointer z-10"
+					>
+						<Camera className="h-4 w-4 text-[#C49B83]" />
+					</button>
+					<input
+						type="file"
+						ref={fileInputRef}
+						className="hidden"
+						accept="image/*"
+						onChange={(e) => {
+							const file = e.target.files?.[0];
+							if (file) {
+								setAvatarFile(file);
+								setPreviewAvatar(URL.createObjectURL(file));
+							}
+						}}
+					/>
+				</div>
 				<div className="text-center md:text-left space-y-1.5 flex-1">
 					<div className="flex flex-wrap justify-center md:justify-start items-center gap-2">
 						<h1 className="font-serif text-2xl sm:text-3xl font-light text-sf-fg uppercase tracking-wide">
@@ -733,13 +819,28 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 														{Number(order.total).toLocaleString("vi-VN")} đ
 													</span>
 												</div>
-												<button
-													type="button"
-													onClick={() => handleViewOrderDetails(order)}
-													className="text-[10px] font-bold uppercase tracking-widest text-white bg-[#1A1A1A] hover:bg-[#C49B83] transition-colors px-4 py-2 rounded-full cursor-pointer"
-												>
-													Xem chi tiết
-												</button>
+												<div className="flex gap-2">
+													{(order.status === "PENDING" ||
+														order.status === "WAITING_PAYMENT") && (
+														<button
+															type="button"
+															onClick={() => handleCancelOrder(order)}
+															disabled={isCancelingOrder === order.id}
+															className="text-[10px] font-bold uppercase tracking-widest text-red-600 bg-red-100 hover:bg-red-200 transition-colors px-4 py-2 rounded-full cursor-pointer disabled:opacity-50"
+														>
+															{isCancelingOrder === order.id
+																? "Đang hủy..."
+																: "Hủy đơn"}
+														</button>
+													)}
+													<button
+														type="button"
+														onClick={() => handleViewOrderDetails(order)}
+														className="text-[10px] font-bold uppercase tracking-widest text-white bg-[#1A1A1A] hover:bg-[#C49B83] transition-colors px-4 py-2 rounded-full cursor-pointer"
+													>
+														Xem chi tiết
+													</button>
+												</div>
 											</div>
 										</div>
 									);
@@ -758,13 +859,28 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 							<h3 className="font-serif text-lg font-semibold text-sf-fg">
 								Chi Tiết Đơn Hàng #{selectedOrder.id}
 							</h3>
-							<button
-								type="button"
-								onClick={() => setSelectedOrder(null)}
-								className="p-1 rounded-full hover:bg-sf-bg transition-colors text-sf-fg-muted hover:text-sf-fg cursor-pointer"
-							>
-								<X className="w-5 h-5" />
-							</button>
+							<div className="flex items-center gap-3">
+								{(selectedOrder.status === "PENDING" ||
+									selectedOrder.status === "WAITING_PAYMENT") && (
+									<button
+										type="button"
+										onClick={() => handleCancelOrder(selectedOrder)}
+										disabled={isCancelingOrder === selectedOrder.id}
+										className="text-[10px] font-bold uppercase tracking-widest text-red-600 bg-red-100 hover:bg-red-200 transition-colors px-3 py-1.5 rounded-full cursor-pointer disabled:opacity-50"
+									>
+										{isCancelingOrder === selectedOrder.id
+											? "Đang hủy..."
+											: "Hủy đơn hàng"}
+									</button>
+								)}
+								<button
+									type="button"
+									onClick={() => setSelectedOrder(null)}
+									className="p-1 rounded-full hover:bg-sf-bg transition-colors text-sf-fg-muted hover:text-sf-fg cursor-pointer"
+								>
+									<X className="w-5 h-5" />
+								</button>
+							</div>
 						</div>
 
 						<div className="p-5 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
@@ -883,6 +999,59 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 								<span className="text-xl font-bold">
 									{Number(selectedOrder.total).toLocaleString("vi-VN")} đ
 								</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* POPUP CONFIRM CANCEL ORDER */}
+			{orderToCancel && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-opacity">
+					<div className="bg-sf-bg-elevated w-full max-w-sm rounded-2xl border border-sf-border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+						<div className="p-5 border-b border-sf-border flex justify-between items-center bg-sf-surface">
+							<h3 className="font-serif text-lg font-semibold text-sf-fg">
+								Xác nhận hủy đơn
+							</h3>
+							<button
+								type="button"
+								onClick={() => setOrderToCancel(null)}
+								disabled={isCancelingOrder === orderToCancel.id}
+								className="p-1 rounded-full hover:bg-sf-bg transition-colors text-sf-fg-muted hover:text-sf-fg cursor-pointer disabled:opacity-50"
+							>
+								<X className="w-5 h-5" />
+							</button>
+						</div>
+						<div className="p-5 space-y-4">
+							<p className="text-sf-fg text-sm">
+								Bạn có chắc chắn muốn hủy đơn hàng{" "}
+								<span className="font-bold">#{orderToCancel.id}</span> không?
+								Hành động này không thể hoàn tác.
+							</p>
+							<div className="flex gap-3 justify-end mt-6">
+								<button
+									type="button"
+									onClick={() => setOrderToCancel(null)}
+									disabled={isCancelingOrder === orderToCancel.id}
+									className="px-4 py-2 rounded-xl text-sm font-bold bg-sf-surface border border-sf-border text-sf-fg hover:bg-sf-bg transition-colors disabled:opacity-50 cursor-pointer"
+								>
+									Không, quay lại
+								</button>
+								<button
+									type="button"
+									onClick={confirmCancelOrder}
+									disabled={isCancelingOrder === orderToCancel.id}
+									className="px-4 py-2 rounded-xl text-sm font-bold bg-red-100 text-red-600 hover:bg-red-200 transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+								>
+									{isCancelingOrder === orderToCancel.id ? (
+										<>
+											<div className="animate-spin h-3 w-3 border-2 border-current border-t-transparent rounded-full" />
+											Đang hủy...
+										</>
+									) : (
+										"Đồng ý hủy"
+									)}
+								</button>
 							</div>
 						</div>
 					</div>
