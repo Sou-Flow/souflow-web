@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
 import { Eye, EyeOff, Flower, Lock, User } from "lucide-react";
+import axios from "axios";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
