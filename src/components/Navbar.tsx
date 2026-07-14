@@ -304,7 +304,9 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 										type="button"
 										onClick={() => {
 											showToast("Chuyển đến trang đăng nhập", "success");
-											router.push(`${soulFlowRoutes.login}?callbackUrl=${encodeURIComponent(pathname)}`);
+											router.push(
+												`${soulFlowRoutes.login}?callbackUrl=${encodeURIComponent(pathname)}`,
+											);
 										}}
 										className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] uppercase tracking-widest font-bold transition-all cursor-pointer ${
 											pathname === soulFlowRoutes.login
@@ -326,7 +328,9 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 										type="button"
 										onClick={() => {
 											showToast("Chuyển đến trang đăng ký", "success");
-											router.push(`${soulFlowRoutes.register}?callbackUrl=${encodeURIComponent(pathname)}`);
+											router.push(
+												`${soulFlowRoutes.register}?callbackUrl=${encodeURIComponent(pathname)}`,
+											);
 										}}
 										className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] uppercase tracking-widest font-bold transition-all cursor-pointer ${
 											pathname === soulFlowRoutes.register
@@ -353,25 +357,23 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 											isAccount ? "ring-2 ring-sf-accent" : ""
 										}`}
 									>
-										<Image
+										<img
 											src={user.avatar}
 											alt={user.fullName}
 											className="h-7 w-7 rounded-full object-cover grayscale brightness-105 border border-sf-border"
 											referrerPolicy="no-referrer"
-											width={25}
-											height={25}
-											priority
 										/>
 
 										<span className="hidden lg:flex items-center gap-1.5 text-sm font-bold tracking-widest text-sf-fg uppercase">
 											{user.roleCode === "ADMIN" ? (
 												<>
-													SouFlow Shop <Crown className="h-4 w-4 text-sf-accent" />
+													SouFlow Shop{" "}
+													<Crown className="h-4 w-4 text-sf-accent" />
 												</>
+											) : user.fullName ? (
+												user.fullName.trim().split(" ").at(-1)
 											) : (
-												user.fullName
-													? user.fullName.trim().split(" ").at(-1)
-													: "User"
+												"User"
 											)}
 										</span>
 									</Link>
@@ -453,22 +455,22 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 													: "text-sf-fg hover:bg-sf-surface"
 											}`}
 										>
-											<Image
-												src={user.avatar || "/images/avatar-placeholder.png"}
+											<img
+												src={user.avatar || "/images/avatar.png"}
 												alt={user.fullName || "User"}
 												className="h-8 w-8 rounded-full object-cover grayscale brightness-105 border border-sf-border"
 												referrerPolicy="no-referrer"
-												width={32}
-												height={32}
-												priority
-												blurDataURL="/images/avatar-placeholder.png"
-												loading="eager"
 											/>
 											<span className="flex items-center gap-1.5">
 												{user.roleCode === "ADMIN" ? (
-													<>SouFlow Shop <Crown className="h-4 w-4 text-sf-accent" /></>
+													<>
+														SouFlow Shop{" "}
+														<Crown className="h-4 w-4 text-sf-accent" />
+													</>
+												) : user.fullName ? (
+													user.fullName.split(" ")[0]
 												) : (
-													user.fullName ? user.fullName.split(" ")[0] : "User"
+													"User"
 												)}
 											</span>
 										</Link>

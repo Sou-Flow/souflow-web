@@ -1,8 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, Flower, Lock, User } from "lucide-react";
 import axios from "axios";
+import { Eye, EyeOff, Flower, Lock, User } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -68,10 +68,16 @@ export function LoginScreen() {
 			}
 		} catch (error) {
 			if (axios.isAxiosError(error)) {
-				const msg = String(error.response?.data?.message || error.response?.data || "");
-				if (msg.toLowerCase().includes("lock") || msg.toLowerCase().includes("khoá") || msg.toLowerCase().includes("khoa")) {
+				const msg = String(
+					error.response?.data?.message || error.response?.data || "",
+				);
+				if (
+					msg.toLowerCase().includes("lock") ||
+					msg.toLowerCase().includes("khoá") ||
+					msg.toLowerCase().includes("khoa")
+				) {
 					toast.error("Tài khoản của bạn đã bị khoá!", { id: toastId });
-				} else if (msg && typeof error.response?.data?.message === 'string') {
+				} else if (msg && typeof error.response?.data?.message === "string") {
 					toast.error(msg, { id: toastId });
 				} else {
 					toast.error("Sai tài khoản hoặc mật khẩu!", { id: toastId });
@@ -262,7 +268,11 @@ export function LoginScreen() {
 							Chưa có tài khoản?{" "}
 							<button
 								type="button"
-								onClick={() => router.push(`${soulFlowRoutes.register}${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ''}`)}
+								onClick={() =>
+									router.push(
+										`${soulFlowRoutes.register}${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ""}`,
+									)
+								}
 								className="font-semibold text-primary hover:underline hover:cursor-pointer underline-offset-4 decoration-primary/30 transition-all ml-1 text-xs"
 							>
 								Tạo Tài Khoản

@@ -17,6 +17,7 @@ export interface CategoryResponseDTO {
 	descriptionVn: string | null;
 	descriptionEng: string | null;
 	delIf?: boolean; // BE tự convert BIT sang boolean
+	del_if?: boolean; // Hỗ trợ snake_case từ BE
 }
 
 // 3. Dữ liệu sạch cho FE xài
@@ -41,6 +42,11 @@ export const mapCategoryResponseToFE = (
 		nameEng: dto.nameEng,
 		descriptionVn: dto.descriptionVn || "", // Fallback chuỗi rỗng nếu BE trả null
 		descriptionEng: dto.descriptionEng || "",
-		isActive: !dto.delIf, // del_if = false (0) nghĩa là isActive = true
+		isActive: !(
+			String(dto.delIf) === "true" ||
+			String(dto.delIf) === "1" ||
+			String(dto.del_if) === "true" ||
+			String(dto.del_if) === "1"
+		),
 	};
 };

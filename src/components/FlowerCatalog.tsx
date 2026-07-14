@@ -5,6 +5,7 @@ import {
 	ChevronLeft,
 	ChevronRight,
 	Filter,
+	Palette,
 	Plus,
 	SlidersHorizontal,
 	Star,
@@ -12,7 +13,7 @@ import {
 import { motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -23,6 +24,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cart-store";
 import { useCatalogStore } from "@/store/catalog-store";
 import { useCategoryStore } from "@/store/category-store";
+import { CustomOrderPopup } from "./CustomOrderPopup";
 import { PriceFilter } from "./PriceFilter";
 
 export function FlowerCatalog() {
@@ -36,6 +38,8 @@ export function FlowerCatalog() {
 	const { addToCart, cart } = useCartStore();
 	const { user } = useAuthStore();
 	const router = useRouter();
+	const pathname = usePathname();
+	const [isCustomOrderPopupOpen, setIsCustomOrderPopupOpen] = useState(false);
 
 	const { data: categories = [] } = useQuery({
 		queryKey: ["categories"],
@@ -107,17 +111,34 @@ export function FlowerCatalog() {
 		<div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 bg-sf-bg transition-colors duration-300">
 			{/* Header and Sorting */}
 			<div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 pb-6 border-b border-sf-border">
-				<div className="space-y-1.5 text-center md:text-left">
+				<div className="space-y-1.5 text-center md:text-left flex-1">
 					<span className="text-sm font-bold tracking-widest text-sf-accent uppercase block">
 						Bộ Sưu Tập
 					</span>
 					<h1 className="font-serif text-3xl sm:text-4xl font-light text-sf-fg">
 						Danh Mục Sản Phẩm
 					</h1>
-					<p className="max-w-md text-xs text-sf-fg-muted font-light">
+					<p className="max-w-md text-xs text-sf-fg-muted font-light mb-4">
 						Sản phẩm được tuyển chọn tỉ mỉ, kết tinh nghệ thuật thủ công từ các
 						thợ cắm hoa chuẩn Âu hàng đầu.
 					</p>
+					<button
+						type="button"
+						onClick={() => {
+							if (!user) {
+								toast.error("Vui lòng đăng nhập để đặt hoa theo yêu cầu");
+								router.push(
+									`/login?callbackUrl=${encodeURIComponent(pathname)}`,
+								);
+								return;
+							}
+							setIsCustomOrderPopupOpen(true);
+						}}
+						className="inline-flex items-center justify-center gap-2 rounded-xl bg-sf-accent text-white px-5 py-3 text-xs font-bold uppercase tracking-widest hover:bg-[#A37B63] transition-colors cursor-pointer"
+					>
+						<Palette className="h-4 w-4" />
+						Đặt hoa theo yêu cầu
+					</button>
 				</div>
 
 				{/* Filter and utilities */}
@@ -184,6 +205,11 @@ export function FlowerCatalog() {
 				</div>
 			</div>
 
+			<CustomOrderPopup
+				isOpen={isCustomOrderPopupOpen}
+				onClose={() => setIsCustomOrderPopupOpen(false)}
+			/>
+
 			{/* Category selector */}
 			<div className="flex flex-wrap gap-2 justify-start md:justify-center mb-10">
 				{/* Nút "Tất cả" để reset bộ lọc */}
@@ -225,10 +251,7 @@ export function FlowerCatalog() {
 				{paginatedFlowers.map((flower, index) => {
 					const cartItem = cart.find((i) => i.product.id === flower.id);
 					const currentCartQty = cartItem ? cartItem.quantity : 0;
-					const availableStock = Math.max(
-						0,
-						flower.stockQuantity - currentCartQty,
-					);
+					const availableStock = flower.stockQuantity;
 
 					return (
 						<motion.div
@@ -307,6 +330,10 @@ export function FlowerCatalog() {
 										onClick={async (e) => {
 											e.stopPropagation();
 											if (availableStock <= 0) return;
+											if (currentCartQty >= flower.stockQuantity) {
+												toast.error("Đã đạt số lượng tối đa trong kho");
+												return;
+											}
 											if (!user) {
 												toast.error("Vui lòng đăng nhập để thêm vào giỏ hàng");
 												router.push("/login");
@@ -322,16 +349,25 @@ export function FlowerCatalog() {
 												[flower.id]: false,
 											}));
 										}}
-										disabled={addingItems[flower.id] || availableStock <= 0}
+										disabled={
+											addingItems[flower.id] ||
+											availableStock <= 0 ||
+											currentCartQty >= flower.stockQuantity
+										}
 										className={`flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300 shadow-sm ${
-											availableStock <= 0
+											availableStock <= 0 ||
+											currentCartQty >= flower.stockQuantity
 												? "disabled:bg-gray-400 disabled:text-gray-200 cursor-not-allowed"
 												: addingItems[flower.id]
 													? "bg-sf-fg/50 text-white cursor-not-allowed"
 													: "bg-sf-fg text-sf-bg hover:bg-sf-accent hover:text-white"
 										}`}
 										title={
-											availableStock <= 0 ? "Đã hết hàng" : "Thêm hoa vào giỏ"
+											availableStock <= 0
+												? "Đã hết hàng"
+												: currentCartQty >= flower.stockQuantity
+													? "Đã đạt giới hạn"
+													: "Thêm hoa vào giỏ"
 										}
 									>
 										{addingItems[flower.id] ? (

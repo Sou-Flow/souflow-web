@@ -4,14 +4,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
 import { Clock, Mail, MapPin, Phone, Send } from "lucide-react";
 import type React from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "react-hot-toast";
+import { useAuthStore } from "@/store/auth-store";
 import {
 	type ContactFormValues,
 	contactValidator,
 } from "../validations/contact.validator";
-import { useAuthStore } from "@/store/auth-store";
-import { useEffect } from "react";
 
 export function ContactUs() {
 	const {
@@ -49,27 +49,27 @@ export function ContactUs() {
 			const discordPayload = {
 				embeds: [
 					{
-						title: "Thông Báo User Gửi Contact 🌸",
+						title: "Thông Báo User Gửi Contact",
 						description:
 							"Một khách hàng vừa gửi biểu mẫu liên hệ, dưới đây là thông tin chi tiết:",
 						color: 12884867,
 						fields: [
 							{
-								name: "🧑 Họ Tên Khách Hàng",
+								name: "Họ Tên Khách Hàng",
 								value: data.name,
 							},
 							{
-								name: "📧 Email",
+								name: "Email",
 								value: data.email,
 								inline: true,
 							},
 							{
-								name: "📞 Số điện thoại",
+								name: "Số điện thoại",
 								value: data.tel,
 								inline: true,
 							},
 							{
-								name: "💬 Nội dung lời nhắn",
+								name: "Nội dung lời nhắn",
 								value: data.msg,
 							},
 						],
@@ -258,7 +258,7 @@ export function ContactUs() {
 								<Phone className="h-4.5 w-4.5 text-[#C49B83] shrink-0 mt-0.5" />
 								<div>
 									<p className="font-bold text-sf-fg uppercase tracking-wider">
-										Đường Dây Hỗ Trợ Khách Hàng
+										Liên Hệ Hỗ Trợ Khách Hàng
 									</p>
 									<p className="text-sf-fg text-[17px] mt-1">
 										+84 28 3824 5678
@@ -273,7 +273,7 @@ export function ContactUs() {
 										Email Hỗ Trợ & Đặt Hàng
 									</p>
 									<p className="text-sf-fg text-[17px] mt-1">
-										contact@souflow.com
+										contact.souflow@gmail.com
 									</p>
 								</div>
 							</div>

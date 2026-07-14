@@ -30,6 +30,7 @@ export interface UserResponseDTO {
 	phone?: string;
 	address: string;
 	photo: string | null;
+	url?: string;
 	roleCode?: string; // BE trả chuỗi (vd: "CUSTOMER") chứ không phải số rolePk
 	roleResponse?: Record<string, unknown>;
 	createdDate: string; // BE trả createdDate (có chữ d)
@@ -62,7 +63,20 @@ export const mapUserResponseToFE = (dto: UserResponseDTO): UserFE => {
 		username: dto.username,
 		fullName: dto.fullName || dto.fullname || "",
 		email: dto.email,
-		avatar: dto.photo || "/images/avatar.png", // Fallback ảnh
+		avatar: (() => {
+			const isValid = (u: any) =>
+				u &&
+				typeof u === "string" &&
+				u.trim() !== "" &&
+				u !== "null" &&
+				u !== "undefined" &&
+				!u.endsWith("/null");
+			return isValid(dto.url)
+				? (dto.url as string)
+				: isValid(dto.photo)
+					? (dto.photo as string)
+					: "/images/avatar.png";
+		})(), // Fallback ảnh
 		phone: dto.phoneNumber || dto.phone || "",
 		address: dto.address,
 		// biome-ignore lint/suspicious/noExplicitAny: skip
