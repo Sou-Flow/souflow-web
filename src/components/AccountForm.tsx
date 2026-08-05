@@ -43,10 +43,8 @@ const translateStatus = (status: string) => {
 			return "Đã thanh toán";
 		case "PROCESSING":
 			return "Đang xử lý";
-		case "SHIPPED":
-			return "Đang giao hàng";
 		case "DELIVERED":
-			return "Đã giao hàng";
+			return "Hoàn tất";
 		case "CANCELLED":
 			return "Đã hủy";
 		case "SUCCESS":

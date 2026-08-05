@@ -55,7 +55,7 @@ export function CheckoutForm() {
 	const handleApplyDiscount = async () => {
 		if (!discountCodeInput.trim()) return;
 		setIsApplyingDiscount(true);
-		
+
 		const subtotalTemp = cart.reduce(
 			(sum, item) => sum + (item.product?.price || 0) * (item.quantity || 1),
 			0,
@@ -299,6 +299,7 @@ export function CheckoutForm() {
 			// Chia luồng giao diện dựa trên phương thức thanh toán
 			if (paymentMethod === "SEPAY") {
 				// SEPAY thì chuyển sang màn chờ quét mã
+				setTimeLeft(30); // Đặt lại thời gian đếm ngược
 				setOrderStatus("WAITING_PAYMENT");
 			} else {
 				// COD thì không cần quét mã, cho qua trang Success luôn
@@ -1007,11 +1008,10 @@ export function CheckoutForm() {
 											key={pay.id}
 											type="button"
 											onClick={() => setPaymentMethod(pay.id)}
-											className={`text-left p-4 rounded-xl border transition-all h-24 flex flex-col justify-between ${
-												isChose
+											className={`text-left p-4 rounded-xl border transition-all h-24 flex flex-col justify-between ${isChose
 													? "border-[#C49B83] bg-[#C49B83]/10 ring-1 ring-[#C49B83]"
 													: "hover:border-[#C49B83]"
-											}`}
+												}`}
 										>
 											<span className="text-sm font-semibold uppercase">
 												{pay.label}
@@ -1112,15 +1112,15 @@ export function CheckoutForm() {
 						{/* Phần nhập mã giảm giá */}
 						<div className="pt-4 border-t border-sf-border mt-4">
 							<div className="flex gap-2">
-								<input 
-									type="text" 
-									placeholder="Nhập mã giảm giá..." 
+								<input
+									type="text"
+									placeholder="Nhập mã giảm giá..."
 									value={discountCodeInput}
 									onChange={(e) => setDiscountCodeInput(e.target.value)}
 									className="flex-1 text-xs rounded-lg border bg-sf-surface p-3 outline-none"
 								/>
-								<button 
-									type="button" 
+								<button
+									type="button"
 									onClick={handleApplyDiscount}
 									disabled={isApplyingDiscount || !discountCodeInput.trim()}
 									className="px-4 py-2 bg-[#1A1A1A] text-white text-xs font-bold rounded-lg uppercase disabled:opacity-50"
