@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import axios from "axios";
+import axiosClient from "@/services/axiosClient";
 import { Loader2, X } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -57,13 +57,6 @@ export function CustomOrderPopup({
 
 	const onSubmit = async (data: CustomOrderFormValues) => {
 		try {
-			const webhookUrl = process.env.NEXT_PUBLIC_DISCORD_CUSTOM_ORDER_WEBHOOK;
-
-			if (!webhookUrl) {
-				toast.error("Chưa cấu hình Discord Webhook URL cho tính năng này!");
-				return;
-			}
-
 			const discordPayload = {
 				content: null,
 				embeds: [
@@ -111,9 +104,7 @@ export function CustomOrderPopup({
 				attachments: [],
 			};
 
-			await axios.post(webhookUrl, discordPayload, {
-				headers: { "Content-Type": "application/json" },
-			});
+			await axiosClient.post("/notify/custom-order", discordPayload);
 
 			toast.success("Gửi yêu cầu thành công! Chúng tôi sẽ liên hệ lại sớm.");
 			reset();

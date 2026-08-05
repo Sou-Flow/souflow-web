@@ -8,6 +8,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SouFlowShell } from "@/components/SouFlowShell";
 import { AuthProvider } from "@/providers/AuthProviders";
 import TanStackProvider from "@/providers/TanStackProvider";
+import GoogleProvider from "@/providers/GoogleProvider";
 
 const inter = Inter({
 	variable: "--font-geist-sans",
@@ -37,6 +38,7 @@ export default function RootLayout({
 			suppressHydrationWarning
 		>
 			<body className="min-h-full flex flex-col bg-sf-bg text-sf-fg transition-colors duration-300">
+				<GoogleProvider>
 				<TanStackProvider>
 					<AuthProvider>
 						<ThemeProvider>
@@ -65,6 +67,7 @@ export default function RootLayout({
 						</ThemeProvider>
 					</AuthProvider>
 				</TanStackProvider>
+				</GoogleProvider>
 			</body>
 		</html>
 	);

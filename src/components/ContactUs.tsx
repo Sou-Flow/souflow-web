@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import axios from "axios";
+import axiosClient from "@/services/axiosClient";
 import { Clock, Mail, MapPin, Phone, Send } from "lucide-react";
 import type React from "react";
 import { useEffect } from "react";
@@ -38,13 +38,6 @@ export function ContactUs() {
 	// Xử lý gửi Form Liên hệ
 	const onSubmit = async (data: ContactFormValues) => {
 		try {
-			const webhookUrl = process.env.NEXT_PUBLIC_DISCORD_WEBHOOK_URL;
-
-			if (!webhookUrl) {
-				toast.error("Chưa cấu hình Discord Webhook URL!");
-				return;
-			}
-
 			// Cấu trúc JSON chuẩn cho Discord
 			const discordPayload = {
 				embeds: [
@@ -78,10 +71,8 @@ export function ContactUs() {
 				attachments: [],
 			};
 
-			// Bắn thẳng từ Client lên Discord
-			await axios.post(webhookUrl, discordPayload, {
-				headers: { "Content-Type": "application/json" },
-			});
+			// Gọi lên Backend, Backend sẽ tự đẩy qua Discord
+			await axiosClient.post("/notify/contact", discordPayload);
 
 			toast.success("Yêu cầu đã được gửi! Chúng tôi sẽ liên hệ lại sớm.");
 			reset(); // Reset form sau khi gửi thành công

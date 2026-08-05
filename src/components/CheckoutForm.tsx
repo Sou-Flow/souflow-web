@@ -44,7 +44,33 @@ export function CheckoutForm() {
 	const { placeOrder, isPlacingOrder } = useOrderStore();
 	const { cart, clearCart, updateCartQuantity } = useCartStore(); // Lấy thêm clearCart và updateCartQuantity
 	const { locationData } = useLocationStore();
-	const { appliedDiscount, clearDiscount } = useDiscountStore(); // Lấy thêm clearDiscount
+	const { appliedDiscount, checkAndApplyDiscount, removeDiscount, clearDiscount } = useDiscountStore();
+
+	const [discountCodeInput, setDiscountCodeInput] = useState("");
+	const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
+
+	// Phải khai báo subtotal sớm hơn một chút, hoặc tính lại tạm thời để truyền vào checkAndApplyDiscount
+	// Thực tế subtotal đã được khai báo ở dưới (line 158), nhưng ta đang dùng ở đây (line 52) 
+	// => Javascript tính toán theo thứ tự trên dưới nên ta phải tính tạm thời.
+	const handleApplyDiscount = async () => {
+		if (!discountCodeInput.trim()) return;
+		setIsApplyingDiscount(true);
+
+		const subtotalTemp = cart.reduce(
+			(sum, item) => sum + (item.product?.price || 0) * (item.quantity || 1),
+			0,
+		);
+
+		try {
+			const success = await checkAndApplyDiscount(discountCodeInput, subtotalTemp);
+			if (success) {
+				toast.success(`Áp dụng mã ${discountCodeInput} thành công!`);
+				setDiscountCodeInput("");
+			}
+		} finally {
+			setIsApplyingDiscount(false);
+		}
+	};
 
 	// === 2. STATES QUẢN LÝ FORM ===
 	const {
@@ -120,7 +146,7 @@ export function CheckoutForm() {
 	const [placedOrderDetails, setPlacedOrderDetails] = useState<OrderFE | null>(
 		null,
 	);
-	const [timeLeft, setTimeLeft] = useState(300); // 5 phút đếm ngược cho QR
+	const [timeLeft, setTimeLeft] = useState(60); // 5 phút đếm ngược cho QR
 
 	// === 4. TÍNH TOÁN TIỀN BẠC ===
 	const subtotal = cart.reduce(
@@ -237,6 +263,8 @@ export function CheckoutForm() {
 			district: paymentMethod === "STORE" ? "Không" : selectedDistrict || "",
 			paymentMethod: paymentMethod as "COD" | "SEPAY" | "STORE",
 			shippingFee: paymentMethod === "STORE" ? 0 : shippingFee,
+			discountCode: appliedDiscount?.code || null,
+			discountAmount: discount || 0,
 		};
 
 		try {
@@ -271,6 +299,7 @@ export function CheckoutForm() {
 			// Chia luồng giao diện dựa trên phương thức thanh toán
 			if (paymentMethod === "SEPAY") {
 				// SEPAY thì chuyển sang màn chờ quét mã
+				setTimeLeft(30); // Đặt lại thời gian đếm ngược
 				setOrderStatus("WAITING_PAYMENT");
 			} else {
 				// COD thì không cần quét mã, cho qua trang Success luôn
@@ -338,7 +367,7 @@ export function CheckoutForm() {
 						["PAID", "COMPLETED", "SUCCESS", "PAID_SEPAY"].includes(res.status)
 					) {
 						clearInterval(interval);
-						toast.success("Thanh toán thành công!");
+						toast.success("Success!");
 						queryClient.removeQueries({ queryKey: ["flowers"] });
 						queryClient.removeQueries({ queryKey: ["flower"] });
 						queryClient.removeQueries({ queryKey: ["orderHistory"] });
@@ -724,6 +753,18 @@ export function CheckoutForm() {
 								đ
 							</div>
 
+							{placedOrderDetails.discountAmount && placedOrderDetails.discountAmount > 0 ? (
+								<>
+									<div className="text-green-600 font-medium">Mã Giảm Giá ({placedOrderDetails.discountCode}):</div>
+									<div className="text-right font-medium text-green-600">
+										-{Number(placedOrderDetails.discountAmount).toLocaleString(
+											"vi-VN",
+										)}{" "}
+										đ
+									</div>
+								</>
+							) : null}
+
 							<div className="border-t border-dashed pt-2.5 font-bold">
 								Tổng Số Tiền:
 							</div>
@@ -967,11 +1008,10 @@ export function CheckoutForm() {
 											key={pay.id}
 											type="button"
 											onClick={() => setPaymentMethod(pay.id)}
-											className={`text-left p-4 rounded-xl border transition-all h-24 flex flex-col justify-between ${
-												isChose
+											className={`text-left p-4 rounded-xl border transition-all h-24 flex flex-col justify-between ${isChose
 													? "border-[#C49B83] bg-[#C49B83]/10 ring-1 ring-[#C49B83]"
 													: "hover:border-[#C49B83]"
-											}`}
+												}`}
 										>
 											<span className="text-sm font-semibold uppercase">
 												{pay.label}
@@ -1067,6 +1107,38 @@ export function CheckoutForm() {
 									</div>
 								</div>
 							))}
+						</div>
+
+						{/* Phần nhập mã giảm giá */}
+						<div className="pt-4 border-t border-sf-border mt-4">
+							<div className="flex gap-2">
+								<input
+									type="text"
+									placeholder="Nhập mã giảm giá..."
+									value={discountCodeInput}
+									onChange={(e) => setDiscountCodeInput(e.target.value)}
+									className="flex-1 text-xs rounded-lg border bg-sf-surface p-3 outline-none"
+								/>
+								<button
+									type="button"
+									onClick={handleApplyDiscount}
+									disabled={isApplyingDiscount || !discountCodeInput.trim()}
+									className="px-4 py-2 bg-[#1A1A1A] text-white text-xs font-bold rounded-lg uppercase disabled:opacity-50"
+								>
+									{isApplyingDiscount ? <Loader2 className="h-4 w-4 animate-spin" /> : "Áp dụng"}
+								</button>
+							</div>
+							{appliedDiscount && (
+								<div className="mt-2 flex items-center justify-between bg-green-50 text-green-700 p-2 rounded text-xs border border-green-200">
+									<div>
+										<span className="font-bold">{appliedDiscount.code}</span>
+										<span className="ml-2">- Giảm {appliedDiscount.percentage}%</span>
+									</div>
+									<button type="button" onClick={removeDiscount} className="text-red-500 hover:underline">
+										Gỡ bỏ
+									</button>
+								</div>
+							)}
 						</div>
 
 						<div className="space-y-2 text-xs pt-4">

@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { GoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { Eye, EyeOff, Flower, Lock, User } from "lucide-react";
 import Image from "next/image";
@@ -259,6 +260,69 @@ export function LoginScreen() {
 									"ĐĂNG NHẬP"
 								)}
 							</button>
+						</div>
+
+						<div className="relative flex py-2 items-center">
+							<div className="flex-grow border-t border-outline-variant/40"></div>
+							<span className="flex-shrink-0 mx-4 text-secondary/50 text-xs uppercase tracking-widest font-semibold">
+								Hoặc
+							</span>
+							<div className="flex-grow border-t border-outline-variant/40"></div>
+						</div>
+
+						<div className="flex justify-center w-full mt-4">
+							<div className="w-[340px] flex justify-center hover:drop-shadow-md transition-all duration-300 transform active:scale-[0.98]">
+								<GoogleLogin
+									theme="filled_black"
+									size="large"
+									text="continue_with"
+									shape="pill"
+									width="340"
+									// @ts-expect-error - locale is supported by Google Identity Services but missing from React library types
+									locale="vi"
+									logo_alignment="center"
+									prompt="select_account"
+									onSuccess={async (credentialResponse) => {
+										if (credentialResponse.credential) {
+											try {
+												const toastId = toast.loading(
+													"Đang đăng nhập bằng Google...",
+												);
+												const res = await authService.loginWithGoogle(
+													credentialResponse.credential,
+												);
+												if (res.isNewUser) {
+													toast.dismiss(toastId);
+													// Redirect to register with email and fullname
+													router.push(
+														`${soulFlowRoutes.register}?email=${encodeURIComponent(res.email)}&fullname=${encodeURIComponent(res.fullname)}`,
+													);
+												} else {
+													const userName =
+														res.fullName?.slice(0, res.fullName.indexOf(" ")) ||
+														res.username ||
+														"User";
+													setUser(res);
+													toast.success(
+														`Đăng nhập Google thành công! Chào mừng ${userName}!`,
+														{ id: toastId },
+													);
+													if (callbackUrl) {
+														router.push(callbackUrl);
+													} else {
+														router.push(soulFlowRoutes.home);
+													}
+												}
+											} catch (err) {
+												toast.error("Đăng nhập Google thất bại!");
+											}
+										}
+									}}
+									onError={() => {
+										toast.error("Đăng nhập Google thất bại!");
+									}}
+								/>
+							</div>
 						</div>
 					</form>
 

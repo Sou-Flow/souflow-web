@@ -2,10 +2,9 @@ import Cookies from "js-cookie";
 import toast from "react-hot-toast";
 import { create } from "zustand";
 import { cartService } from "@/services/cartService";
-import { discountService } from "@/services/discountService";
 import { productService } from "@/services/productService";
+import { useDiscountStore } from "@/store/discount-store";
 import { mapCartItemResponseToFE } from "@/types/cart.type";
-import type { DiscountFE } from "@/types/discount.type";
 import type { CartItemFE } from "@/types/order.type";
 import type { ProductFE } from "@/types/product.type";
 
@@ -13,10 +12,6 @@ interface CartState {
 	cartId: number | null;
 	cart: CartItemFE[];
 	isLoading: boolean;
-
-	// Quản lý mã giảm giá
-	couponCode: string;
-	appliedCoupon: DiscountFE | null;
 
 	// Các Actions
 	fetchCart: () => Promise<void>;
@@ -27,17 +22,12 @@ interface CartState {
 	clearCartState: () => void;
 	recreateCart: () => Promise<void>;
 	revalidateCart: () => Promise<void>;
-
-	applyCoupon: (code: string) => Promise<boolean>;
-	removeCoupon: () => void;
 }
 
 export const useCartStore = create<CartState>()((set, get) => ({
 	cartId: null,
 	cart: [],
 	isLoading: false,
-	couponCode: "",
-	appliedCoupon: null,
 
 	// 1. LẤY GIỎ HÀNG TỪ DATABASE KHI VÀO WEB
 	fetchCart: async () => {
@@ -334,6 +324,19 @@ export const useCartStore = create<CartState>()((set, get) => ({
 				set({ cart: cart.filter((item) => item.product.id !== productId) });
 			}
 			toast.success("Đã xóa sản phẩm khỏi giỏ hàng", { id: toastId });
+			const discountStore = useDiscountStore.getState();
+			if (discountStore.couponCode) {
+				const currentCart = get().cart;
+				const currentSubtotal = currentCart.reduce(
+					(sum, item) =>
+						sum + (item.product?.price || 0) * (item.quantity || 1),
+					0,
+				);
+				await discountStore.checkAndApplyDiscount(
+					discountStore.couponCode,
+					currentSubtotal,
+				);
+			}
 		} catch (error: unknown) {
 			const err = error as { response?: { status?: number } };
 			if (err.response?.status === 410 || err.response?.status === 404) {
@@ -446,6 +449,20 @@ export const useCartStore = create<CartState>()((set, get) => ({
 						),
 					});
 				}
+
+				const discountStore = useDiscountStore.getState();
+				if (discountStore.couponCode) {
+					const currentCart = get().cart;
+					const currentSubtotal = currentCart.reduce(
+						(sum, item) =>
+							sum + (item.product?.price || 0) * (item.quantity || 1),
+						0,
+					);
+					await discountStore.checkAndApplyDiscount(
+						discountStore.couponCode,
+						currentSubtotal,
+					);
+				}
 			} catch (error: unknown) {
 				console.error("Lỗi cập nhật số lượng:", error);
 				toast.error("Không thể cập nhật số lượng!", { id: "update-error" });
@@ -458,7 +475,7 @@ export const useCartStore = create<CartState>()((set, get) => ({
 		const { cartId } = get();
 
 		// Ngay lập tức reset state về rỗng để UI phản hồi ngay
-		set({ cart: [], appliedCoupon: null, couponCode: "", cartId: null });
+		set({ cart: [], cartId: null });
 
 		if (cartId) {
 			try {
@@ -497,7 +514,7 @@ export const useCartStore = create<CartState>()((set, get) => ({
 
 	// 6. XÓA TRẮNG CHỈ TRÊN LOCAL (DÙNG KHI LOGOUT)
 	clearCartState: () => {
-		set({ cart: [], appliedCoupon: null, couponCode: "", cartId: null });
+		set({ cart: [], cartId: null });
 	},
 
 	// 6.1 TÁI TẠO GIỎ HÀNG TỪ LOCAL STATE (KHI ĐƠN HÀNG BỊ HỦY)
@@ -546,25 +563,4 @@ export const useCartStore = create<CartState>()((set, get) => ({
 			console.error("Lỗi revalidateCart:", error);
 		}
 	},
-
-	// 8. ÁP DỤNG MÃ GIẢM GIÁ
-	applyCoupon: async (code) => {
-		const match = code.toUpperCase().trim();
-		if (!match) return false;
-
-		try {
-			const discountData = await discountService.checkDiscount(match);
-
-			if (discountData && !discountData.isExpired && discountData.isActive) {
-				set({ appliedCoupon: discountData, couponCode: match });
-				return true;
-			}
-			return false;
-		} catch (_error) {
-			console.warn("Mã giảm giá không hợp lệ.");
-			return false;
-		}
-	},
-
-	removeCoupon: () => set({ appliedCoupon: null, couponCode: "" }),
 }));

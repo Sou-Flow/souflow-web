@@ -77,7 +77,7 @@ export function Footer() {
 							Địa Chỉ Cửa Hàng
 						</h4>
 						<p className="text-sm text-sf-fg-muted leading-relaxed">
-							88 Đồng Khởi, Phường Bến Nghé, Quận 1, Hồ Chí Minh, Việt Nam
+							Tòa nhà QTSC 9, Công viên phần mềm Quang Trung, Quận 12, Thành phố Hồ Chí Minh
 						</p>
 						<div className="flex items-center gap-1 text-xl pt-4.5 text-sf-fg-muted font-semibold uppercase">
 							<ShieldCheck className="h-8 w-8 text-green-500" />

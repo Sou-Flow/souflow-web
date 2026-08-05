@@ -34,6 +34,27 @@ export const authService = {
 		return await authService.me();
 	},
 
+	loginWithGoogle: async (token: string): Promise<any> => {
+		const rawResponse: ApiResponse<any> = await axiosClient.post(
+			"/google/login",
+			{ token }
+		);
+
+		const authData: any =
+			(rawResponse as unknown as Record<string, unknown>).data ?? rawResponse;
+
+		if (authData.isNewUser) {
+			return authData;
+		}
+
+		const jwt = authData.token || authData.accessToken;
+		if (jwt) {
+			Cookies.set("accessToken", jwt, { expires: 7 });
+		}
+
+		return await authService.me();
+	},
+
 	me: async (): Promise<UserFE> => {
 		// Gọi API lấy thông tin user hiện tại (BE sẽ dựa vào token để trả về đúng user)
 		const rawResponse: ApiResponse<UserResponseDTO> =

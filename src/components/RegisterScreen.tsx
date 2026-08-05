@@ -22,6 +22,9 @@ export function RegisterScreen() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const callbackUrl = searchParams.get("callbackUrl");
+	const defaultEmail = searchParams.get("email") || "";
+	const defaultFullName = searchParams.get("fullname") || "";
+
 	const {
 		register,
 		watch,
@@ -30,12 +33,12 @@ export function RegisterScreen() {
 	} = useForm<RegisterFormData>({
 		resolver: zodResolver(registerValidator),
 		defaultValues: {
-			username: "",
-			email: "",
+			username: defaultEmail,
+			email: defaultEmail,
 			password: "",
 			confirmPassword: "",
 			phoneNumber: "",
-			fullName: "",
+			fullName: defaultFullName,
 			street: "",
 			ward: "",
 			district: "",
@@ -187,7 +190,8 @@ export function RegisterScreen() {
 									type="text"
 									placeholder="Evelyn Rose"
 									{...register("fullName")}
-									className="w-full bg-white/5 border-0 border-b border-outline-variant/60 py-2.5 px-0 text-sm focus:border-primary transition-all focus:outline-none placeholder-secondary/30 text-sf-fg"
+									readOnly={!!defaultFullName}
+									className={`w-full border-0 border-b border-outline-variant/60 py-2.5 px-0 text-sm focus:border-primary transition-all focus:outline-none placeholder-secondary/30 text-sf-fg ${defaultFullName ? "bg-white/10 opacity-70 cursor-not-allowed" : "bg-white/5"}`}
 									required
 								/>
 								{errors.fullName && (
@@ -210,7 +214,8 @@ export function RegisterScreen() {
 									type="email"
 									placeholder="evelyn@example.com"
 									{...register("email")}
-									className="w-full bg-white/5 border-0 border-b border-outline-variant/60 py-2.5 px-0 text-sm focus:border-primary transition-all focus:outline-none placeholder-secondary/30 text-sf-fg"
+									readOnly={!!defaultEmail}
+									className={`w-full border-0 border-b border-outline-variant/60 py-2.5 px-0 text-sm focus:border-primary transition-all focus:outline-none placeholder-secondary/30 text-sf-fg ${defaultEmail ? "bg-white/10 opacity-70 cursor-not-allowed" : "bg-white/5"}`}
 									required
 								/>
 								{errors.email && (
@@ -256,7 +261,8 @@ export function RegisterScreen() {
 									type="text"
 									placeholder="evelyn_rose"
 									{...register("username")}
-									className="w-full bg-white/5 border-0 border-b border-outline-variant/60 py-2.5 px-0 text-sm focus:border-primary transition-all focus:outline-none placeholder-secondary/30 text-sf-fg"
+									readOnly={!!defaultEmail}
+									className={`w-full border-0 border-b border-outline-variant/60 py-2.5 px-0 text-sm focus:border-primary transition-all focus:outline-none placeholder-secondary/30 text-sf-fg ${defaultEmail ? "bg-white/10 opacity-70 cursor-not-allowed" : "bg-white/5"}`}
 									required
 								/>
 								{errors.username && (
