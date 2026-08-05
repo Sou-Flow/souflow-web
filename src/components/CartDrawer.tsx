@@ -221,7 +221,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 						{cart.length > 0 && (
 							<div className="border-t border-sf-border bg-sf-bg-elevated p-6 space-y-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
 								{/* Promo Code Form */}
-								<form onSubmit={handleApplyPromo} className="flex gap-2">
+								{/* <form onSubmit={handleApplyPromo} className="flex gap-2">
 									<input
 										id="cart-coupon-input"
 										type="text"
@@ -253,7 +253,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 										Mã Khuyến Mãi: {appliedDiscount.code} (-
 										{appliedDiscount.percentage}%)
 									</div>
-								)}
+								)} */}
 
 								{/* Pricing summary list */}
 								<div className="space-y-2 text-sm">
