@@ -328,10 +328,14 @@ export const useCartStore = create<CartState>()((set, get) => ({
 			if (discountStore.couponCode) {
 				const currentCart = get().cart;
 				const currentSubtotal = currentCart.reduce(
-					(sum, item) => sum + (item.product?.price || 0) * (item.quantity || 1),
+					(sum, item) =>
+						sum + (item.product?.price || 0) * (item.quantity || 1),
 					0,
 				);
-				await discountStore.checkAndApplyDiscount(discountStore.couponCode, currentSubtotal);
+				await discountStore.checkAndApplyDiscount(
+					discountStore.couponCode,
+					currentSubtotal,
+				);
 			}
 		} catch (error: unknown) {
 			const err = error as { response?: { status?: number } };
@@ -450,10 +454,14 @@ export const useCartStore = create<CartState>()((set, get) => ({
 				if (discountStore.couponCode) {
 					const currentCart = get().cart;
 					const currentSubtotal = currentCart.reduce(
-						(sum, item) => sum + (item.product?.price || 0) * (item.quantity || 1),
+						(sum, item) =>
+							sum + (item.product?.price || 0) * (item.quantity || 1),
 						0,
 					);
-					await discountStore.checkAndApplyDiscount(discountStore.couponCode, currentSubtotal);
+					await discountStore.checkAndApplyDiscount(
+						discountStore.couponCode,
+						currentSubtotal,
+					);
 				}
 			} catch (error: unknown) {
 				console.error("Lỗi cập nhật số lượng:", error);
@@ -467,7 +475,7 @@ export const useCartStore = create<CartState>()((set, get) => ({
 		const { cartId } = get();
 
 		// Ngay lập tức reset state về rỗng để UI phản hồi ngay
-		set({ cart: [], appliedCoupon: null, couponCode: "", cartId: null });
+		set({ cart: [], cartId: null });
 
 		if (cartId) {
 			try {
@@ -506,7 +514,7 @@ export const useCartStore = create<CartState>()((set, get) => ({
 
 	// 6. XÓA TRẮNG CHỈ TRÊN LOCAL (DÙNG KHI LOGOUT)
 	clearCartState: () => {
-		set({ cart: [], appliedCoupon: null, couponCode: "", cartId: null });
+		set({ cart: [], cartId: null });
 	},
 
 	// 6.1 TÁI TẠO GIỎ HÀNG TỪ LOCAL STATE (KHI ĐƠN HÀNG BỊ HỦY)
@@ -555,5 +563,4 @@ export const useCartStore = create<CartState>()((set, get) => ({
 			console.error("Lỗi revalidateCart:", error);
 		}
 	},
-
 }));

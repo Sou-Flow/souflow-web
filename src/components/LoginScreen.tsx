@@ -1,7 +1,7 @@
 "use client";
 
-import { GoogleLogin } from "@react-oauth/google";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { GoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { Eye, EyeOff, Flower, Lock, User } from "lucide-react";
 import Image from "next/image";
@@ -264,7 +264,9 @@ export function LoginScreen() {
 
 						<div className="relative flex py-2 items-center">
 							<div className="flex-grow border-t border-outline-variant/40"></div>
-							<span className="flex-shrink-0 mx-4 text-secondary/50 text-xs uppercase tracking-widest font-semibold">Hoặc</span>
+							<span className="flex-shrink-0 mx-4 text-secondary/50 text-xs uppercase tracking-widest font-semibold">
+								Hoặc
+							</span>
 							<div className="flex-grow border-t border-outline-variant/40"></div>
 						</div>
 
@@ -276,22 +278,35 @@ export function LoginScreen() {
 									text="continue_with"
 									shape="pill"
 									width="340"
+									// @ts-expect-error - locale is supported by Google Identity Services but missing from React library types
 									locale="vi"
 									logo_alignment="center"
 									prompt="select_account"
 									onSuccess={async (credentialResponse) => {
 										if (credentialResponse.credential) {
 											try {
-												const toastId = toast.loading("Đang đăng nhập bằng Google...");
-												const res = await authService.loginWithGoogle(credentialResponse.credential);
+												const toastId = toast.loading(
+													"Đang đăng nhập bằng Google...",
+												);
+												const res = await authService.loginWithGoogle(
+													credentialResponse.credential,
+												);
 												if (res.isNewUser) {
 													toast.dismiss(toastId);
 													// Redirect to register with email and fullname
-													router.push(`${soulFlowRoutes.register}?email=${encodeURIComponent(res.email)}&fullname=${encodeURIComponent(res.fullname)}`);
+													router.push(
+														`${soulFlowRoutes.register}?email=${encodeURIComponent(res.email)}&fullname=${encodeURIComponent(res.fullname)}`,
+													);
 												} else {
-													const userName = res.fullName?.slice(0, res.fullName.indexOf(" ")) || res.username || "User";
+													const userName =
+														res.fullName?.slice(0, res.fullName.indexOf(" ")) ||
+														res.username ||
+														"User";
 													setUser(res);
-													toast.success(`Đăng nhập Google thành công! Chào mừng ${userName}!`, { id: toastId });
+													toast.success(
+														`Đăng nhập Google thành công! Chào mừng ${userName}!`,
+														{ id: toastId },
+													);
 													if (callbackUrl) {
 														router.push(callbackUrl);
 													} else {
