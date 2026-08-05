@@ -18,6 +18,8 @@ interface OrderState {
 		district: string;
 		paymentMethod: "SEPAY" | "COD" | "STORE";
 		shippingFee?: number;
+		discountCode?: string | null;
+		discountAmount?: number;
 	}) => Promise<OrderFE>;
 	clearOrderState: () => void;
 }
@@ -70,6 +72,8 @@ export const useOrderStore = create<OrderState>()(
 						address: fullAddress,
 						paymentMethod: details.paymentMethod,
 						shippingFee: details.shippingFee,
+						discountCode: details.discountCode,
+						discountAmount: details.discountAmount,
 						orderDetailRequests: currentCart.map((item) => ({
 							productPk: Number(item.product.id),
 							quantity: item.quantity,

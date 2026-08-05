@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { soulFlowRoutes } from "@/lib/souflow/routes";
 import { useCartStore } from "@/store/cart-store";
+import { useDiscountStore } from "@/store/discount-store";
 
 type CartDrawerProps = {
 	isOpen: boolean;
@@ -24,14 +25,9 @@ type CartDrawerProps = {
 
 export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 	const router = useRouter();
-	const {
-		cart,
-		removeFromCart,
-		updateCartQuantity,
-		appliedCoupon,
-		applyCoupon,
-		revalidateCart,
-	} = useCartStore();
+	const { cart, removeFromCart, updateCartQuantity, revalidateCart } =
+		useCartStore();
+	const { appliedDiscount, checkAndApplyDiscount } = useDiscountStore();
 
 	const [promoCode, setPromoCode] = useState("");
 	const [promoError, setPromoError] = useState(false);
@@ -47,8 +43,8 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 		(sum, item) => sum + (item.product?.price || 0) * (item.quantity || 1),
 		0,
 	);
-	const discount = appliedCoupon
-		? (subtotal * appliedCoupon.percentage) / 100
+	const discount = appliedDiscount
+		? (subtotal * appliedDiscount.percentage) / 100
 		: 0;
 	const total = subtotal - discount;
 
@@ -56,7 +52,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 		e.preventDefault();
 		setPromoError(false);
 		setPromoSuccess(false);
-		const success = await applyCoupon(promoCode);
+		const success = await checkAndApplyDiscount(promoCode, subtotal);
 		if (success) {
 			setPromoSuccess(true);
 			setPromoCode("");
@@ -225,11 +221,11 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 						{cart.length > 0 && (
 							<div className="border-t border-sf-border bg-sf-bg-elevated p-6 space-y-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
 								{/* Promo Code Form */}
-								{/* <form onSubmit={handleApplyPromo} className="flex gap-2">
+								<form onSubmit={handleApplyPromo} className="flex gap-2">
 									<input
 										id="cart-coupon-input"
 										type="text"
-										placeholder="Enter Coupon (SOULWINTER)"
+										placeholder="Nhập mã giảm giá (VD: SOULWINTER)"
 										value={promoCode}
 										onChange={(e) => setPromoCode(e.target.value)}
 										className="grow text-sm rounded-lg border border-sf-border bg-sf-bg text-sf-fg placeholder:text-sf-fg-muted px-3 py-2 outline-none focus:border-sf-accent focus:ring-1 focus:ring-sf-accent transition-all"
@@ -243,26 +239,21 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 									</button>
 								</form>
 
-								{promoError && (
-									<p className="text-xs text-red-500 font-semibold uppercase tracking-wider">
-										Không thể áp dụng mã này. Vui lòng thử lại.
-									</p>
-								)}
-								{promoSuccess && (
+								{promoSuccess && appliedDiscount && (
 									<p className="text-xs text-green-500 font-semibold uppercase tracking-wider">
 										Mã giảm giá đã được áp dụng thành công!
 										<span className="block text-[12px] text-sf-fg-muted font-normal tracking-normal uppercase">
-											(15% off toàn bộ giỏ hàng)
+											({appliedDiscount.percentage}% off toàn bộ giỏ hàng)
 										</span>
 									</p>
 								)}
-								{appliedCoupon && (
+								{appliedDiscount && !promoSuccess && (
 									<div className="flex items-center gap-1.5 text-xs text-sf-accent font-bold uppercase tracking-wider bg-sf-accent/10 px-3 py-2 rounded-md">
 										<Tag className="h-3.5 w-3.5" />
-										Mã Khuyến Mãi: {appliedCoupon.code} (-
-										{appliedCoupon.percentage}%)
+										Mã Khuyến Mãi: {appliedDiscount.code} (-
+										{appliedDiscount.percentage}%)
 									</div>
-								)} */}
+								)}
 
 								{/* Pricing summary list */}
 								<div className="space-y-2 text-sm">
@@ -270,10 +261,10 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 										<span>Giá Trị Giỏ Hàng</span>
 										<span>{subtotal.toLocaleString("vi-VN")} đ</span>
 									</div>
-									{discount > 0 && (
+									{discount > 0 && appliedDiscount && (
 										<div className="flex justify-between text-green-500 font-medium">
-											<span>Giảm Giá (15%)</span>
-											<span>{discount.toFixed(0)} đ</span>
+											<span>Giảm Giá ({appliedDiscount.percentage}%)</span>
+											<span>-{discount.toLocaleString("vi-VN")} đ</span>
 										</div>
 									)}
 

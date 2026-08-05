@@ -197,7 +197,7 @@ export function FlowerCatalog() {
 									<option value="featured">Sắp xếp: Khuyên dùng</option>
 									<option value="price-low">Giá: Thấp đến Cao</option>
 									<option value="price-high">Giá: Cao đến Thấp</option>
-									<option value="popular">Yêu thích nhất</option>
+									<option value="popular">Sản phẩm bán chạy</option>
 								</select>
 							</div>
 						</div>

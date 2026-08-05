@@ -926,6 +926,17 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 											đ
 										</span>
 									</div>
+									{selectedOrder.discountAmount && selectedOrder.discountAmount > 0 ? (
+										<div className="flex justify-between text-green-600">
+											<span className="font-medium">Mã giảm giá ({selectedOrder.discountCode}):</span>
+											<span className="font-medium">
+												-{Number(selectedOrder.discountAmount).toLocaleString(
+													"vi-VN",
+												)}{" "}
+												đ
+											</span>
+										</div>
+									) : null}
 								</div>
 							</div>
 

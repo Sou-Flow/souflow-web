@@ -39,21 +39,27 @@ export const discountService = {
 		}
 	},
 
-	checkDiscount: async (code: string): Promise<DiscountFE | null> => {
+	applyDiscount: async (
+		code: string,
+		orderAmount: number,
+	): Promise<DiscountFE | null> => {
 		try {
 			const rawResponse: ApiResponse<DiscountResponseDTO> =
-				await axiosClient.post("/non-user/discount/check", { code });
+				await axiosClient.post("/discount/apply", null, { params: { code, orderAmount } });
 
-			// CÁCH SỬA LỖI Ở ĐÂY TƯƠNG TỰ
 			// biome-ignore lint/suspicious/noExplicitAny: skip
 			const actualData: any =
 				(rawResponse as unknown as Record<string, unknown>).data ?? rawResponse;
 
 			if (!actualData) return null;
 			return mapDiscountResponseToFE(actualData);
-		} catch (error) {
-			console.warn("Mã giảm giá không hợp lệ hoặc đã hết hạn.", error);
-			throw error;
+		} catch (error: any) {
+			const message =
+				error.response?.data?.message ||
+				error.message ||
+				"Mã giảm giá không hợp lệ hoặc đã hết hạn.";
+			console.warn("Lỗi khi áp mã giảm giá:", message);
+			throw new Error(message);
 		}
 	},
 };

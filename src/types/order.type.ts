@@ -26,6 +26,8 @@ export interface OrderRequestDTO {
 	orderDetailRequests: OrderDetailRequestDTO[]; // Gửi danh sách sản phẩm thay vì cartId
 	paymentMethod: string; // Thêm trường paymentMethod cho dual-payment (COD, SEPAY)
 	shippingFee?: number; // Truyền phí ship lên Backend
+	discountCode?: string | null;
+	discountAmount?: number;
 }
 
 // ===== ORDER RESPONSE (BE trả về) =====
@@ -54,6 +56,8 @@ export interface OrderResponseDTO {
 	delIf: boolean; // Map từ 'del_if' BIT
 	items: OrderDetailResponseDTO[];
 	paymentMethod?: string;
+	discountCode?: string;
+	discountAmount?: string | number;
 }
 
 // 3. Chi tiết đơn hàng - Dữ liệu sạch cho FE
@@ -82,6 +86,8 @@ export interface OrderFE {
 	isActive: boolean;
 	items: OrderDetailFE[];
 	paymentMethod: string;
+	discountCode?: string;
+	discountAmount: number;
 }
 
 // 5. Hàm Mapper
@@ -216,7 +222,7 @@ export const mapOrderResponseToFE = (dto: any): OrderFE => {
 		status: dto.status || "PENDING",
 		createdDate:
 			dto.createdDate || dto.created_date || new Date().toISOString(),
-		isExpired: !!dto.expired,
+		isExpired: Boolean(dto.expired),
 		isActive: !dto.delIf && !dto.del_if,
 		items: Array.isArray(rawItems)
 			? rawItems.map(mapOrderDetailResponseToFE)
@@ -229,5 +235,7 @@ export const mapOrderResponseToFE = (dto: any): OrderFE => {
 			dto.payment_type ||
 			dto.payment ||
 			"COD",
+		discountCode: dto.discountCode,
+		discountAmount: Number(dto.discountAmount) || 0,
 	};
 };
