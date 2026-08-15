@@ -217,7 +217,7 @@ export function FlowerCatalog() {
 					type="button"
 					id="category-btn-all"
 					onClick={() => setSelectedCategory(null)}
-					className={`rounded-full px-4 sm:px-5 py-2 sm:py-2.5 text-xs font-semibold tracking-wider whitespace-nowrap shrink-0 transition-all duration-300 cursor-pointer ${
+					className={`rounded-full px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold tracking-wider whitespace-nowrap shrink-0 transition-all duration-300 cursor-pointer ${
 						selectedCategory === null
 							? "bg-sf-fg text-sf-bg shadow-md"
 							: "bg-sf-bg-elevated text-sf-fg-muted border border-sf-border hover:border-sf-accent hover:text-sf-accent"
@@ -234,7 +234,7 @@ export function FlowerCatalog() {
 							id={`category-btn-${cat.code}`}
 							key={cat.id}
 							onClick={() => setSelectedCategory(cat.id)}
-							className={`rounded-full px-4 sm:px-5 py-2 sm:py-2.5 text-xs font-semibold tracking-wider whitespace-nowrap shrink-0 transition-all duration-300 cursor-pointer ${
+							className={`rounded-full px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold tracking-wider whitespace-nowrap shrink-0 transition-all duration-300 cursor-pointer ${
 								isSelected
 									? "bg-sf-fg text-sf-bg shadow-md"
 									: "bg-sf-bg-elevated text-sf-fg-muted border border-sf-border hover:border-sf-accent hover:text-sf-accent"
@@ -278,14 +278,14 @@ export function FlowerCatalog() {
 								/>
 
 								{flower.totalSales > 0 && availableStock > 0 && (
-									<span className="absolute top-2 left-2 sm:top-3 sm:left-3 flex items-center gap-1 rounded-full bg-amber-500 text-white px-2 py-0.5 sm:px-2.5 sm:py-1 text-[7px] sm:text-[8px] font-bold tracking-widest uppercase shadow-md">
-										<Star className="h-2 w-2 sm:h-2.5 sm:w-2.5 fill-current" />
+									<span className="absolute top-2 left-2 sm:top-3 sm:left-3 flex items-center gap-1 rounded-full bg-amber-500 text-white px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-xs font-bold tracking-widest uppercase shadow-md">
+										<Star className="h-2.5 w-2.5 fill-current" />
 										BEST SELLER
 									</span>
 								)}
 								{availableStock <= 0 && (
 									<div className="absolute inset-0 flex items-center justify-center bg-black/30">
-										<span className="bg-sf-fg text-sf-bg px-3 py-1 sm:px-4 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-widest shadow-lg">
+										<span className="bg-sf-fg text-sf-bg px-3 py-1 sm:px-4 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold uppercase tracking-widest shadow-lg">
 											Hết hàng
 										</span>
 									</div>
@@ -299,27 +299,27 @@ export function FlowerCatalog() {
 										flower.businessId || flower.code || String(flower.id),
 									)}
 								>
-									<span className="text-[10px] sm:text-xs uppercase tracking-widest text-sf-accent font-bold">
+									<span className="text-xs sm:text-sm uppercase tracking-widest text-sf-accent font-bold">
 										{getCategoryName(flower.categoryId)}
 									</span>
 
-									<h3 className="font-serif text-sm sm:text-base font-medium text-sf-fg mt-0.5 sm:mt-1 group-hover:text-sf-accent transition-colors line-clamp-1">
+									<h3 className="font-serif text-sm sm:text-lg font-medium text-sf-fg mt-0.5 sm:mt-1 group-hover:text-sf-accent transition-colors line-clamp-1">
 										{flower.nameVn}
 									</h3>
 
-									<p className="text-[11px] sm:text-xs text-sf-fg-muted font-light mt-1 sm:mt-2 line-clamp-2 leading-relaxed h-8 sm:h-10">
+									<p className="text-xs sm:text-sm text-sf-fg-muted font-light mt-1 sm:mt-2 line-clamp-2 leading-relaxed h-8 sm:h-10">
 										{flower.descriptionVn}
 									</p>
 								</Link>
 
 								<div className="flex items-center justify-between border-t border-sf-border mt-3 sm:mt-4 pt-2.5 sm:pt-3">
 									<div>
-										<span className="text-[9px] sm:text-[10px] text-sf-fg-muted uppercase tracking-wider block font-bold">
+										<span className="text-[11px] sm:text-xs text-sf-fg-muted uppercase tracking-wider block font-semibold">
 											{availableStock > 0
 												? `Kho: ${availableStock}`
 												: "Hết hàng"}
 										</span>
-										<span className="font-sans font-bold text-sf-fg text-xs sm:text-base">
+										<span className="font-sans font-bold text-sf-fg text-sm sm:text-lg">
 											{flower.price.toLocaleString("vi-VN")} ₫
 										</span>
 									</div>

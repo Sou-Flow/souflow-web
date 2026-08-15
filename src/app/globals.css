@@ -38,20 +38,20 @@
 
 html {
 	color-scheme: light;
-	font-size: 110%;
+	font-size: 115%;
 	-webkit-text-size-adjust: 100%;
 	scroll-behavior: smooth;
 }
 
 @media (min-width: 768px) {
 	html {
-		font-size: 115%;
+		font-size: 120%;
 	}
 }
 
 @media (min-width: 1440px) {
 	html {
-		font-size: 118%;
+		font-size: 125%;
 	}
 }
 

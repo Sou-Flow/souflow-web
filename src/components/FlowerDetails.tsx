@@ -632,13 +632,13 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 								/>
 							</div>
 							<div className="mt-2.5 sm:mt-3 text-left">
-								<span className="text-[7px] sm:text-[8px] tracking-widest uppercase font-bold text-[#C49B83] block">
+								<span className="text-xs tracking-widest uppercase font-bold text-[#C49B83] block">
 									{item.category}
 								</span>
-								<h4 className="font-serif text-xs sm:text-sm font-semibold text-sf-fg mt-0.5 group-hover:text-[#C49B83] line-clamp-1">
+								<h4 className="font-serif text-sm sm:text-base font-semibold text-sf-fg mt-0.5 group-hover:text-[#C49B83] line-clamp-1">
 									{item.name}
 								</h4>
-								<p className="font-sans text-xs sm:text-sm font-bold text-sf-fg mt-1">
+								<p className="font-sans text-sm sm:text-base font-bold text-sf-fg mt-1">
 									{item.formattedPrice}
 								</p>
 							</div>
