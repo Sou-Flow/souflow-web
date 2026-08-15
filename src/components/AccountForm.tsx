@@ -15,6 +15,7 @@ import { useTheme } from "next-themes";
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import SockJS from "sockjs-client";
+import { getApiBaseUrl } from "@/services/axiosClient";
 import { authService } from "@/services/authService";
 import { orderService } from "@/services/orderService";
 import { useAuthStore } from "@/store/auth-store";
@@ -206,7 +207,7 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 	useEffect(() => {
 		if (!user?.username) return;
 
-		const socketUrl = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/ws`;
+		const socketUrl = `${getApiBaseUrl()}/ws`;
 
 		const client = new Client({
 			webSocketFactory: () => new SockJS(socketUrl),

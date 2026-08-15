@@ -2,8 +2,27 @@ import axios from "axios";
 import Cookies from "js-cookie";
 import { useAuthStore } from "@/store/auth-store";
 
+export const getApiBaseUrl = (): string => {
+	// Khi chạy trên Server (Node.js SSR / SSG / generateMetadata)
+	if (typeof window === "undefined") {
+		return (
+			process.env.INTERNAL_API_URL ||
+			process.env.BACKEND_URL ||
+			"http://backend:8080"
+		).replace(/\/+$/, "");
+	}
+	// Khi chạy trên Client (Browser)
+	if (process.env.NEXT_PUBLIC_API_URL) {
+		return process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "");
+	}
+	if (window.location.hostname.includes("souflow.shop")) {
+		return `${window.location.protocol}//api.souflow.shop`;
+	}
+	return "http://localhost:8080";
+};
+
 const axiosClient = axios.create({
-	baseURL: process.env.NEXT_PUBLIC_API_URL,
+	baseURL: getApiBaseUrl(),
 	// Thêm cái timeout để lỡ Backend sập thì FE không bị treo quay đều mãi
 	timeout: 10000,
 });
@@ -11,6 +30,7 @@ const axiosClient = axios.create({
 // Xử lý trước khi GỬI request đi (Nhét Token vào)
 axiosClient.interceptors.request.use(
 	(config) => {
+		config.baseURL = getApiBaseUrl();
 		const token =
 			typeof window !== "undefined" ? Cookies.get("accessToken") : null;
 		if (token && config.headers) {
@@ -87,7 +107,7 @@ axiosClient.interceptors.response.use(
 				}
 				
 				// Tránh circular dependency bằng cách dùng axios thuần
-				const rs = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`, {
+				const rs = await axios.post(`${getApiBaseUrl()}/auth/refresh`, {
 					refreshToken,
 				});
 				

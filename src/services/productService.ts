@@ -11,10 +11,9 @@ import axiosClient from "./axiosClient";
 export const productService = {
 	getAllFlower: async (): Promise<ProductFE[]> => {
 		try {
-			// 1. Gọi API, thêm query param t để bypass cache của backend nếu backend cấu hình cache theo URL
 			const rawResponse: ApiResponse<ProductResponseDTO[]> =
 				await axiosClient.get("/product", {
-					params: { t: Date.now(), pageSize: 100 },
+					params: { pageSize: 100 },
 				});
 
 			// CÁCH SỬA LỖI Ở ĐÂY: Thêm : any
@@ -59,7 +58,6 @@ export const productService = {
 			const params: Record<string, unknown> = {
 				pageNumber,
 				pageSize,
-				t: Date.now(),
 			};
 			if (keyword) params.keyword = keyword;
 			if (categoryPk) params.categoryPk = categoryPk;
@@ -97,9 +95,7 @@ export const productService = {
 	getFlowerByCode: async (code: string): Promise<ProductFE | null> => {
 		try {
 			const rawResponse: ApiResponse<ProductResponseDTO> =
-				await axiosClient.get(`/product/by-code/${code}`, {
-					params: { t: Date.now() },
-				});
+				await axiosClient.get(`/product/by-code/${code}`);
 
 			// Ở đây vì gọi thẳng cho 1 object, nên không bị lỗi .content, nhưng cứ thêm : any cho đồng bộ
 			// biome-ignore lint/suspicious/noExplicitAny: skip

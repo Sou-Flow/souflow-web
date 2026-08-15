@@ -1,6 +1,15 @@
 "use client";
 
-import { CreditCard, Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
+import {
+	CreditCard,
+	Loader2,
+	Minus,
+	Plus,
+	ShoppingBag,
+	Tag,
+	Trash2,
+	X,
+} from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -19,11 +28,14 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 	const router = useRouter();
 	const { cart, removeFromCart, updateCartQuantity, revalidateCart } =
 		useCartStore();
-	const { appliedDiscount, checkAndApplyDiscount } = useDiscountStore();
+	const {
+		appliedDiscount,
+		checkAndApplyDiscount,
+		removeDiscount,
+	} = useDiscountStore();
 
 	const [promoCode, setPromoCode] = useState("");
-	const [_promoError, setPromoError] = useState(false);
-	const [_promoSuccess, setPromoSuccess] = useState(false);
+	const [isApplyingPromo, setIsApplyingPromo] = useState(false);
 
 	useEffect(() => {
 		if (isOpen) {
@@ -38,19 +50,28 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 	const discount = appliedDiscount
 		? (subtotal * appliedDiscount.percentage) / 100
 		: 0;
-	const total = subtotal - discount;
+	const total = Math.max(0, subtotal - discount);
 
-	const _handleApplyPromo = async (e: React.FormEvent) => {
+	const handleApplyPromo = async (e: React.FormEvent) => {
 		e.preventDefault();
-		setPromoError(false);
-		setPromoSuccess(false);
-		const success = await checkAndApplyDiscount(promoCode, subtotal);
-		if (success) {
-			setPromoSuccess(true);
-			setPromoCode("");
-		} else {
-			setPromoError(true);
+		const trimmedCode = promoCode.trim();
+		if (!trimmedCode) return;
+
+		setIsApplyingPromo(true);
+		try {
+			const success = await checkAndApplyDiscount(trimmedCode, subtotal);
+			if (success) {
+				toast.success(`Áp dụng mã ${trimmedCode.toUpperCase()} thành công!`);
+				setPromoCode("");
+			}
+		} finally {
+			setIsApplyingPromo(false);
 		}
+	};
+
+	const handleRemovePromo = () => {
+		removeDiscount();
+		toast.success("Đã gỡ bỏ mã giảm giá");
 	};
 
 	return (
@@ -213,39 +234,47 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 						{cart.length > 0 && (
 							<div className="border-t border-sf-border bg-sf-bg-elevated p-6 space-y-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
 								{/* Promo Code Form */}
-								{/* <form onSubmit={handleApplyPromo} className="flex gap-2">
-									<input
-										id="cart-coupon-input"
-										type="text"
-										placeholder="Nhập mã giảm giá (VD: SOULWINTER)"
-										value={promoCode}
-										onChange={(e) => setPromoCode(e.target.value)}
-										className="grow text-sm rounded-lg border border-sf-border bg-sf-bg text-sf-fg placeholder:text-sf-fg-muted px-3 py-2 outline-none focus:border-sf-accent focus:ring-1 focus:ring-sf-accent transition-all"
-									/>
-									<button
-										id="cart-apply-coupon-btn"
-										type="submit"
-										className="rounded-lg bg-sf-accent px-4 py-2 text-xs font-bold uppercase tracking-widest text-white hover:bg-sf-accent/90 transition-colors"
-									>
-										Áp dụng
-									</button>
-								</form>
-
-								{promoSuccess && appliedDiscount && (
-									<p className="text-xs text-green-500 font-semibold uppercase tracking-wider">
-										Mã giảm giá đã được áp dụng thành công!
-										<span className="block text-[12px] text-sf-fg-muted font-normal tracking-normal uppercase">
-											({appliedDiscount.percentage}% off toàn bộ giỏ hàng)
-										</span>
-									</p>
-								)}
-								{appliedDiscount && !promoSuccess && (
-									<div className="flex items-center gap-1.5 text-xs text-sf-accent font-bold uppercase tracking-wider bg-sf-accent/10 px-3 py-2 rounded-md">
-										<Tag className="h-3.5 w-3.5" />
-										Mã Khuyến Mãi: {appliedDiscount.code} (-
-										{appliedDiscount.percentage}%)
+								{appliedDiscount ? (
+									<div className="flex items-center justify-between rounded-lg bg-sf-accent/10 border border-sf-accent/20 px-3 py-2.5 text-xs text-sf-accent">
+										<div className="flex items-center gap-2 font-medium">
+											<Tag className="h-4 w-4 shrink-0" />
+											<span>
+												Mã <strong className="font-bold">{appliedDiscount.code}</strong> (-{appliedDiscount.percentage}%)
+											</span>
+										</div>
+										<button
+											type="button"
+											id="cart-remove-coupon-btn"
+											onClick={handleRemovePromo}
+											className="text-xs font-medium text-red-500 hover:text-red-600 transition-colors cursor-pointer"
+										>
+											Gỡ bỏ
+										</button>
 									</div>
-								)} */}
+								) : (
+									<form onSubmit={handleApplyPromo} className="flex gap-2">
+										<input
+											id="cart-coupon-input"
+											type="text"
+											placeholder="Nhập mã giảm giá..."
+											value={promoCode}
+											onChange={(e) => setPromoCode(e.target.value)}
+											className="flex-1 text-xs rounded-lg border border-sf-border bg-sf-bg text-sf-fg placeholder:text-sf-fg-muted px-3 py-2.5 outline-none focus:border-sf-accent focus:ring-1 focus:ring-sf-accent transition-all"
+										/>
+										<button
+											id="cart-apply-coupon-btn"
+											type="submit"
+											disabled={isApplyingPromo || !promoCode.trim()}
+											className="rounded-lg bg-sf-fg px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-sf-bg hover:bg-sf-accent hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[80px]"
+										>
+											{isApplyingPromo ? (
+												<Loader2 className="h-3.5 w-3.5 animate-spin" />
+											) : (
+												"Áp dụng"
+											)}
+										</button>
+									</form>
+								)}
 
 								{/* Pricing summary list */}
 								<div className="space-y-2 text-sm">
@@ -263,7 +292,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 									<div className="flex justify-between border-t border-sf-border pt-3 font-bold text-base text-sf-fg">
 										<span>Tổng Số Tiền</span>
 										<span className="text-sf-accent">
-											{total.toLocaleString("vi-VN")}
+											{total.toLocaleString("vi-VN")} đ
 										</span>
 									</div>
 								</div>

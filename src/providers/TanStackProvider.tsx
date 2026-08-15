@@ -14,8 +14,10 @@ export default function TanStackProvider({
 			new QueryClient({
 				defaultOptions: {
 					queries: {
-						refetchOnWindowFocus: false, // Tắt cái vụ user qua tab khác quay lại nó tự gọi API (đỡ tốn băng thông)
-						retry: 1, // Nếu API lỗi, thử gọi lại 1 lần thôi
+						staleTime: 60 * 1000, // 1 phút giữ data không gọi lại API thừa
+						gcTime: 5 * 60 * 1000, // 5 phút lưu trong bộ nhớ
+						refetchOnWindowFocus: false, // Tắt tự gọi lại khi đổi tab
+						retry: 1,
 					},
 				},
 			}),

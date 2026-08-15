@@ -21,9 +21,18 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-	title: "SouFlow",
+	metadataBase: new URL("https://souflow.shop"),
+	title: {
+		default: "SouFlow | Hoa tươi thiết kế cao cấp",
+		template: "%s | SouFlow",
+	},
 	description:
 		"SouFlow - Nơi kết nối tâm hồn và thiên nhiên. Khám phá bộ sưu tập thiết kế hoa độc đáo.",
+	openGraph: {
+		type: "website",
+		locale: "vi_VN",
+		siteName: "SouFlow",
+	},
 };
 
 export default function RootLayout({
