@@ -6,14 +6,12 @@ export default function robots(): MetadataRoute.Robots {
 			{
 				userAgent: "*",
 				allow: "/",
-				disallow: [
-					"/admin/",
-					"/api/",
-					"/login",
-					"/register",
-					"/forgot-password",
-					"/checkout",
-				],
+				disallow: ["/admin/", "/api/"],
+			},
+			{
+				userAgent: "Googlebot",
+				allow: "/",
+				disallow: ["/admin/", "/api/"],
 			},
 		],
 		sitemap: "https://souflow.shop/sitemap.xml",

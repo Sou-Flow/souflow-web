@@ -38,11 +38,113 @@ export const metadata: Metadata = {
 		template: "%s | SouFlow",
 	},
 	description:
-		"SouFlow - Nơi kết nối tâm hồn và thiên nhiên. Khám phá bộ sưu tập thiết kế hoa độc đáo.",
+		"SouFlow - Nơi kết nối tâm hồn và thiên nhiên. Khám phá bộ sưu tập thiết kế hoa tươi nghệ thuật độc đáo, hoa cưới, hoa sinh nhật, hoa chúc mừng.",
+	keywords: [
+		"hoa tươi",
+		"hoa tươi thiết kế",
+		"shop hoa tươi",
+		"tiệm hoa tươi",
+		"đặt hoa tươi online",
+		"hoa sinh nhật",
+		"hoa khai trương",
+		"hoa cưới",
+		"bó hoa tươi",
+		"lẵng hoa",
+		"SouFlow",
+		"souflow.shop",
+	],
+	authors: [{ name: "SouFlow Florist", url: "https://souflow.shop" }],
+	creator: "SouFlow",
+	publisher: "SouFlow",
+	formatDetection: {
+		email: false,
+		address: false,
+		telephone: false,
+	},
+	alternates: {
+		canonical: "https://souflow.shop",
+	},
+	robots: {
+		index: true,
+		follow: true,
+		nocache: false,
+		googleBot: {
+			index: true,
+			follow: true,
+			noimageindex: false,
+			"max-video-preview": -1,
+			"max-image-preview": "large",
+			"max-snippet": -1,
+		},
+	},
 	openGraph: {
 		type: "website",
 		locale: "vi_VN",
+		url: "https://souflow.shop",
 		siteName: "SouFlow",
+		title: "SouFlow | Hoa tươi thiết kế cao cấp",
+		description:
+			"SouFlow - Nơi kết nối tâm hồn và thiên nhiên. Khám phá bộ sưu tập thiết kế hoa tươi nghệ thuật độc đáo.",
+		images: [
+			{
+				url: "https://souflow.shop/images/about-us-main1.avif",
+				width: 1200,
+				height: 630,
+				alt: "SouFlow - Hoa tươi thiết kế cao cấp",
+			},
+		],
+	},
+	twitter: {
+		card: "summary_large_image",
+		title: "SouFlow | Hoa tươi thiết kế cao cấp",
+		description:
+			"SouFlow - Nơi kết nối tâm hồn và thiên nhiên. Khám phá bộ sưu tập thiết kế hoa tươi nghệ thuật độc đáo.",
+		images: ["https://souflow.shop/images/about-us-main1.avif"],
+	},
+};
+
+const storeJsonLd = {
+	"@context": "https://schema.org",
+	"@type": "Florist",
+	name: "SouFlow",
+	image: "https://souflow.shop/images/about-us-main1.avif",
+	url: "https://souflow.shop",
+	telephone: "+84901234567",
+	priceRange: "₫₫",
+	address: {
+		"@type": "PostalAddress",
+		streetAddress: "Tòa nhà QTSC 9, Công viên phần mềm Quang Trung",
+		addressLocality: "Quận 12",
+		addressRegion: "Hồ Chí Minh",
+		addressCountry: "VN",
+	},
+	geo: {
+		"@type": "GeoCoordinates",
+		latitude: 10.8538,
+		longitude: 106.6262,
+	},
+	openingHoursSpecification: {
+		"@type": "OpeningHoursSpecification",
+		dayOfWeek: [
+			"Monday",
+			"Tuesday",
+			"Wednesday",
+			"Thursday",
+			"Friday",
+			"Saturday",
+			"Sunday",
+		],
+		opens: "08:00",
+		closes: "21:00",
+	},
+	sameAs: [
+		"https://facebook.com/souflow.shop",
+		"https://instagram.com/souflow.shop",
+	],
+	potentialAction: {
+		"@type": "SearchAction",
+		target: "https://souflow.shop/catalog?search={search_term_string}",
+		"query-input": "required name=search_term_string",
 	},
 };
 
@@ -57,6 +159,13 @@ export default function RootLayout({
 			className={`${inter.variable} ${playfair.variable} h-full antialiased`}
 			suppressHydrationWarning
 		>
+			<head>
+				<script
+					type="application/ld+json"
+					// biome-ignore lint/security/noDangerouslySetInnerHtml: Google SEO JSON-LD schema
+					dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd) }}
+				/>
+			</head>
 			<body className="min-h-full flex flex-col bg-sf-bg text-sf-fg transition-colors duration-300">
 				<GoogleProvider>
 					<TanStackProvider>
