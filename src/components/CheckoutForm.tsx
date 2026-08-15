@@ -1020,11 +1020,10 @@ export function CheckoutForm() {
 											key={pay.id}
 											type="button"
 											onClick={() => setPaymentMethod(pay.id)}
-											className={`text-left p-4 rounded-xl border transition-all h-24 flex flex-col justify-between ${
-												isChose
+											className={`text-left p-4 rounded-xl border transition-all h-24 flex flex-col justify-between ${isChose
 													? "border-[#C49B83] bg-[#C49B83]/10 ring-1 ring-[#C49B83]"
 													: "hover:border-[#C49B83]"
-											}`}
+												}`}
 										>
 											<span className="text-sm font-semibold uppercase">
 												{pay.label}

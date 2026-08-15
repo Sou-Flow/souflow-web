@@ -3,6 +3,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { discountService } from "@/services/discountService";
 import type { DiscountFE } from "@/types/discount.type";
+import { discountService } from "@/services/discountService";
+import toast from "react-hot-toast";
 
 interface DiscountState {
 	appliedDiscount: DiscountFE | null; // Lưu trữ discount đang được áp dụng

@@ -9,6 +9,7 @@ import { SouFlowShell } from "@/components/SouFlowShell";
 import { AuthProvider } from "@/providers/AuthProviders";
 import GoogleProvider from "@/providers/GoogleProvider";
 import TanStackProvider from "@/providers/TanStackProvider";
+import GoogleProvider from "@/providers/GoogleProvider";
 
 const inter = Inter({
 	variable: "--font-geist-sans",
