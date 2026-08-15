@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import { BoutiqueProviders } from "@/providers/SoulflowProviders";
@@ -19,6 +19,17 @@ const playfair = Playfair_Display({
 	variable: "--font-serif",
 	subsets: ["latin", "vietnamese"],
 });
+
+export const viewport: Viewport = {
+	width: "device-width",
+	initialScale: 1,
+	maximumScale: 5,
+	userScalable: true,
+	themeColor: [
+		{ media: "(prefers-color-scheme: light)", color: "#fcfaf7" },
+		{ media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+	],
+};
 
 export const metadata: Metadata = {
 	metadataBase: new URL("https://souflow.shop"),

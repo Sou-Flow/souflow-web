@@ -119,7 +119,7 @@ export function Hero() {
 
 						<p className="max-w-xl mx-auto lg:mx-0 text-sm sm:text-base text-sf-fg-muted font-light leading-relaxed">
 							Chào mừng bạn đến với{" "}
-							<span className="font-medium text-sf-fg">FlowerShop</span>. Chúng
+							<span className="font-medium text-sf-fg">SouFlow</span>. Chúng
 							tôi lưu giữ thông điệp lãng mạn thông qua ngôn từ tinh tế của cánh
 							hoa tươi nguyên bản.
 						</p>
@@ -143,21 +143,23 @@ export function Hero() {
 						transition={{ duration: 0.8, delay: 0.1 }}
 						className="lg:col-span-12 xl:col-span-5 relative"
 					>
-						<div className="relative aspect-4/5 w-full h-110 overflow-hidden rounded-xl">
+						<div className="relative aspect-4/5 w-full h-72 sm:h-96 md:h-110 overflow-hidden rounded-xl">
 							<div className="absolute inset-0 bg-sf-surface" />{" "}
 							{/* Main Hero Image */}
 							<Image
 								src="/images/about-us-main1.avif"
 								alt="Hero Image"
 								fill
+								sizes="(max-width: 768px) 100vw, 500px"
 								className="object-cover"
+								priority
 							/>
 							<div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
-							<div className="absolute bottom-6 left-10 z-10">
-								<span className="text-base uppercase tracking-widest text-rose-500 font-bold drop-shadow-sm">
+							<div className="absolute bottom-6 left-6 sm:left-10 z-10">
+								<span className="text-xs sm:text-base uppercase tracking-widest text-rose-500 font-bold drop-shadow-sm">
 									BẢN TÌNH CA MÙA XUÂN
 								</span>
-								<h3 className="font-serif text-xl font-normal leading-tight text-white drop-shadow-md mt-1">
+								<h3 className="font-serif text-lg sm:text-xl font-normal leading-tight text-white drop-shadow-md mt-1">
 									Bộ Sưu Tập Mới Nhất
 								</h3>
 							</div>
@@ -241,7 +243,7 @@ export function Hero() {
 								</Link>
 							</div>
 
-							<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+							<div className="grid grid-cols-2 gap-3 sm:gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
 								{categoryFlowers.map((flower) => {
 									const cartItem = cart.find((i) => i.product.id === flower.id);
 									const currentCartQty = cartItem ? cartItem.quantity : 0;
@@ -254,7 +256,7 @@ export function Hero() {
 										<motion.div
 											key={flower.id}
 											whileHover={{ y: -6 }}
-											className="group relative cursor-pointer flex flex-col h-full bg-sf-bg-elevated border border-sf-border rounded-xl p-3 shadow-xs hover:shadow-md transition-all duration-300"
+											className="group relative cursor-pointer flex flex-col h-full bg-sf-bg-elevated border border-sf-border rounded-xl p-2.5 sm:p-3 shadow-xs hover:shadow-md transition-all duration-300"
 										>
 											<Link
 												href={soulFlowRoutes.product(
@@ -266,18 +268,19 @@ export function Hero() {
 													src={flower.imageUrl || "/images/about-us-main1.avif"}
 													alt={flower.nameVn}
 													fill
+													sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
 													className="object-cover group-hover:scale-105 transition-transform duration-500"
 												/>
 												{availableStock <= 0 && (
 													<div className="absolute inset-0 flex items-center justify-center bg-black/30">
-														<span className="bg-sf-fg text-sf-bg px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+														<span className="bg-sf-fg text-sf-bg px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider">
 															Hết hàng
 														</span>
 													</div>
 												)}
 											</Link>
 
-											<div className="flex flex-col justify-between grow mt-3">
+											<div className="flex flex-col justify-between grow mt-2.5 sm:mt-3">
 												<Link
 													href={soulFlowRoutes.product(
 														flower.businessId ||
@@ -286,23 +289,23 @@ export function Hero() {
 													)}
 													className="block"
 												>
-													<h4 className="font-serif text-sm font-semibold text-sf-fg group-hover:text-sf-accent transition-colors line-clamp-1">
+													<h4 className="font-serif text-xs sm:text-sm font-semibold text-sf-fg group-hover:text-sf-accent transition-colors line-clamp-1">
 														{flower.nameVn} {/* Tên hoa */}
 													</h4>
 
-													<p className="text-[11px] text-sf-fg-muted font-light mt-1.5 line-clamp-2 h-8 leading-normal">
+													<p className="text-[10px] sm:text-[11px] text-sf-fg-muted font-light mt-1 sm:mt-1.5 line-clamp-2 h-7 sm:h-8 leading-normal">
 														{flower.descriptionVn} {/* Mô tả hoa */}
 													</p>
 												</Link>
 
-												<div className="flex items-center justify-between border-t border-sf-border mt-3 pt-2">
+												<div className="flex items-center justify-between border-t border-sf-border mt-2.5 sm:mt-3 pt-2">
 													<div>
-														<span className="text-[10px] text-sf-fg-muted uppercase tracking-wider block font-bold">
+														<span className="text-[9px] sm:text-[10px] text-sf-fg-muted uppercase tracking-wider block font-bold">
 															{availableStock > 0
 																? `Kho: ${availableStock}`
 																: "Hết hàng"}
 														</span>
-														<span className="text-sm text-sf-fg font-bold">
+														<span className="text-xs sm:text-sm text-sf-fg font-bold">
 															{flower.formattedPrice}{" "}
 															{/* Giá đã format sẵn "120.000 ₫" */}
 														</span>
@@ -333,23 +336,13 @@ export function Hero() {
 														disabled={
 															addingItems[flower.id] || availableStock <= 0
 														}
-														className={`flex h-7 w-7 items-center justify-center rounded-full transition-all duration-300 shadow-sm ${
-															availableStock <= 0
-																? "disabled:bg-gray-400 disabled:text-gray-200 cursor-not-allowed"
-																: addingItems[flower.id]
-																	? "bg-sf-fg/50 text-white cursor-not-allowed"
-																	: "bg-sf-fg text-sf-bg hover:bg-sf-accent hover:text-white"
-														}`}
-														title={
-															availableStock <= 0
-																? "Đã hết hàng"
-																: "Thêm hoa vào giỏ"
-														}
+														className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-sf-fg text-sf-bg hover:bg-sf-accent hover:text-white transition-colors duration-200 cursor-pointer disabled:bg-gray-400 disabled:text-gray-200 shrink-0"
+														aria-label="Add to cart"
 													>
 														{addingItems[flower.id] ? (
-															<div className="animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full" />
+															<div className="animate-spin h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full" />
 														) : (
-															<Plus className="h-3.5 w-3.5" />
+															<Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
 														)}
 													</button>
 												</div>

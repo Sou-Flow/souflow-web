@@ -990,28 +990,28 @@ export function CheckoutForm() {
 							)}
 						</div>
 
-						{/* Box 2: Payment Methods (Thu gọn lại 2 cái) */}
+						{/* Box 2: Payment Methods */}
 						<div className="bg-sf-bg-elevated p-6 rounded-2xl border border-[#EBE5DA] dark:border-[#222222] shadow-xs space-y-4">
 							<h2 className="font-serif text-lg font-semibold flex items-center gap-2 border-b border-[#EBE5DA] pb-3">
 								<CreditCard className="h-4.5 w-4.5 text-[#C49B83]" /> 2. Phương
 								Thức Thanh Toán
 							</h2>
-							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+							<div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
 								{[
 									{
 										id: "SEPAY" as const,
-										label: "Chuyển Khoản Mã QR",
-										desc: "Tự động xác nhận qua SePay.",
+										label: "Mã QR SePay",
+										desc: "Xác nhận tự động tức thì.",
 									},
 									{
 										id: "COD" as const,
-										label: "Giao Hàng Tận Nơi",
-										desc: "Thanh toán bằng tiền mặt (COD).",
+										label: "Giao Hàng (COD)",
+										desc: "Thanh toán khi nhận hoa.",
 									},
 									{
 										id: "STORE" as const,
-										label: "Nhận Tại Cửa Hàng",
-										desc: "Thanh toán & nhận hoa tại tiệm.",
+										label: "Tại Cửa Hàng",
+										desc: "Nhận hoa trực tiếp tại tiệm.",
 									},
 								].map((pay) => {
 									const isChose = paymentMethod === pay.id;
@@ -1020,15 +1020,15 @@ export function CheckoutForm() {
 											key={pay.id}
 											type="button"
 											onClick={() => setPaymentMethod(pay.id)}
-											className={`text-left p-4 rounded-xl border transition-all h-24 flex flex-col justify-between ${isChose
+											className={`text-left p-4 rounded-xl border transition-all h-24 flex flex-col justify-between cursor-pointer ${isChose
 													? "border-[#C49B83] bg-[#C49B83]/10 ring-1 ring-[#C49B83]"
-													: "hover:border-[#C49B83]"
+													: "hover:border-[#C49B83] bg-sf-bg"
 												}`}
 										>
-											<span className="text-sm font-semibold uppercase">
+											<span className="text-xs sm:text-sm font-semibold uppercase tracking-wider">
 												{pay.label}
 											</span>
-											<p className="text-xs text-sf-fg-muted">{pay.desc}</p>
+											<p className="text-[11px] sm:text-xs text-sf-fg-muted">{pay.desc}</p>
 										</button>
 									);
 								})}

@@ -211,13 +211,13 @@ export function FlowerCatalog() {
 			/>
 
 			{/* Category selector */}
-			<div className="flex flex-wrap gap-2 justify-start md:justify-center mb-10">
+			<div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 md:pb-0 md:flex-wrap md:justify-center mb-8">
 				{/* Nút "Tất cả" để reset bộ lọc */}
 				<button
 					type="button"
 					id="category-btn-all"
 					onClick={() => setSelectedCategory(null)}
-					className={`rounded-full px-5 py-2.5 text-xs font-semibold tracking-wider whitespace-nowrap transition-all duration-300 cursor-pointer ${
+					className={`rounded-full px-4 sm:px-5 py-2 sm:py-2.5 text-xs font-semibold tracking-wider whitespace-nowrap shrink-0 transition-all duration-300 cursor-pointer ${
 						selectedCategory === null
 							? "bg-sf-fg text-sf-bg shadow-md"
 							: "bg-sf-bg-elevated text-sf-fg-muted border border-sf-border hover:border-sf-accent hover:text-sf-accent"
@@ -234,7 +234,7 @@ export function FlowerCatalog() {
 							id={`category-btn-${cat.code}`}
 							key={cat.id}
 							onClick={() => setSelectedCategory(cat.id)}
-							className={`rounded-full px-5 py-2.5 text-xs font-semibold tracking-wider whitespace-nowrap transition-all duration-300 cursor-pointer ${
+							className={`rounded-full px-4 sm:px-5 py-2 sm:py-2.5 text-xs font-semibold tracking-wider whitespace-nowrap shrink-0 transition-all duration-300 cursor-pointer ${
 								isSelected
 									? "bg-sf-fg text-sf-bg shadow-md"
 									: "bg-sf-bg-elevated text-sf-fg-muted border border-sf-border hover:border-sf-accent hover:text-sf-accent"
@@ -247,7 +247,7 @@ export function FlowerCatalog() {
 			</div>
 
 			{/* Main Grid View */}
-			<motion.div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+			<motion.div className="grid grid-cols-2 gap-3 sm:gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
 				{paginatedFlowers.map((flower, index) => {
 					const cartItem = cart.find((i) => i.product.id === flower.id);
 					const currentCartQty = cartItem ? cartItem.quantity : 0;
@@ -258,7 +258,7 @@ export function FlowerCatalog() {
 							id={`flower-card-${flower.code}`}
 							key={flower.id || flower.code || `flower-${index}`}
 							transition={{ duration: 0.4 }}
-							className="group relative cursor-pointer flex flex-col h-full bg-sf-bg-elevated border border-sf-border rounded-xl p-3 overflow-hidden shadow-sm hover:shadow-lg hover:border-sf-accent transition-all duration-300"
+							className="group relative cursor-pointer flex flex-col h-full bg-sf-bg-elevated border border-sf-border rounded-xl p-2.5 sm:p-3 overflow-hidden shadow-sm hover:shadow-lg hover:border-sf-accent transition-all duration-300"
 						>
 							{/* Product Card Image Frame */}
 							<Link
@@ -274,18 +274,18 @@ export function FlowerCatalog() {
 									referrerPolicy="no-referrer"
 									fill
 									loading="lazy"
-									sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+									sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
 								/>
 
 								{flower.totalSales > 0 && availableStock > 0 && (
-									<span className="absolute top-3 left-3 flex items-center gap-1 rounded-full bg-amber-500 text-white px-2.5 py-1 text-[8px] font-bold tracking-widest uppercase shadow-md">
-										<Star className="h-2.5 w-2.5 fill-current" />
+									<span className="absolute top-2 left-2 sm:top-3 sm:left-3 flex items-center gap-1 rounded-full bg-amber-500 text-white px-2 py-0.5 sm:px-2.5 sm:py-1 text-[7px] sm:text-[8px] font-bold tracking-widest uppercase shadow-md">
+										<Star className="h-2 w-2 sm:h-2.5 sm:w-2.5 fill-current" />
 										BEST SELLER
 									</span>
 								)}
 								{availableStock <= 0 && (
 									<div className="absolute inset-0 flex items-center justify-center bg-black/30">
-										<span className="bg-sf-fg text-sf-bg px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest shadow-lg">
+										<span className="bg-sf-fg text-sf-bg px-3 py-1 sm:px-4 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-widest shadow-lg">
 											Hết hàng
 										</span>
 									</div>
@@ -293,33 +293,33 @@ export function FlowerCatalog() {
 							</Link>
 
 							{/* Text metadata */}
-							<div className="flex flex-col justify-between grow mt-4">
+							<div className="flex flex-col justify-between grow mt-3 sm:mt-4">
 								<Link
 									href={soulFlowRoutes.product(
 										flower.businessId || flower.code || String(flower.id),
 									)}
 								>
-									<span className="text-xs uppercase tracking-widest text-sf-accent font-bold">
+									<span className="text-[10px] sm:text-xs uppercase tracking-widest text-sf-accent font-bold">
 										{getCategoryName(flower.categoryId)}
 									</span>
 
-									<h3 className="font-serif text-base font-medium text-sf-fg mt-1 group-hover:text-sf-accent transition-colors line-clamp-1">
+									<h3 className="font-serif text-sm sm:text-base font-medium text-sf-fg mt-0.5 sm:mt-1 group-hover:text-sf-accent transition-colors line-clamp-1">
 										{flower.nameVn}
 									</h3>
 
-									<p className="text-xs text-sf-fg-muted font-light mt-2 line-clamp-2 leading-relaxed h-10">
+									<p className="text-[11px] sm:text-xs text-sf-fg-muted font-light mt-1 sm:mt-2 line-clamp-2 leading-relaxed h-8 sm:h-10">
 										{flower.descriptionVn}
 									</p>
 								</Link>
 
-								<div className="flex items-center justify-between border-t border-sf-border mt-4 pt-3">
+								<div className="flex items-center justify-between border-t border-sf-border mt-3 sm:mt-4 pt-2.5 sm:pt-3">
 									<div>
-										<span className="text-[10px] text-sf-fg-muted uppercase tracking-wider block font-bold">
+										<span className="text-[9px] sm:text-[10px] text-sf-fg-muted uppercase tracking-wider block font-bold">
 											{availableStock > 0
 												? `Kho: ${availableStock}`
 												: "Hết hàng"}
 										</span>
-										<span className="font-sans font-bold text-sf-fg text-base">
+										<span className="font-sans font-bold text-sf-fg text-xs sm:text-base">
 											{flower.price.toLocaleString("vi-VN")} ₫
 										</span>
 									</div>
@@ -336,7 +336,7 @@ export function FlowerCatalog() {
 											}
 											if (!user) {
 												toast.error("Vui lòng đăng nhập để thêm vào giỏ hàng");
-												router.push("/login");
+												router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
 												return;
 											}
 											setAddingItems((prev) => ({
@@ -354,24 +354,16 @@ export function FlowerCatalog() {
 											availableStock <= 0 ||
 											currentCartQty >= flower.stockQuantity
 										}
-										className={`flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300 shadow-sm ${
+										className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full transition-all duration-300 shadow-sm shrink-0 ${
 											availableStock <= 0 ||
 											currentCartQty >= flower.stockQuantity
 												? "disabled:bg-gray-400 disabled:text-gray-200 cursor-not-allowed"
-												: addingItems[flower.id]
-													? "bg-sf-fg/50 text-white cursor-not-allowed"
-													: "bg-sf-fg text-sf-bg hover:bg-sf-accent hover:text-white"
+												: "bg-sf-fg text-sf-bg hover:bg-sf-accent hover:text-white cursor-pointer"
 										}`}
-										title={
-											availableStock <= 0
-												? "Đã hết hàng"
-												: currentCartQty >= flower.stockQuantity
-													? "Đã đạt giới hạn"
-													: "Thêm hoa vào giỏ"
-										}
+										aria-label="Add to cart"
 									>
 										{addingItems[flower.id] ? (
-											<div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+											<div className="animate-spin h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full" />
 										) : (
 											<Plus className="h-4 w-4" />
 										)}

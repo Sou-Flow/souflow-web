@@ -390,22 +390,22 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 						</div>
 					</div>
 
-					{/* Shopping Bag Button */}
+					{/* Shopping Bag Button (Accessible on both Mobile and Desktop) */}
 					<button
 						type="button"
 						id="cart-nav-btn"
 						onClick={onOpenCart}
-						className="hidden md:flex relative p-2 rounded-lg text-sf-fg hover:bg-sf-surface transition-colors duration-200 cursor-pointer"
+						className="relative flex items-center justify-center p-2 rounded-lg text-sf-fg hover:bg-sf-surface transition-colors duration-200 cursor-pointer"
 						aria-label="Open shopping bag"
 					>
-						<ShoppingBag className="h-4.5 w-4.5" />
+						<ShoppingBag className="h-5 w-5" />
 						<AnimatePresence>
 							{cartItemsCount > 0 && (
 								<motion.span
 									initial={{ scale: 0 }}
 									animate={{ scale: 1 }}
 									exit={{ scale: 0 }}
-									className="absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-sf-accent text-xs font-bold text-white shadow-sm"
+									className="absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-sf-accent text-[10px] font-bold text-white shadow-sm"
 								>
 									{cartItemsCount}
 								</motion.span>
@@ -474,15 +474,16 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 											</span>
 										</Link>
 
-										{/* Thêm luôn nút Đăng xuất cho Mobile cho tiện */}
+										{/* Nút Đăng xuất cho Mobile */}
 										<button
 											type="button"
 											onClick={() => {
-												// handleLogout();
+												logout();
 												showToast("Đăng xuất thành công", "success");
 												setMobileMenuOpen(false);
+												router.push(soulFlowRoutes.home);
 											}}
-											className="flex w-full items-center gap-3 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest text-sf-fg-muted hover:text-red-400 hover:bg-red-400/10 transition-colors"
+											className="flex w-full items-center gap-3 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest text-sf-fg-muted hover:text-red-400 hover:bg-red-400/10 transition-colors cursor-pointer"
 										>
 											<LogOut className="h-4 w-4" />
 											Đăng xuất
@@ -514,14 +515,22 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 								<button
 									type="button"
 									id="mobile-cart-nav-btn"
-									onClick={onOpenCart}
+									onClick={() => {
+										setMobileMenuOpen(false);
+										onOpenCart();
+									}}
 									aria-label="Open shopping bag"
-									className="flex w-full items-center px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest text-sf-fg hover:bg-sf-surface transition-colors"
+									className="flex w-full items-center justify-between px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest text-sf-fg hover:bg-sf-surface transition-colors cursor-pointer"
 								>
-									<p className="flex w-full items-center gap-3 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest text-sf-fg hover:bg-sf-surface">
-										<ShoppingBag className="h-4.5 w-4.5" />
+									<span className="flex items-center gap-3">
+										<ShoppingBag className="h-4.5 w-4.5 text-sf-accent" />
 										Giỏ Hàng
-									</p>
+									</span>
+									{cartItemsCount > 0 && (
+										<span className="bg-sf-accent text-white px-2 py-0.5 rounded-full text-[10px] font-bold">
+											{cartItemsCount} món
+										</span>
+									)}
 								</button>
 							</div>
 							{/* Mobile Search input */}
