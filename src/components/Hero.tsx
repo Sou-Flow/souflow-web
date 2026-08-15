@@ -43,38 +43,14 @@ export function Hero() {
 		},
 	});
 
-	const randomBudgetFlowers = useMemo(() => {
+	const featuredBudgetFlowers = useMemo(() => {
 		if (!flowers || flowers.length === 0) return [];
-
-		// Giả định property chứa giá trị số nguyên của bạn là 'price'
-		const budgetFlowers = flowers.filter((f) => f.price < 500000);
-
-		// Randomize (xáo trộn) mảng và lấy 3 phần tử đầu
-		// eslint-disable-next-line react-hooks/purity
-		const shuffled = [...budgetFlowers].sort(() => 0.5 - Math.random());
-		return shuffled.slice(0, 3);
+		// Sắp xếp ổn định theo lượt bán để tránh layout shift khi re-render
+		return [...flowers]
+			.filter((f) => f.stockQuantity > 0)
+			.sort((a, b) => (b.totalSales || 0) - (a.totalSales || 0))
+			.slice(0, 3);
 	}, [flowers]);
-
-	const _budgetTiers = [
-		{
-			label: "Petite Delight",
-			value: "Dưới 500k",
-			img: "https://images.unsplash.com/photo-1596436889106-be35e843f974?auto=format&fit=crop&q=80&w=300",
-			desc: "Thiết kế tinh tế nhỏ gọn, tô điểm bàn làm việc.",
-		},
-		{
-			label: "Atelier Signature",
-			value: "500k - 1 Triệu",
-			img: "https://images.unsplash.com/photo-1561181286-d3fee7d55364?auto=format&fit=crop&q=80&w=300",
-			desc: "Bó hoa xoắn tròn nguyên bản tinh xảo từ nghệ nhân.",
-		},
-		{
-			label: "Grand Opulence",
-			value: "Trên 1 Triệu",
-			img: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&q=80&w=300",
-			desc: "Cực phẩm hoa quý phái sang trọng cho buổi lễ đỉnh cao.",
-		},
-	];
 
 	const brandPillars = [
 		{
@@ -96,10 +72,6 @@ export function Hero() {
 
 	return (
 		<div className="relative overflow-hidden bg-sf-bg transition-colors duration-300">
-			{/* Decorative Blur Orbs */}
-			<div className="absolute top-1/4 left-1/10 h-48 w-48 rounded-full bg-sf-accent/10 blur-3xl pointer-events-none" />
-			<div className="absolute bottom-1/4 right-1/10 h-64 w-64 rounded-full bg-(--sf-surface)/50 blur-3xl pointer-events-none" />
-
 			{/* Main Hero Showcase */}
 			<section className="relative mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8 lg:pt-8">
 				<div className="grid grid-cols-1 gap-6 lg:gap-8 lg:grid-cols-12 lg:items-center">
@@ -298,16 +270,15 @@ export function Hero() {
 													</p>
 												</Link>
 
-												<div className="flex items-center justify-between border-t border-sf-border mt-2.5 sm:mt-3 pt-2">
-													<div>
-														<span className="text-[11px] sm:text-xs text-sf-fg-muted uppercase tracking-wider block font-semibold">
+												<div className="flex items-end justify-between border-t border-sf-border mt-2.5 sm:mt-3 pt-2 gap-2">
+													<div className="min-w-0">
+														<span className="text-[11px] sm:text-xs text-sf-fg-muted uppercase tracking-wider block font-semibold truncate">
 															{availableStock > 0
 																? `Kho: ${availableStock}`
 																: "Hết hàng"}
 														</span>
-														<span className="text-sm sm:text-base text-sf-fg font-bold">
-															{flower.formattedPrice}{" "}
-															{/* Giá đã format sẵn "120.000 ₫" */}
+														<span className="text-sm sm:text-base text-sf-fg font-bold whitespace-nowrap block mt-0.5">
+															{flower.formattedPrice}
 														</span>
 													</div>
 
@@ -336,7 +307,7 @@ export function Hero() {
 														disabled={
 															addingItems[flower.id] || availableStock <= 0
 														}
-														className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-sf-fg text-sf-bg hover:bg-sf-accent hover:text-white transition-colors duration-200 cursor-pointer disabled:bg-gray-400 disabled:text-gray-200 shrink-0"
+														className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-sf-fg text-sf-bg hover:bg-sf-accent hover:text-white transition-colors duration-200 cursor-pointer disabled:bg-gray-400 disabled:text-gray-200 shrink-0 self-end mb-0.5"
 														aria-label="Add to cart"
 													>
 														{addingItems[flower.id] ? (
@@ -372,7 +343,7 @@ export function Hero() {
 				</div>
 
 				<div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
-					{randomBudgetFlowers.map((flower) => (
+					{featuredBudgetFlowers.map((flower) => (
 						<Link
 							key={flower.id}
 							href={soulFlowRoutes.product(
@@ -410,7 +381,7 @@ export function Hero() {
 							</motion.div>
 						</Link>
 					))}
-					{randomBudgetFlowers.length === 0 && (
+					{featuredBudgetFlowers.length === 0 && (
 						<p className="col-span-3 text-center text-sm text-sf-fg-muted py-6">
 							Chưa có sản phẩm nào phù hợp với ngân sách này.
 						</p>

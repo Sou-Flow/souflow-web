@@ -312,14 +312,14 @@ export function FlowerCatalog() {
 									</p>
 								</Link>
 
-								<div className="flex items-center justify-between border-t border-sf-border mt-3 sm:mt-4 pt-2.5 sm:pt-3">
-									<div>
-										<span className="text-[11px] sm:text-xs text-sf-fg-muted uppercase tracking-wider block font-semibold">
+								<div className="flex items-end justify-between border-t border-sf-border mt-3 sm:mt-4 pt-2.5 sm:pt-3 gap-2">
+									<div className="min-w-0">
+										<span className="text-[11px] sm:text-xs text-sf-fg-muted uppercase tracking-wider block font-semibold truncate">
 											{availableStock > 0
 												? `Kho: ${availableStock}`
 												: "Hết hàng"}
 										</span>
-										<span className="font-sans font-bold text-sf-fg text-sm sm:text-lg">
+										<span className="font-sans font-bold text-sf-fg text-sm sm:text-base whitespace-nowrap block mt-0.5">
 											{flower.price.toLocaleString("vi-VN")} ₫
 										</span>
 									</div>
@@ -354,7 +354,7 @@ export function FlowerCatalog() {
 											availableStock <= 0 ||
 											currentCartQty >= flower.stockQuantity
 										}
-										className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full transition-all duration-300 shadow-sm shrink-0 ${
+										className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full transition-all duration-300 shadow-xs shrink-0 self-end mb-0.5 ${
 											availableStock <= 0 ||
 											currentCartQty >= flower.stockQuantity
 												? "disabled:bg-gray-400 disabled:text-gray-200 cursor-not-allowed"
