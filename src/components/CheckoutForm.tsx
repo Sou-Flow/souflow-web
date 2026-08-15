@@ -18,7 +18,6 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
-import { z } from "zod";
 import { soulFlowRoutes } from "@/lib/souflow/routes";
 import { orderService } from "@/services/orderService";
 import { shippingService } from "@/services/shippingService";
@@ -44,13 +43,18 @@ export function CheckoutForm() {
 	const { placeOrder, isPlacingOrder } = useOrderStore();
 	const { cart, clearCart, updateCartQuantity } = useCartStore(); // Lấy thêm clearCart và updateCartQuantity
 	const { locationData } = useLocationStore();
-	const { appliedDiscount, checkAndApplyDiscount, removeDiscount, clearDiscount } = useDiscountStore();
+	const {
+		appliedDiscount,
+		checkAndApplyDiscount,
+		removeDiscount,
+		clearDiscount,
+	} = useDiscountStore();
 
 	const [discountCodeInput, setDiscountCodeInput] = useState("");
 	const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
 
 	// Phải khai báo subtotal sớm hơn một chút, hoặc tính lại tạm thời để truyền vào checkAndApplyDiscount
-	// Thực tế subtotal đã được khai báo ở dưới (line 158), nhưng ta đang dùng ở đây (line 52) 
+	// Thực tế subtotal đã được khai báo ở dưới (line 158), nhưng ta đang dùng ở đây (line 52)
 	// => Javascript tính toán theo thứ tự trên dưới nên ta phải tính tạm thời.
 	const handleApplyDiscount = async () => {
 		if (!discountCodeInput.trim()) return;
@@ -62,7 +66,10 @@ export function CheckoutForm() {
 		);
 
 		try {
-			const success = await checkAndApplyDiscount(discountCodeInput, subtotalTemp);
+			const success = await checkAndApplyDiscount(
+				discountCodeInput,
+				subtotalTemp,
+			);
 			if (success) {
 				toast.success(`Áp dụng mã ${discountCodeInput} thành công!`);
 				setDiscountCodeInput("");
@@ -333,10 +340,11 @@ export function CheckoutForm() {
 				) {
 					setOrderStatus("OUT_OF_STOCK");
 
-					// Xoá sạch giỏ hàng và kéo lại danh sách hoa để UI cập nhật số lượng
+					// Xoá dòng clearCart() để khách không bị mất các món hàng khác.
+					// Chỉ cần gọi revalidateCart() để lấy số lượng mới nhất từ backend.
 					queryClient.invalidateQueries({ queryKey: ["flowers"] });
 					queryClient.invalidateQueries({ queryKey: ["flower"] });
-					clearCart();
+					useCartStore.getState().revalidateCart();
 					return;
 				}
 
@@ -753,11 +761,15 @@ export function CheckoutForm() {
 								đ
 							</div>
 
-							{placedOrderDetails.discountAmount && placedOrderDetails.discountAmount > 0 ? (
+							{placedOrderDetails.discountAmount &&
+							placedOrderDetails.discountAmount > 0 ? (
 								<>
-									<div className="text-green-600 font-medium">Mã Giảm Giá ({placedOrderDetails.discountCode}):</div>
+									<div className="text-green-600 font-medium">
+										Mã Giảm Giá ({placedOrderDetails.discountCode}):
+									</div>
 									<div className="text-right font-medium text-green-600">
-										-{Number(placedOrderDetails.discountAmount).toLocaleString(
+										-
+										{Number(placedOrderDetails.discountAmount).toLocaleString(
 											"vi-VN",
 										)}{" "}
 										đ
@@ -1125,16 +1137,26 @@ export function CheckoutForm() {
 									disabled={isApplyingDiscount || !discountCodeInput.trim()}
 									className="px-4 py-2 bg-[#1A1A1A] text-white text-xs font-bold rounded-lg uppercase disabled:opacity-50"
 								>
-									{isApplyingDiscount ? <Loader2 className="h-4 w-4 animate-spin" /> : "Áp dụng"}
+									{isApplyingDiscount ? (
+										<Loader2 className="h-4 w-4 animate-spin" />
+									) : (
+										"Áp dụng"
+									)}
 								</button>
 							</div>
 							{appliedDiscount && (
 								<div className="mt-2 flex items-center justify-between bg-green-50 text-green-700 p-2 rounded text-xs border border-green-200">
 									<div>
 										<span className="font-bold">{appliedDiscount.code}</span>
-										<span className="ml-2">- Giảm {appliedDiscount.percentage}%</span>
+										<span className="ml-2">
+											- Giảm {appliedDiscount.percentage}%
+										</span>
 									</div>
-									<button type="button" onClick={removeDiscount} className="text-red-500 hover:underline">
+									<button
+										type="button"
+										onClick={removeDiscount}
+										className="text-red-500 hover:underline"
+									>
 										Gỡ bỏ
 									</button>
 								</div>

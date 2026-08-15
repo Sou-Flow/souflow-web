@@ -33,7 +33,7 @@ export function RegisterScreen() {
 	} = useForm<RegisterFormData>({
 		resolver: zodResolver(registerValidator),
 		defaultValues: {
-			username: defaultEmail,
+			username: "",
 			email: defaultEmail,
 			password: "",
 			confirmPassword: "",

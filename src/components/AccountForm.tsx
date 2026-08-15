@@ -172,7 +172,7 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 				);
 			}
 			setOrderToCancel(null);
-		} catch (error: unknown) {
+		} catch (_error: unknown) {
 			toast.error("Không thể hủy đơn hàng");
 		} finally {
 			setIsCancelingOrder(null);
@@ -244,7 +244,7 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 				);
 			},
 			onStompError: (frame) => {
-				console.error("Broker reported error: " + frame.headers.message);
+				console.error(`Broker reported error: ${frame.headers.message}`);
 			},
 		});
 
@@ -924,11 +924,15 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 											đ
 										</span>
 									</div>
-									{selectedOrder.discountAmount && selectedOrder.discountAmount > 0 ? (
+									{selectedOrder.discountAmount &&
+									selectedOrder.discountAmount > 0 ? (
 										<div className="flex justify-between text-green-600">
-											<span className="font-medium">Mã giảm giá ({selectedOrder.discountCode}):</span>
 											<span className="font-medium">
-												-{Number(selectedOrder.discountAmount).toLocaleString(
+												Mã giảm giá ({selectedOrder.discountCode}):
+											</span>
+											<span className="font-medium">
+												-
+												{Number(selectedOrder.discountAmount).toLocaleString(
 													"vi-VN",
 												)}{" "}
 												đ

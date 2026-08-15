@@ -45,7 +45,9 @@ export const discountService = {
 	): Promise<DiscountFE | null> => {
 		try {
 			const rawResponse: ApiResponse<DiscountResponseDTO> =
-				await axiosClient.post("/discount/apply", null, { params: { code, orderAmount } });
+				await axiosClient.post("/discount/apply", null, {
+					params: { code, orderAmount },
+				});
 
 			// biome-ignore lint/suspicious/noExplicitAny: skip
 			const actualData: any =

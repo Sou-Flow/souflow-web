@@ -47,7 +47,11 @@ export const mapDiscountResponseToFE = (
 		descriptionEng: dto.descriptionEng || "",
 		createdDate: dto.createdDate,
 		expiredDate: dto.expiredDate,
-		isExpired: dto.expired === true || String(dto.expired).toLowerCase() === "true",
-		isActive: dto.delIf === undefined ? true : (dto.delIf === false || String(dto.delIf).toLowerCase() === "false"),
+		isExpired:
+			dto.expired === true || String(dto.expired).toLowerCase() === "true",
+		isActive:
+			dto.delIf === undefined
+				? true
+				: dto.delIf === false || String(dto.delIf).toLowerCase() === "false",
 	};
 };
