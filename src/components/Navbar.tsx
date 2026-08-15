@@ -307,10 +307,10 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 										className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
 											pathname === soulFlowRoutes.login
 												? "bg-sf-accent text-white shadow-xs"
-												: "text-sf-fg-muted hover:text-sf-accent"
+												: "text-sf-fg-muted hover:text-sf-accent hover:bg-sf-bg-elevated"
 										}`}
 									>
-										<LogIn className="h-3.5 w-3.5 text-sf-accent" />
+										<LogIn className="h-3.5 w-3.5" />
 										<span>Đăng Nhập</span>
 									</button>
 
@@ -324,10 +324,10 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 										className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
 											pathname === soulFlowRoutes.register
 												? "bg-sf-accent text-white shadow-xs"
-												: "text-sf-fg-muted hover:text-sf-accent"
+												: "text-sf-fg-muted hover:text-sf-accent hover:bg-sf-bg-elevated"
 										}`}
 									>
-										<SquarePen className="h-3.5 w-3.5 text-sf-accent" />
+										<SquarePen className="h-3.5 w-3.5" />
 										<span>Đăng Ký</span>
 									</button>
 								</div>
