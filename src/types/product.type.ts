@@ -203,16 +203,23 @@ export const mapProductResponseToFE = (
 		isActive: !(dto.delIf || dto.del_if),
 		categoryId:
 			Number(dto.categoryId || dto.category_pk || dto.categoryPk) || 0,
-		imageUrl: String(
-			dto.imageUrl ||
-				dto.productImageResponses?.[0]?.url ||
-				dto.productImageResponses?.[0]?.name ||
-				"/images/about-us-main1.avif",
-		).replace(/([^:]\/)\/+/g, "$1"),
+		imageUrl: (() => {
+			const raw = dto.imageUrl || dto.productImageResponses?.[0]?.url || dto.productImageResponses?.[0]?.name;
+			if (!raw) return "/images/about-us-main1.avif";
+			let url = String(raw).replace(/([^:]\/)\/+/g, "$1");
+			if (typeof window !== "undefined" && window.location.protocol === "https:" && url.startsWith("http://s3.souflow.shop")) {
+				url = url.replace("http://s3.souflow.shop", "https://s3.souflow.shop");
+			}
+			return url;
+		})(),
 		images:
-			dto.productImageResponses?.map((img) =>
-				String(img.url || img.name || "").replace(/([^:]\/)\/+/g, "$1"),
-			) || [],
+			dto.productImageResponses?.map((img) => {
+				let url = String(img.url || img.name || "").replace(/([^:]\/)\/+/g, "$1");
+				if (typeof window !== "undefined" && window.location.protocol === "https:" && url.startsWith("http://s3.souflow.shop")) {
+					url = url.replace("http://s3.souflow.shop", "https://s3.souflow.shop");
+				}
+				return url;
+			}) || [],
 		comments: (dto.commentResponses || []).map((c) => ({
 			id: String(c.pk || ""),
 			author: c.fullname || c.username || "Khách",

@@ -35,6 +35,26 @@ const nextConfig = {
 				port: "9000",
 				pathname: "/**",
 			},
+			{
+				protocol: "https",
+				hostname: "s3.souflow.shop",
+				pathname: "/**",
+			},
+			{
+				protocol: "http",
+				hostname: "s3.souflow.shop",
+				pathname: "/**",
+			},
+			{
+				protocol: "https",
+				hostname: "storage.souflow.shop",
+				pathname: "/**",
+			},
+			{
+				protocol: "http",
+				hostname: "storage.souflow.shop",
+				pathname: "/**",
+			},
 		],
 	},
 };

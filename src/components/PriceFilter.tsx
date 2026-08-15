@@ -123,7 +123,7 @@ export function PriceFilter({
 						<div className="flex-1">
 							<label
 								htmlFor="price-min"
-								className="text-[10px] uppercase font-bold text-sf-fg-muted block mb-1"
+								className="text-xs uppercase font-bold text-sf-fg-muted block mb-1"
 							>
 								Từ
 							</label>
@@ -133,7 +133,7 @@ export function PriceFilter({
 									type="number"
 									value={localMin}
 									onChange={(e) => setLocalMin(Number(e.target.value))}
-									className="w-full rounded-md border border-sf-border bg-sf-bg px-2 py-1.5 text-xs text-sf-fg outline-none focus:border-sf-accent"
+									className="w-full rounded-md border border-sf-border bg-sf-bg px-2.5 py-1.5 text-sm text-sf-fg outline-none focus:border-sf-accent"
 								/>
 							</div>
 						</div>
@@ -141,7 +141,7 @@ export function PriceFilter({
 						<div className="flex-1">
 							<label
 								htmlFor="price-max"
-								className="text-[10px] uppercase font-bold text-sf-fg-muted block mb-1"
+								className="text-xs uppercase font-bold text-sf-fg-muted block mb-1"
 							>
 								Đến
 							</label>
@@ -151,7 +151,7 @@ export function PriceFilter({
 									type="number"
 									value={localMax}
 									onChange={(e) => setLocalMax(Number(e.target.value))}
-									className="w-full rounded-md border border-sf-border bg-sf-bg px-2 py-1.5 text-xs text-sf-fg outline-none focus:border-sf-accent"
+									className="w-full rounded-md border border-sf-border bg-sf-bg px-2.5 py-1.5 text-sm text-sf-fg outline-none focus:border-sf-accent"
 								/>
 							</div>
 						</div>

@@ -380,7 +380,7 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 						{fetchedFlower.descriptionVn}
 					</p>
 
-					<div className="border-t border-[#EBE5DA] dark:border-[#C49B83]/30 mt-8 pt-6">
+					<div className="border-t border-[#EBE5DA] dark:border-[#C49B83]/30 mt-8 pt-6 flex flex-col sm:flex-row gap-3">
 						<button
 							type="button"
 							disabled={
@@ -406,7 +406,7 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 								await addToCart(fetchedFlower);
 								setIsAddingToCart(false);
 							}}
-							className="w-full sm:w-2/3 group flex items-center justify-center gap-2.5 rounded-xl bg-[#1A1A1A] dark:bg-[#FCFAF7] py-4 text-xs font-bold uppercase tracking-widest text-white dark:text-[#1F1A16] hover:bg-[#C49B83] transition-all duration-300 shadow-md disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed"
+							className="flex-1 group flex items-center justify-center gap-2.5 rounded-xl bg-[#1A1A1A] dark:bg-[#FCFAF7] py-4 text-xs font-bold uppercase tracking-widest text-white dark:text-[#1F1A16] hover:bg-[#C49B83] hover:text-white transition-all duration-300 shadow-md disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed cursor-pointer"
 						>
 							{isAddingToCart ? (
 								<div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
@@ -421,10 +421,7 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 										: "Thêm vào giỏ hàng"
 									: "Đã hết hàng"}
 						</button>
-					</div>
 
-					{/* Nút Đặt hoa theo yêu cầu */}
-					<div className="mt-4">
 						<button
 							type="button"
 							onClick={() => {
@@ -437,7 +434,7 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 								}
 								setIsCustomOrderPopupOpen(true);
 							}}
-							className="w-full flex items-center justify-center gap-2 rounded-xl border border-[#C49B83] text-[#C49B83] hover:bg-[#C49B83] hover:text-white py-4 text-xs font-bold uppercase tracking-widest transition-all duration-300 cursor-pointer"
+							className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-[#C49B83] text-[#C49B83] hover:bg-[#C49B83] hover:text-white py-4 text-xs font-bold uppercase tracking-widest transition-all duration-300 cursor-pointer"
 						>
 							<Palette className="h-4 w-4" />
 							Đặt hoa theo yêu cầu
@@ -607,7 +604,7 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 						Khám phá thêm
 					</Link>
 				</div>
-				<div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+				<div className="grid grid-cols-2 gap-3 sm:gap-6 sm:grid-cols-3">
 					{relatedFlowers.map((item) => (
 						<button
 							type="button"
@@ -623,25 +620,25 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 									),
 								)
 							}
-							className="group cursor-pointer overflow-hidden rounded-xl border border-[#C49B83]/30 bg-sf-bg-elevated p-3 shadow-xs hover:shadow-sm hover:-translate-y-1 transition-all"
+							className="group cursor-pointer overflow-hidden rounded-xl border border-[#C49B83]/30 bg-sf-bg-elevated p-2.5 sm:p-3 shadow-xs hover:shadow-sm hover:-translate-y-1 transition-all text-left"
 						>
 							<div className="relative aspect-square w-full overflow-hidden rounded-lg bg-[#EBE5DA] dark:bg-[#2C2C2C] grayscale-1/10 group-hover:grayscale-0">
 								<Image
 									src={item.image}
 									alt={item.name}
 									fill
-									sizes="(max-width: 640px) 100vw, 33vw"
+									sizes="(max-width: 640px) 50vw, 33vw"
 									className="object-cover group-hover:scale-103 transition-transform"
 								/>
 							</div>
-							<div className="mt-3 text-left">
-								<span className="text-[8px] tracking-widest uppercase font-bold text-[#C49B83] block">
+							<div className="mt-2.5 sm:mt-3 text-left">
+								<span className="text-xs tracking-widest uppercase font-bold text-[#C49B83] block">
 									{item.category}
 								</span>
-								<h4 className="font-serif text-sm font-semibold text-sf-fg mt-0.5 group-hover:text-[#C49B83] line-clamp-1">
+								<h4 className="font-serif text-sm sm:text-base font-semibold text-sf-fg mt-0.5 group-hover:text-[#C49B83] line-clamp-1">
 									{item.name}
 								</h4>
-								<p className="font-sans text-xs font-bold text-sf-fg mt-1">
+								<p className="font-sans text-sm sm:text-base font-bold text-sf-fg mt-1">
 									{item.formattedPrice}
 								</p>
 							</div>

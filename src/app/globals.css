@@ -38,8 +38,23 @@
 
 html {
 	color-scheme: light;
-	font-size: 118%;
+	font-size: 115%;
+	-webkit-text-size-adjust: 100%;
+	scroll-behavior: smooth;
 }
+
+@media (min-width: 768px) {
+	html {
+		font-size: 120%;
+	}
+}
+
+@media (min-width: 1440px) {
+	html {
+		font-size: 125%;
+	}
+}
+
 html.dark {
 	color-scheme: dark;
 }
@@ -50,6 +65,22 @@ body {
 	transition:
 		background-color 0.3s ease,
 		color 0.3s ease;
+	overflow-x: hidden;
+	-webkit-tap-highlight-color: transparent;
+}
+
+/* Mobile Touch Optimization */
+button, a, input, select, textarea {
+	touch-action: manipulation;
+}
+
+/* Utility to hide scrollbars while preserving scrolling */
+.no-scrollbar::-webkit-scrollbar {
+	display: none;
+}
+.no-scrollbar {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
 }
 
 @keyframes float {
