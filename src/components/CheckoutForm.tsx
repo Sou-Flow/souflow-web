@@ -1230,15 +1230,16 @@ export function CheckoutForm() {
 							</button>
 							<button
 								type="button"
+								disabled={isSubmitting || isPlacingOrder}
 								onClick={() => {
 									setShowConfirmPopup(false);
 									if (pendingOrderData) {
 										onSubmit(pendingOrderData);
 									}
 								}}
-								className="px-6 py-2 rounded-full bg-[#1A1A1A] text-white text-xs font-bold uppercase tracking-widest hover:bg-[#C49B83] transition-colors"
+								className="px-6 py-2 rounded-full bg-[#1A1A1A] text-white text-xs font-bold uppercase tracking-widest hover:bg-[#C49B83] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
 							>
-								Chắc chắn
+								{isSubmitting || isPlacingOrder ? "Đang xử lý..." : "Chắc chắn"}
 							</button>
 						</div>
 					</motion.div>
