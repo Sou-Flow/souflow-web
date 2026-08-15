@@ -9,7 +9,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
-import { z } from "zod";
 import { soulFlowRoutes } from "@/lib/souflow/routes";
 import { authService } from "@/services/authService";
 import { useAuthStore } from "@/store/auth-store";
@@ -48,6 +47,7 @@ export function LoginScreen() {
 			const userData = await authService.login({
 				username: data.username,
 				password: data.password,
+				rememberMe: data.rememberMe,
 			});
 			const userName =
 				userData.fullName?.slice(0, userData.fullName.indexOf(" ")) ||
@@ -313,7 +313,7 @@ export function LoginScreen() {
 														router.push(soulFlowRoutes.home);
 													}
 												}
-											} catch (err) {
+											} catch (_err) {
 												toast.error("Đăng nhập Google thất bại!");
 											}
 										}

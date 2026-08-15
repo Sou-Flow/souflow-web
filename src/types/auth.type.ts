@@ -4,6 +4,7 @@
 export interface LoginRequestDTO {
 	username: string;
 	password: string;
+	rememberMe?: boolean;
 }
 
 // 2. Dữ liệu thô BE trả về (Giả sử BE trả về Token kèm Info User)

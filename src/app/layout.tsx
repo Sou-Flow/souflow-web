@@ -7,8 +7,8 @@ import "./globals.css";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SouFlowShell } from "@/components/SouFlowShell";
 import { AuthProvider } from "@/providers/AuthProviders";
-import TanStackProvider from "@/providers/TanStackProvider";
 import GoogleProvider from "@/providers/GoogleProvider";
+import TanStackProvider from "@/providers/TanStackProvider";
 
 const inter = Inter({
 	variable: "--font-geist-sans",
@@ -39,34 +39,34 @@ export default function RootLayout({
 		>
 			<body className="min-h-full flex flex-col bg-sf-bg text-sf-fg transition-colors duration-300">
 				<GoogleProvider>
-				<TanStackProvider>
-					<AuthProvider>
-						<ThemeProvider>
-							<BoutiqueProviders>
-								<ErrorBoundary>
-									<SouFlowShell>{children}</SouFlowShell>
-								</ErrorBoundary>
-							</BoutiqueProviders>
-							<Toaster
-								position="top-right"
-								toastOptions={{
-									style: {
-										background: "#2A2A2A",
-										color: "#fff",
-										borderRadius: "10px",
-										border: "1px solid #4A4A4A",
-									},
-									success: {
-										iconTheme: {
-											primary: "#4ade80",
-											secondary: "#fff",
+					<TanStackProvider>
+						<AuthProvider>
+							<ThemeProvider>
+								<BoutiqueProviders>
+									<ErrorBoundary>
+										<SouFlowShell>{children}</SouFlowShell>
+									</ErrorBoundary>
+								</BoutiqueProviders>
+								<Toaster
+									position="top-right"
+									toastOptions={{
+										style: {
+											background: "#2A2A2A",
+											color: "#fff",
+											borderRadius: "10px",
+											border: "1px solid #4A4A4A",
 										},
-									},
-								}}
-							/>
-						</ThemeProvider>
-					</AuthProvider>
-				</TanStackProvider>
+										success: {
+											iconTheme: {
+												primary: "#4ade80",
+												secondary: "#fff",
+											},
+										},
+									}}
+								/>
+							</ThemeProvider>
+						</AuthProvider>
+					</TanStackProvider>
 				</GoogleProvider>
 			</body>
 		</html>

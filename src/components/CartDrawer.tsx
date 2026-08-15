@@ -1,14 +1,6 @@
 "use client";
 
-import {
-	CreditCard,
-	Minus,
-	Plus,
-	ShoppingBag,
-	Tag,
-	Trash2,
-	X,
-} from "lucide-react";
+import { CreditCard, Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -30,8 +22,8 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 	const { appliedDiscount, checkAndApplyDiscount } = useDiscountStore();
 
 	const [promoCode, setPromoCode] = useState("");
-	const [promoError, setPromoError] = useState(false);
-	const [promoSuccess, setPromoSuccess] = useState(false);
+	const [_promoError, setPromoError] = useState(false);
+	const [_promoSuccess, setPromoSuccess] = useState(false);
 
 	useEffect(() => {
 		if (isOpen) {
@@ -48,7 +40,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 		: 0;
 	const total = subtotal - discount;
 
-	const handleApplyPromo = async (e: React.FormEvent) => {
+	const _handleApplyPromo = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setPromoError(false);
 		setPromoSuccess(false);

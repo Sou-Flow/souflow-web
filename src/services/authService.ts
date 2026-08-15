@@ -26,8 +26,14 @@ export const authService = {
 
 		// 2. BE trả về thành công -> Lưu Token vào trình duyệt để xài cho các API sau
 		const token = authData.token || authData.accessToken;
+		const refreshToken = authData.refreshToken;
+		const cookieOptions = credentials.rememberMe ? { expires: 7 } : undefined; // Nếu không remember, cookie sẽ là Session Cookie
+		
 		if (token) {
-			Cookies.set("accessToken", token, { expires: 7 }); // Expires in 7 days
+			Cookies.set("accessToken", token, cookieOptions); 
+		}
+		if (refreshToken) {
+			Cookies.set("refreshToken", refreshToken, cookieOptions);
 		}
 
 		// 3. Nắn cục data user thô thành user sạch và ném về cho Component
@@ -37,7 +43,7 @@ export const authService = {
 	loginWithGoogle: async (token: string): Promise<any> => {
 		const rawResponse: ApiResponse<any> = await axiosClient.post(
 			"/google/login",
-			{ token }
+			{ token },
 		);
 
 		const authData: any =
@@ -48,8 +54,12 @@ export const authService = {
 		}
 
 		const jwt = authData.token || authData.accessToken;
+		const refreshToken = authData.refreshToken;
 		if (jwt) {
 			Cookies.set("accessToken", jwt, { expires: 7 });
+		}
+		if (refreshToken) {
+			Cookies.set("refreshToken", refreshToken, { expires: 7 });
 		}
 
 		return await authService.me();
@@ -80,6 +90,30 @@ export const authService = {
 	logout: () => {
 		// Hàm phụ trợ để xóa token khi đăng xuất (hoặc khi token hết hạn)
 		Cookies.remove("accessToken");
+		Cookies.remove("refreshToken");
+	},
+
+	refreshToken: async (): Promise<string | null> => {
+		const refreshToken = Cookies.get("refreshToken");
+		if (!refreshToken) return null;
+		try {
+			const rawResponse: any = await axiosClient.post("/auth/refresh", { refreshToken });
+			const authData: any = rawResponse.data ?? rawResponse;
+			const newToken = authData.token || authData.accessToken;
+			const newRefreshToken = authData.refreshToken;
+			
+			if (newToken) {
+				Cookies.set("accessToken", newToken, { expires: 7 });
+			}
+			if (newRefreshToken) {
+				Cookies.set("refreshToken", newRefreshToken, { expires: 7 });
+			}
+			return newToken;
+		} catch (error) {
+			Cookies.remove("accessToken");
+			Cookies.remove("refreshToken");
+			return null;
+		}
 	},
 
 	updateProfile: async (

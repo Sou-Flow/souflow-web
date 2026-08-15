@@ -1,8 +1,8 @@
+import toast from "react-hot-toast";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { DiscountFE } from "@/types/discount.type";
 import { discountService } from "@/services/discountService";
-import toast from "react-hot-toast";
+import type { DiscountFE } from "@/types/discount.type";
 
 interface DiscountState {
 	appliedDiscount: DiscountFE | null; // Lưu trữ discount đang được áp dụng
@@ -12,7 +12,10 @@ interface DiscountState {
 	applyDiscount: (discount: DiscountFE, code: string) => void;
 	removeDiscount: () => void;
 	clearDiscount: () => void;
-	checkAndApplyDiscount: (code: string, orderAmount: number) => Promise<boolean>;
+	checkAndApplyDiscount: (
+		code: string,
+		orderAmount: number,
+	) => Promise<boolean>;
 }
 
 export const useDiscountStore = create<DiscountState>()(
@@ -38,7 +41,10 @@ export const useDiscountStore = create<DiscountState>()(
 				if (!match) return false;
 
 				try {
-					const discountData = await discountService.applyDiscount(match, orderAmount);
+					const discountData = await discountService.applyDiscount(
+						match,
+						orderAmount,
+					);
 
 					if (discountData) {
 						if (discountData.isExpired) {
