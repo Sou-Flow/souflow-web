@@ -296,7 +296,7 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 						{/* Account Profile Link */}
 						<div className="hidden md:flex items-center gap-2">
 							{!user ? (
-								<div className="flex items-center gap-1">
+								<div className="flex items-center bg-sf-surface border border-sf-border rounded-full p-0.5">
 									<button
 										type="button"
 										onClick={() => {
@@ -307,11 +307,28 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 										className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
 											pathname === soulFlowRoutes.login
 												? "bg-sf-accent text-white shadow-xs"
-												: "text-sf-fg-muted hover:text-sf-accent hover:bg-sf-surface"
+												: "text-sf-fg-muted hover:text-sf-accent"
 										}`}
 									>
 										<LogIn className="h-3.5 w-3.5 text-sf-accent" />
 										<span>Đăng Nhập</span>
+									</button>
+
+									<button
+										type="button"
+										onClick={() => {
+											router.push(
+												`${soulFlowRoutes.register}?callbackUrl=${encodeURIComponent(pathname)}`,
+											);
+										}}
+										className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+											pathname === soulFlowRoutes.register
+												? "bg-sf-accent text-white shadow-xs"
+												: "text-sf-fg-muted hover:text-sf-accent"
+										}`}
+									>
+										<SquarePen className="h-3.5 w-3.5 text-sf-accent" />
+										<span>Đăng Ký</span>
 									</button>
 								</div>
 							) : (
