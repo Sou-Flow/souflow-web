@@ -123,54 +123,54 @@ export function RegisterScreen() {
 	};
 
 	return (
-		<div className="w-full min-h-[85vh] md:min-h-175 bg-sf-bg-elevated grid grid-cols-1 lg:grid-cols-12 gap-12 items-center p-4 sm:p-6 md:p-8">
-			{/* Cột Trái: Nội dung Editorial (Màn Hình 2) */}
-			<section className="lg:col-span-6 space-y-8 text-center lg:text-left ml-30 mb-60">
-				<div className="space-y-4">
-					<span className="text-primary font-semibold text-xs uppercase tracking-[0.3em] block">
-						Bắt đầu hành trình của bạn với SouFlow
-					</span>
-					<h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-light text-sf-heading leading-tight select-none">
-						Nơi những loài <br />
-						<span className="font-bold italic text-primary">Hoa</span> Kể
-						Chuyện.
-					</h1>
-					<p className="font-sans text-sm sm:text-base text-secondary/80 max-w-md mx-auto lg:mx-0 leading-relaxed font-light">
-						Tại SouFlow, chúng tôi tin rằng mỗi bông hoa đều có một câu chuyện
-						để kể. Hãy cùng chúng tôi khám phá vẻ đẹp của thiên nhiên và tạo nên
-						những kỷ niệm đáng nhớ qua từng cánh hoa.
-					</p>
-				</div>
-
-				{/* Khung ảnh Nghệ thuật Ranunculus nổi bật */}
-				<div className="relative group mt-8 hidden lg:block max-w-md mx-auto lg:mx-0">
-					<div className="relative aspect-4/3 rounded-2xl overflow-hidden shadow-xl border border-outline-variant/40 transform transition-transform duration-700 hover:scale-[1.01]">
-						<Image
-							className="w-full h-full object-cover"
-							src="/images/register-image.png"
-							alt="High-end Ranunculus Close-up"
-							referrerPolicy="no-referrer"
-							fill
-							sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-							priority
-						/>
-					</div>
-				</div>
-			</section>
-
-			{/* Cột Phải: Form Đăng ký */}
-			<section className="lg:col-span-6 bg-sf-bg-elevated xl:col-start-8 xl:col-span-5">
-				<div className="glass-panel p-8 sm:p-12 rounded-2xl border-2 border-outline-variant/30  border-[#C49B83]/30 shadow-xl relative overflow-hidden bg-sf-bg-elevated">
-					<div className="mb-8">
-						<h2 className="font-serif text-3xl font-light text-sf-heading mb-2">
-							Tạo Tài Khoản Mới
-						</h2>
-						<p className="font-sans text-base text-secondary/80 text-sf-fg font-light">
-							Chúng tôi rất vui được chào đón bạn đến với cộng đồng SouFlow! Hãy
-							điền thông tin bên dưới để bắt đầu hành trình khám phá vẻ đẹp của
-							thiên nhiên cùng chúng tôi.
+		<div className="w-full min-h-[85vh] bg-sf-bg flex items-center justify-center p-4 sm:p-6 lg:p-10">
+			<div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+				{/* Cột Trái: Nội dung Editorial (Ẩn trên mobile, chỉ hiện trên desktop) */}
+				<section className="hidden lg:block lg:col-span-6 space-y-6">
+					<div className="space-y-3">
+						<span className="text-sf-accent font-bold text-xs uppercase tracking-[0.3em] block">
+							Bắt đầu hành trình của bạn với SouFlow
+						</span>
+						<h1 className="font-serif text-4xl lg:text-5xl font-light text-sf-fg leading-tight select-none">
+							Nơi những loài <br />
+							<span className="font-semibold italic text-sf-accent">Hoa</span> Kể
+							Chuyện.
+						</h1>
+						<p className="font-sans text-sm sm:text-base text-sf-fg-muted max-w-md leading-relaxed font-light">
+							Tại SouFlow, chúng tôi tin rằng mỗi bông hoa đều có một câu chuyện
+							để kể. Hãy cùng chúng tôi khám phá vẻ đẹp của thiên nhiên và tạo nên
+							những kỷ niệm đáng nhớ qua từng cánh hoa.
 						</p>
 					</div>
+
+					{/* Khung ảnh Nghệ thuật Ranunculus nổi bật */}
+					<div className="relative group max-w-md">
+						<div className="relative aspect-4/3 rounded-2xl overflow-hidden shadow-lg border border-sf-border transform transition-transform duration-700 hover:scale-[1.01]">
+							<Image
+								className="w-full h-full object-cover"
+								src="/images/register-image.png"
+								alt="High-end Ranunculus Close-up"
+								referrerPolicy="no-referrer"
+								fill
+								sizes="(max-width: 1200px) 50vw, 33vw"
+								priority
+							/>
+						</div>
+					</div>
+				</section>
+
+				{/* Cột Phải: Form Đăng ký */}
+				<section className="col-span-1 lg:col-span-6 w-full max-w-xl mx-auto">
+					<div className="p-6 sm:p-10 rounded-2xl border border-sf-border shadow-xl relative overflow-hidden bg-sf-bg-elevated">
+						<div className="mb-6">
+							<h2 className="font-serif text-2xl sm:text-3xl font-light text-sf-fg mb-2">
+								Tạo Tài Khoản Mới
+							</h2>
+							<p className="font-sans text-xs sm:text-sm text-sf-fg-muted font-light leading-relaxed">
+								Chúng tôi rất vui được chào đón bạn đến với cộng đồng SouFlow! Hãy
+								điền thông tin bên dưới để bắt đầu hành trình cùng chúng tôi.
+							</p>
+						</div>
 
 					<form
 						className="space-y-6"
@@ -531,5 +531,6 @@ export function RegisterScreen() {
 				</div>
 			</section>
 		</div>
-	);
+	</div>
+);
 }
