@@ -378,7 +378,14 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 					<button
 						type="button"
 						id="cart-nav-btn"
-						onClick={onOpenCart}
+						onClick={() => {
+							if (!user) {
+								toast.error("Vui lòng đăng nhập để xem giỏ hàng của bạn!");
+								router.push(`${soulFlowRoutes.login}?redirect=${encodeURIComponent(pathname)}`);
+								return;
+							}
+							onOpenCart();
+						}}
 						className="relative flex items-center justify-center p-2 rounded-lg text-sf-fg hover:bg-sf-surface transition-colors duration-200 cursor-pointer"
 						aria-label="Open shopping bag"
 					>
@@ -501,6 +508,11 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 									id="mobile-cart-nav-btn"
 									onClick={() => {
 										setMobileMenuOpen(false);
+										if (!user) {
+											toast.error("Vui lòng đăng nhập để xem giỏ hàng của bạn!");
+											router.push(`${soulFlowRoutes.login}?redirect=${encodeURIComponent(pathname)}`);
+											return;
+										}
 										onOpenCart();
 									}}
 									aria-label="Open shopping bag"

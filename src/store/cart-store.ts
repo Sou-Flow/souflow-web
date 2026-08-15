@@ -110,6 +110,16 @@ export const useCartStore = create<CartState>()((set, get) => ({
 
 	// 2. THÊM VÀO GIỎ HÀNG (PESSIMISTIC UPDATE)
 	addToCart: async (product, quantity = 1) => {
+		const token = Cookies.get("accessToken");
+		if (!token) {
+			toast.error("Vui lòng đăng nhập để thêm hoa vào giỏ hàng!");
+			if (typeof window !== "undefined") {
+				const currentPath = window.location.pathname + window.location.search;
+				window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
+			}
+			return;
+		}
+
 		const { cartId, fetchCart } = get();
 
 		// Kiểm tra tồn kho trước khi gọi API

@@ -2,14 +2,15 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
-import { ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, KeyRound, Mail, RefreshCw } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { soulFlowRoutes } from "@/lib/souflow/routes";
 import { authService } from "@/services/authService";
+import { useAuthStore } from "@/store/auth-store";
 import { useLocationStore } from "@/store/location-store";
 import type { District, Ward } from "@/types/location.type";
 import { encodeAddress } from "@/utils/addressUtils";
@@ -21,9 +22,17 @@ import {
 export function RegisterScreen() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
-	const callbackUrl = searchParams.get("callbackUrl");
+	const callbackUrl = searchParams.get("callbackUrl") || searchParams.get("redirect");
 	const defaultEmail = searchParams.get("email") || "";
 	const defaultFullName = searchParams.get("fullname") || "";
+	const setUser = useAuthStore((state) => state.setUser);
+
+	const [step, setStep] = useState<"FORM" | "OTP">("FORM");
+	const [registeredEmail, setRegisteredEmail] = useState("");
+	const [otp, setOtp] = useState("");
+	const [resendTimer, setResendTimer] = useState(60);
+	const [isVerifying, setIsVerifying] = useState(false);
+	const [pendingPayload, setPendingPayload] = useState<Record<string, unknown> | null>(null);
 
 	const {
 		register,
@@ -55,6 +64,15 @@ export function RegisterScreen() {
 			setCapsLockOn(false);
 		}
 	};
+
+	// Countdown timer for OTP resend
+	useEffect(() => {
+		if (step !== "OTP" || resendTimer <= 0) return;
+		const interval = setInterval(() => {
+			setResendTimer((prev) => prev - 1);
+		}, 1000);
+		return () => clearInterval(interval);
+	}, [step, resendTimer]);
 
 	const { locationData } = useLocationStore();
 
@@ -98,18 +116,19 @@ export function RegisterScreen() {
 				address: finalAddress,
 			};
 
-			await authService.register(payload);
-			toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
-			setTimeout(() => {
-				router.push(
-					`${soulFlowRoutes.login}${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ""}`,
-				);
-			}, 1000);
+			const toastId = toast.loading("Đang gửi mã xác thực OTP về email...");
+			await authService.sendRegisterOtp(payload);
+			toast.success(`Mã xác thực OTP đã được gửi đến ${data.email}!`, { id: toastId });
+
+			setPendingPayload(payload);
+			setRegisteredEmail(data.email);
+			setStep("OTP");
+			setResendTimer(60);
 		} catch (error) {
 			if (axios.isAxiosError(error)) {
 				toast.error(
 					error.response?.data?.message ||
-						"Đăng ký thất bại. Vui lòng thử lại.",
+						"Không thể gửi mã OTP. Vui lòng thử lại.",
 				);
 			} else if (error instanceof Error) {
 				toast.error(error.message);
@@ -118,6 +137,60 @@ export function RegisterScreen() {
 			}
 		}
 	};
+
+	const handleResendOtp = async () => {
+		if (resendTimer > 0 || !pendingPayload) return;
+		const toastId = toast.loading("Đang gửi lại mã OTP...");
+		try {
+			await authService.sendRegisterOtp(pendingPayload);
+			toast.success(`Đã gửi lại mã OTP đến ${registeredEmail}!`, { id: toastId });
+			setResendTimer(60);
+		} catch (error) {
+			if (axios.isAxiosError(error)) {
+				toast.error(error.response?.data?.message || "Lỗi khi gửi lại OTP.", { id: toastId });
+			} else {
+				toast.error("Không thể gửi lại mã OTP.", { id: toastId });
+			}
+		}
+	};
+
+	const handleVerifyOtp = async (e: React.FormEvent) => {
+		e.preventDefault();
+		const cleanOtp = otp.trim();
+		if (!cleanOtp || cleanOtp.length !== 6) {
+			toast.error("Vui lòng nhập đủ 6 chữ số OTP!");
+			return;
+		}
+
+		setIsVerifying(true);
+		const toastId = toast.loading("Đang xác thực tài khoản...");
+		try {
+			const userData = await authService.verifyRegisterOtp(registeredEmail, cleanOtp);
+			setUser(userData);
+			const userName =
+				userData.fullName?.slice(0, userData.fullName.indexOf(" ")) ||
+				userData.username ||
+				"Quý Khách";
+			toast.success(`Đăng ký thành công! Chào mừng ${userName} đến với SouFlow!`, { id: toastId });
+
+			setTimeout(() => {
+				router.push(callbackUrl || soulFlowRoutes.home);
+			}, 800);
+		} catch (error) {
+			if (axios.isAxiosError(error)) {
+				toast.error(
+					error.response?.data?.message ||
+						"Mã OTP không hợp lệ hoặc đã hết hạn!",
+					{ id: toastId },
+				);
+			} else {
+				toast.error("Xác thực OTP thất bại. Vui lòng thử lại!", { id: toastId });
+			}
+		} finally {
+			setIsVerifying(false);
+		}
+	};
+
 	const onError = () => {
 		toast.error("Vui lòng kiểm tra lại thông tin đã nhập.");
 	};
@@ -162,20 +235,110 @@ export function RegisterScreen() {
 				{/* Cột Phải: Form Đăng ký */}
 				<section className="col-span-1 lg:col-span-6 w-full max-w-xl mx-auto">
 					<div className="p-6 sm:p-10 rounded-2xl border border-sf-border shadow-xl relative overflow-hidden bg-sf-bg-elevated">
-						<div className="mb-6">
-							<h2 className="font-serif text-2xl sm:text-3xl font-light text-sf-fg mb-2">
-								Tạo Tài Khoản Mới
-							</h2>
-							<p className="font-sans text-xs sm:text-sm text-sf-fg-muted font-light leading-relaxed">
-								Chúng tôi rất vui được chào đón bạn đến với cộng đồng SouFlow! Hãy
-								điền thông tin bên dưới để bắt đầu hành trình cùng chúng tôi.
-							</p>
-						</div>
+						{step === "OTP" ? (
+							<div>
+								<div className="text-center mb-6">
+									<div className="h-14 w-14 rounded-2xl bg-sf-accent/15 border border-sf-accent/30 text-sf-accent flex items-center justify-center mx-auto mb-4 shadow-xs">
+										<Mail className="h-7 w-7" />
+									</div>
+									<h2 className="font-serif text-2xl sm:text-3xl font-normal text-sf-fg mb-2">
+										Xác Thực Mã OTP
+									</h2>
+									<p className="font-sans text-xs sm:text-sm text-sf-fg-muted leading-relaxed max-w-md mx-auto">
+										Mã xác thực 6 chữ số đã được gửi đến hộp thư:{" "}
+										<span className="font-semibold text-sf-fg">{registeredEmail}</span>
+									</p>
+								</div>
 
-					<form
-						className="space-y-6"
-						onSubmit={handleFormSubmit(onSubmit, onError)}
-					>
+								<form onSubmit={handleVerifyOtp} className="space-y-6">
+									<div className="space-y-2">
+										<label
+											htmlFor="otp-input"
+											className="text-[10px] uppercase tracking-widest font-bold text-secondary block text-center"
+										>
+											Nhập 6 Chữ Số OTP
+										</label>
+										<div className="relative flex items-center justify-center">
+											<KeyRound className="absolute left-4 w-5 h-5 text-sf-accent pointer-events-none" />
+											<input
+												id="otp-input"
+												type="text"
+												inputMode="numeric"
+												maxLength={6}
+												autoFocus
+												placeholder="------"
+												value={otp}
+												onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+												className="w-full bg-sf-bg border border-sf-border rounded-xl py-3.5 pl-12 pr-4 text-center font-mono text-2xl tracking-[0.4em] font-bold text-sf-fg focus:border-sf-accent focus:ring-1 focus:ring-sf-accent transition-all outline-none"
+												required
+											/>
+										</div>
+										<p className="text-[11px] text-center text-sf-fg-muted mt-1">
+											Mã OTP có hiệu lực trong vòng <b className="text-sf-fg">5 phút</b>.
+										</p>
+									</div>
+
+									<div className="space-y-3 pt-2">
+										<button
+											type="submit"
+											disabled={isVerifying || otp.length !== 6}
+											className="w-full py-3.5 bg-sf-accent hover:bg-[#c3632b] disabled:opacity-50 text-white text-xs font-semibold uppercase tracking-[0.2em] rounded-xl shadow-lg transition-all duration-300 transform active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+										>
+											{isVerifying ? (
+												<span>ĐANG XÁC THỰC...</span>
+											) : (
+												<>
+													<span>Xác Nhận & Hoàn Tất</span>
+													<ArrowRight className="w-4 h-4" />
+												</>
+											)}
+										</button>
+
+										<div className="flex items-center justify-between text-xs pt-2">
+											<button
+												type="button"
+												onClick={() => setStep("FORM")}
+												className="flex items-center gap-1.5 text-sf-fg-muted hover:text-sf-fg transition-colors cursor-pointer"
+											>
+												<ArrowLeft className="w-3.5 h-3.5" />
+												<span>Sửa thông tin</span>
+											</button>
+
+											<button
+												type="button"
+												disabled={resendTimer > 0}
+												onClick={handleResendOtp}
+												className={`flex items-center gap-1.5 font-medium transition-colors ${
+													resendTimer > 0
+														? "text-sf-fg-muted/60 cursor-not-allowed"
+														: "text-sf-accent hover:underline cursor-pointer"
+												}`}
+											>
+												<RefreshCw className="w-3.5 h-3.5" />
+												<span>
+													{resendTimer > 0 ? `Gửi lại mã (${resendTimer}s)` : "Gửi lại mã OTP"}
+												</span>
+											</button>
+										</div>
+									</div>
+								</form>
+							</div>
+						) : (
+							<>
+								<div className="mb-6">
+									<h2 className="font-serif text-2xl sm:text-3xl font-light text-sf-fg mb-2">
+										Tạo Tài Khoản Mới
+									</h2>
+									<p className="font-sans text-xs sm:text-sm text-sf-fg-muted font-light leading-relaxed">
+										Chúng tôi rất vui được chào đón bạn đến với cộng đồng SouFlow! Hãy
+										điền thông tin bên dưới để bắt đầu hành trình cùng chúng tôi.
+									</p>
+								</div>
+
+								<form
+									className="space-y-6"
+									onSubmit={handleFormSubmit(onSubmit, onError)}
+								>
 						<div className="space-y-5">
 							{/* fullname */}
 							<div className="space-y-1.5">
@@ -528,8 +691,10 @@ export function RegisterScreen() {
 							</button>
 						</p>
 					</div>
-				</div>
-			</section>
+				</>
+			)}
+		</div>
+	</section>
 		</div>
 	</div>
 );

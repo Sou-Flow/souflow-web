@@ -17,6 +17,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import Cookies from "js-cookie";
 import toast from "react-hot-toast";
 import { soulFlowRoutes } from "@/lib/souflow/routes";
 import { orderService } from "@/services/orderService";
@@ -38,7 +39,16 @@ export function CheckoutForm() {
 	const router = useRouter();
 	const queryClient = useQueryClient();
 	// === 1. LẤY DATA TỪ STORE ===
-	const { user } = useAuthStore(); // Mở comment này khi bạn có auth store
+	const { user } = useAuthStore();
+
+	// Auth Guard: Bắt buộc đăng nhập để thanh toán
+	useEffect(() => {
+		const token = Cookies.get("accessToken");
+		if (!token && !user) {
+			toast.error("Vui lòng đăng nhập để tiến hành thanh toán!");
+			router.replace("/login?redirect=/checkout");
+		}
+	}, [user, router]);
 
 	const { placeOrder, isPlacingOrder } = useOrderStore();
 	const { cart, clearCart, updateCartQuantity } = useCartStore(); // Lấy thêm clearCart và updateCartQuantity
