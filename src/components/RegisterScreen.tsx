@@ -42,7 +42,7 @@ export function RegisterScreen() {
 	} = useForm<RegisterFormData>({
 		resolver: zodResolver(registerValidator),
 		defaultValues: {
-			username: "",
+			username: defaultEmail ? defaultEmail.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "") : "",
 			email: defaultEmail,
 			password: "",
 			confirmPassword: "",
@@ -118,23 +118,26 @@ export function RegisterScreen() {
 
 			const toastId = toast.loading("Đang gửi mã xác thực OTP về email...");
 			await authService.sendRegisterOtp(payload);
-			toast.success(`Mã xác thực OTP đã được gửi đến ${data.email}!`, { id: toastId });
+			toast.dismiss(toastId);
+			toast.success(`Mã xác thực OTP đã được gửi đến ${data.email}!`, { duration: 4000 });
 
 			setPendingPayload(payload);
 			setRegisteredEmail(data.email);
 			setStep("OTP");
 			setResendTimer(60);
-		} catch (error) {
+		} catch (error: unknown) {
+			toast.dismiss(toastId);
+			let errMsg = "Không thể gửi mã OTP. Vui lòng thử lại.";
 			if (axios.isAxiosError(error)) {
-				toast.error(
+				errMsg =
 					error.response?.data?.message ||
-						"Không thể gửi mã OTP. Vui lòng thử lại.",
-				);
+					error.response?.data?.error ||
+					(typeof error.response?.data === "string" ? error.response.data : "") ||
+					errMsg;
 			} else if (error instanceof Error) {
-				toast.error(error.message);
-			} else {
-				toast.error("Đã có lỗi xảy ra. Vui lòng thử lại.");
+				errMsg = error.message;
 			}
+			toast.error(errMsg, { duration: 5000 });
 		}
 	};
 
@@ -143,14 +146,22 @@ export function RegisterScreen() {
 		const toastId = toast.loading("Đang gửi lại mã OTP...");
 		try {
 			await authService.sendRegisterOtp(pendingPayload);
-			toast.success(`Đã gửi lại mã OTP đến ${registeredEmail}!`, { id: toastId });
+			toast.dismiss(toastId);
+			toast.success(`Đã gửi lại mã OTP đến ${registeredEmail}!`, { duration: 4000 });
 			setResendTimer(60);
-		} catch (error) {
+		} catch (error: unknown) {
+			toast.dismiss(toastId);
+			let errMsg = "Lỗi khi gửi lại OTP.";
 			if (axios.isAxiosError(error)) {
-				toast.error(error.response?.data?.message || "Lỗi khi gửi lại OTP.", { id: toastId });
-			} else {
-				toast.error("Không thể gửi lại mã OTP.", { id: toastId });
+				errMsg =
+					error.response?.data?.message ||
+					error.response?.data?.error ||
+					(typeof error.response?.data === "string" ? error.response.data : "") ||
+					errMsg;
+			} else if (error instanceof Error) {
+				errMsg = error.message;
 			}
+			toast.error(errMsg, { duration: 5000 });
 		}
 	};
 
@@ -171,21 +182,25 @@ export function RegisterScreen() {
 				userData.fullName?.slice(0, userData.fullName.indexOf(" ")) ||
 				userData.username ||
 				"Quý Khách";
-			toast.success(`Đăng ký thành công! Chào mừng ${userName} đến với SouFlow!`, { id: toastId });
+			toast.dismiss(toastId);
+			toast.success(`Đăng ký thành công! Chào mừng ${userName} đến với SouFlow!`, { duration: 4000 });
 
 			setTimeout(() => {
 				router.push(callbackUrl || soulFlowRoutes.home);
 			}, 800);
-		} catch (error) {
+		} catch (error: unknown) {
+			toast.dismiss(toastId);
+			let errMsg = "Mã OTP không hợp lệ hoặc đã hết hạn!";
 			if (axios.isAxiosError(error)) {
-				toast.error(
+				errMsg =
 					error.response?.data?.message ||
-						"Mã OTP không hợp lệ hoặc đã hết hạn!",
-					{ id: toastId },
-				);
-			} else {
-				toast.error("Xác thực OTP thất bại. Vui lòng thử lại!", { id: toastId });
+					error.response?.data?.error ||
+					(typeof error.response?.data === "string" ? error.response.data : "") ||
+					errMsg;
+			} else if (error instanceof Error) {
+				errMsg = error.message;
 			}
+			toast.error(errMsg, { duration: 5000 });
 		} finally {
 			setIsVerifying(false);
 		}
@@ -417,15 +432,14 @@ export function RegisterScreen() {
 									className="text-[10px] uppercase tracking-widest font-bold text-secondary"
 									htmlFor="reg-username"
 								>
-									Tên Người Dùng
+									Tên Người Dùng (Username)
 								</label>
 								<input
 									id="reg-username"
 									type="text"
 									placeholder="evelyn_rose"
 									{...register("username")}
-									readOnly={!!defaultEmail}
-									className={`w-full border-0 border-b border-outline-variant/60 py-2.5 px-0 text-sm focus:border-primary transition-all focus:outline-none placeholder-secondary/30 text-sf-fg ${defaultEmail ? "bg-white/10 opacity-70 cursor-not-allowed" : "bg-white/5"}`}
+									className="w-full bg-white/5 border-0 border-b border-outline-variant/60 py-2.5 px-0 text-sm focus:border-primary transition-all focus:outline-none placeholder-secondary/30 text-sf-fg"
 									required
 								/>
 								{errors.username && (
