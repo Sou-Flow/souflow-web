@@ -326,7 +326,7 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 										<img
 											src={user.avatar}
 											alt={user.fullName}
-											className="h-7 w-7 rounded-full object-cover grayscale brightness-105 border border-sf-border"
+											className="h-9 w-9 rounded-full object-cover grayscale brightness-105 border border-sf-border ring-2 ring-sf-accent/30 shadow-xs"
 											referrerPolicy="no-referrer"
 										/>
 
@@ -424,7 +424,7 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 											<img
 												src={user.avatar || "/images/avatar.png"}
 												alt={user.fullName || "User"}
-												className="h-8 w-8 rounded-full object-cover grayscale brightness-105 border border-sf-border"
+												className="h-10 w-10 rounded-full object-cover grayscale brightness-105 border border-sf-border ring-2 ring-sf-accent/30 shadow-xs"
 												referrerPolicy="no-referrer"
 											/>
 											<span className="flex items-center gap-1.5">

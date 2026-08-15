@@ -342,20 +342,20 @@ export function Hero() {
 					</p>
 				</div>
 
-				<div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
+				<div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3 items-stretch">
 					{featuredBudgetFlowers.map((flower) => (
 						<Link
 							key={flower.id}
 							href={soulFlowRoutes.product(
 								flower.businessId || flower.code || String(flower.id),
 							)}
-							className="block"
+							className="block h-full"
 						>
 							<motion.div
 								whileHover={{ y: -6 }}
-								className="group cursor-pointer overflow-hidden rounded-xl border border-sf-border bg-sf-bg-elevated p-3.5 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300"
+								className="group cursor-pointer overflow-hidden rounded-xl border border-sf-border bg-sf-bg-elevated p-3.5 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col h-full justify-between"
 							>
-								<div className="relative aspect-16/10 w-full overflow-hidden rounded-lg bg-sf-surface flex items-center justify-center text-sf-fg-muted">
+								<div className="relative aspect-16/10 w-full overflow-hidden rounded-lg bg-sf-surface flex items-center justify-center text-sf-fg-muted shrink-0">
 									<Image
 										src={flower.imageUrl || "/images/about-us-main1.avif"}
 										alt={flower.nameVn}
@@ -369,14 +369,21 @@ export function Hero() {
 									</span>
 								</div>
 
-								<div className="mt-3 sm:mt-4 space-y-1">
-									<h3 className="font-serif text-base sm:text-lg font-semibold text-sf-fg group-hover:text-sf-accent transition-colors line-clamp-1">
-										{flower.nameVn}
-									</h3>
-									<p className="text-xs sm:text-sm text-sf-fg-muted font-light text-ellipsis overflow-hidden line-clamp-2">
-										{flower.descriptionVn ||
-											"Thiết kế tinh tế nhỏ gọn, điểm tô không gian."}
-									</p>
+								<div className="mt-3 sm:mt-4 flex flex-col grow justify-between">
+									<div>
+										<h3 className="font-serif text-base sm:text-lg font-semibold text-sf-fg group-hover:text-sf-accent transition-colors line-clamp-1">
+											{flower.nameVn}
+										</h3>
+										<p className="text-xs sm:text-sm text-sf-fg-muted font-light line-clamp-2 h-9 sm:h-10 leading-relaxed mt-1">
+											{flower.descriptionVn ||
+												"Thiết kế tinh tế nhỏ gọn, điểm tô không gian."}
+										</p>
+									</div>
+
+									<div className="flex items-center justify-between border-t border-sf-border mt-3 pt-2 text-xs text-sf-accent font-bold uppercase tracking-wider">
+										<span>Xem Chi Tiết</span>
+										<ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+									</div>
 								</div>
 							</motion.div>
 						</Link>
