@@ -1,6 +1,7 @@
 import { FlowerDetails } from "@/components/FlowerDetails";
 import { productService } from "@/services/productService";
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 
 type ProductPageProps = {
 	params: Promise<{ id: string }>;
@@ -28,9 +29,12 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 	let ogImage =
 		product.imageUrl ||
 		product.images?.[0] ||
-		"https://souflow.shop/images/about-us-main1.avif";
+		"https://souflow.shop/images/og-image.jpg";
 	if (ogImage.startsWith("http://s3.souflow.shop")) {
 		ogImage = ogImage.replace("http://s3.souflow.shop", "https://s3.souflow.shop");
+	}
+	if (ogImage.startsWith("http://storage.souflow.shop")) {
+		ogImage = ogImage.replace("http://storage.souflow.shop", "https://storage.souflow.shop");
 	}
 
 	return {
@@ -92,42 +96,44 @@ export default async function ProductPage({ params }: ProductPageProps) {
 	const { id } = await params;
 	const product = await productService.getFlowerByCode(id);
 
+	if (!product) {
+		notFound();
+	}
+
 	// Schema.org Structured Data (JSON-LD) giúp Google hiển thị giá tiền, hình ảnh và tình trạng còn hàng
-	const jsonLd = product
-		? {
-				"@context": "https://schema.org",
-				"@type": "Product",
-				name: product.nameVn,
-				image: [
-					product.imageUrl ||
-						product.images?.[0] ||
-						"https://souflow.shop/images/about-us-main1.avif",
-				],
-				description: product.descriptionVn || product.nameVn,
-				sku: product.code,
-				mpn: product.code,
-				brand: {
-					"@type": "Brand",
-					name: "SouFlow",
-				},
-				offers: {
-					"@type": "Offer",
-					url: `https://souflow.shop/catalog/${id}`,
-					priceCurrency: "VND",
-					price: product.price,
-					priceValidUntil: "2027-12-31",
-					itemCondition: "https://schema.org/NewCondition",
-					availability:
-						product.isAvailable && product.stockQuantity > 0
-							? "https://schema.org/InStock"
-							: "https://schema.org/OutOfStock",
-					seller: {
-						"@type": "Organization",
-						name: "SouFlow",
-					},
-				},
-			}
-		: null;
+	const jsonLd = {
+		"@context": "https://schema.org",
+		"@type": "Product",
+		name: product.nameVn,
+		image: [
+			product.imageUrl ||
+				product.images?.[0] ||
+				"https://souflow.shop/images/og-image.jpg",
+		],
+		description: product.descriptionVn || product.nameVn,
+		sku: product.code,
+		mpn: product.code,
+		brand: {
+			"@type": "Brand",
+			name: "SouFlow",
+		},
+		offers: {
+			"@type": "Offer",
+			url: `https://souflow.shop/catalog/${id}`,
+			priceCurrency: "VND",
+			price: product.price,
+			priceValidUntil: "2027-12-31",
+			itemCondition: "https://schema.org/NewCondition",
+			availability:
+				product.isAvailable && product.stockQuantity > 0
+					? "https://schema.org/InStock"
+					: "https://schema.org/OutOfStock",
+			seller: {
+				"@type": "Organization",
+				name: "SouFlow",
+			},
+		},
+	};
 
 	return (
 		<>

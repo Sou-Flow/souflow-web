@@ -112,7 +112,7 @@ export function Hero() {
 						<div className="relative aspect-4/5 w-full h-72 sm:h-96 md:h-110 overflow-hidden rounded-xl bg-sf-surface">
 							{/* Main Hero Image - Critical LCP Element */}
 							<Image
-								src="/images/about-us-main1.avif"
+								src="/images/about-us-main1.webp"
 								alt="SouFlow - Hoa tươi thiết kế cao cấp"
 								fill
 								sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 550px"

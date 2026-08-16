@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { notFound, usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { soulFlowRoutes } from "@/lib/souflow/routes";
@@ -244,19 +244,7 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 	}
 
 	if (!fetchedFlower) {
-		return (
-			<div className="mx-auto max-w-7xl px-4 py-32 text-center bg-sf-bg-elevated min-h-screen">
-				<h2 className="font-serif text-2xl text-sf-fg">
-					Không tìm thấy sản phẩm
-				</h2>
-				<Link
-					href={soulFlowRoutes.catalog}
-					className="text-sf-accent mt-4 inline-block hover:underline"
-				>
-					Quay lại cửa hàng
-				</Link>
-			</div>
-		);
+		notFound();
 	}
 
 	const cartItem = cart.find((i) => i.product.id === fetchedFlower.id);
