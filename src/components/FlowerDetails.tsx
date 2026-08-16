@@ -384,12 +384,17 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 						<button
 							type="button"
 							disabled={
+								user?.roleCode === "ADMIN" ||
 								!fetchedFlower.isAvailable ||
 								availableStock <= 0 ||
 								isAddingToCart ||
 								currentCartQty >= fetchedFlower.stockQuantity
 							}
 							onClick={async () => {
+								if (user?.roleCode === "ADMIN") {
+									toast.error("Tài khoản Quản trị viên chỉ dùng để phản hồi bình luận, không hỗ trợ đặt hàng.");
+									return;
+								}
 								if (!fetchedFlower.isAvailable || availableStock <= 0) return;
 								if (currentCartQty >= fetchedFlower.stockQuantity) {
 									toast.error("Đã đạt số lượng tối đa trong kho");
@@ -415,15 +420,18 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 							)}
 							{isAddingToCart
 								? "Đang thêm..."
-								: fetchedFlower.isAvailable && availableStock > 0
-									? currentCartQty >= fetchedFlower.stockQuantity
-										? "Đã đạt giới hạn"
-										: "Thêm vào giỏ hàng"
-									: "Đã hết hàng"}
+								: user?.roleCode === "ADMIN"
+									? "Chế độ Quản trị viên"
+									: fetchedFlower.isAvailable && availableStock > 0
+										? currentCartQty >= fetchedFlower.stockQuantity
+											? "Đã đạt giới hạn"
+											: "Thêm vào giỏ hàng"
+										: "Đã hết hàng"}
 						</button>
 
 						<button
 							type="button"
+							disabled={user?.roleCode === "ADMIN"}
 							onClick={() => {
 								if (!user) {
 									toast.error("Vui lòng đăng nhập để đặt hoa theo yêu cầu");
@@ -432,14 +440,31 @@ export function FlowerDetails({ productId }: FlowerDetailsProps) {
 									);
 									return;
 								}
+								if (user.roleCode === "ADMIN") {
+									toast.error("Tài khoản Quản trị viên không thể tạo yêu cầu đặt hoa.");
+									return;
+								}
 								setIsCustomOrderPopupOpen(true);
 							}}
-							className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-[#C49B83] text-[#C49B83] hover:bg-[#C49B83] hover:text-white py-4 text-xs font-bold uppercase tracking-widest transition-all duration-300 cursor-pointer"
+							className={`flex-1 flex items-center justify-center gap-2 rounded-xl border py-4 text-xs font-bold uppercase tracking-widest transition-all duration-300 ${
+								user?.roleCode === "ADMIN"
+									? "border-gray-400 text-gray-400 bg-gray-100 dark:bg-gray-800 cursor-not-allowed opacity-60"
+									: "border-[#C49B83] text-[#C49B83] hover:bg-[#C49B83] hover:text-white cursor-pointer"
+							}`}
 						>
 							<Palette className="h-4 w-4" />
 							Đặt hoa theo yêu cầu
 						</button>
 					</div>
+
+					{user?.roleCode === "ADMIN" && (
+						<div className="flex items-center gap-2 text-xs text-sf-accent bg-sf-accent/10 border border-sf-accent/20 rounded-lg p-3 mt-3">
+							<Crown className="h-4 w-4 shrink-0" />
+							<span>
+								Bạn đang đăng nhập với tư cách <strong>Quản trị viên (SouFlow Shop)</strong>. Chức năng mua hàng tạm ẩn, bạn có thể bình luận và giải đáp thắc mắc cho khách hàng ở bên dưới.
+							</span>
+						</div>
+					)}
 				</div>
 			</div>
 

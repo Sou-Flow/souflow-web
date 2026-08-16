@@ -1,6 +1,5 @@
 "use client";
 
-import { Client } from "@stomp/stompjs";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	Camera,
@@ -14,8 +13,6 @@ import Image from "next/image";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import SockJS from "sockjs-client";
-import { getApiBaseUrl } from "@/services/axiosClient";
 import { authService } from "@/services/authService";
 import { orderService } from "@/services/orderService";
 import { useAuthStore } from "@/store/auth-store";
@@ -203,58 +200,33 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 		selectedOrderRef.current = selectedOrder;
 	}, [selectedOrder]);
 
-	// WebSocket Subscription cho Order Realtime
+	// Đồng bộ chi tiết đơn hàng đang xem khi nhận sự kiện Realtime từ WebSocketProvider
 	useEffect(() => {
-		if (!user?.username) return;
-
-		const socketUrl = `${getApiBaseUrl()}/ws`;
-
-		const client = new Client({
-			webSocketFactory: () => new SockJS(socketUrl),
-			reconnectDelay: 5000,
-			onConnect: () => {
-				console.log("Connected to STOMP WebSocket for notifications");
-				client.subscribe(
-					`/topic/user.notifications.${user.username}`,
-					(message) => {
-						try {
-							const payload = JSON.parse(message.body);
-							const statusVn =
-								payload.message || "Trạng thái đơn hàng vừa được cập nhật!";
-							toast.success(statusVn);
-
-							queryClient.invalidateQueries({ queryKey: ["orderHistory"] });
-
-							if (selectedOrderRef.current && payload.referenceId) {
-								const currentId =
-									selectedOrderRef.current.businessId ||
-									selectedOrderRef.current.id;
-								if (String(currentId) === String(payload.referenceId)) {
-									setSelectedOrder((prev) =>
-										prev
-											? { ...prev, status: payload.status || prev.status }
-											: prev,
-									);
-								}
-							}
-						} catch {
-							toast.success("Trạng thái đơn hàng vừa được cập nhật!");
-							queryClient.invalidateQueries({ queryKey: ["orderHistory"] });
-						}
-					},
-				);
-			},
-			onStompError: (frame) => {
-				console.error(`Broker reported error: ${frame.headers.message}`);
-			},
-		});
-
-		client.activate();
-
-		return () => {
-			if (client.active) client.deactivate();
+		const handleOrderStatusUpdate = (e: Event) => {
+			const customEvent = e as CustomEvent<{
+				referenceId?: string;
+				status?: string;
+			}>;
+			const payload = customEvent.detail;
+			if (selectedOrderRef.current && payload?.referenceId) {
+				const currentId =
+					selectedOrderRef.current.businessId ||
+					selectedOrderRef.current.id;
+				if (String(currentId) === String(payload.referenceId)) {
+					setSelectedOrder((prev) =>
+						prev
+							? { ...prev, status: payload.status || prev.status }
+							: prev,
+					);
+				}
+			}
 		};
-	}, [user?.username, queryClient]);
+
+		window.addEventListener("orderStatusUpdated", handleOrderStatusUpdate);
+		return () => {
+			window.removeEventListener("orderStatusUpdated", handleOrderStatusUpdate);
+		};
+	}, []);
 
 	const handleUpdateProfile = (e: React.FormEvent) => {
 		e.preventDefault();
@@ -781,7 +753,7 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 										>
 											<div className="flex justify-between items-start mb-2">
 												<div>
-													<span className="text-xs font-bold uppercase tracking-widest text-sf-fg">
+													<span className="font-mono text-xs font-bold tracking-wide text-sf-fg bg-sf-bg-elevated px-2.5 py-0.5 rounded-md border border-sf-border/70 inline-block">
 														#{order.id}
 													</span>
 													<p className="text-[10px] text-sf-fg-muted mt-0.5">
@@ -855,8 +827,8 @@ export default function AccountForm({ initialUser }: AccountFormProps) {
 				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-opacity">
 					<div className="bg-sf-bg-elevated w-full max-w-lg rounded-2xl border border-sf-border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
 						<div className="p-5 border-b border-sf-border flex justify-between items-center bg-sf-surface">
-							<h3 className="font-serif text-lg font-semibold text-sf-fg">
-								Chi Tiết Đơn Hàng #{selectedOrder.id}
+							<h3 className="font-serif text-lg font-semibold text-sf-fg flex items-center gap-2">
+								Chi Tiết Đơn Hàng <span className="font-mono text-sm px-2 py-0.5 rounded bg-sf-bg border border-sf-border text-[#C49B83]">#{selectedOrder.id}</span>
 							</h3>
 							<div className="flex items-center gap-3">
 								{(selectedOrder.status === "PENDING" ||

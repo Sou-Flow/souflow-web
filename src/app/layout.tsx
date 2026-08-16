@@ -9,6 +9,7 @@ import { SouFlowShell } from "@/components/SouFlowShell";
 import { AuthProvider } from "@/providers/AuthProviders";
 import GoogleProvider from "@/providers/GoogleProvider";
 import TanStackProvider from "@/providers/TanStackProvider";
+import { WebSocketProvider } from "@/providers/WebSocketProvider";
 
 const inter = Inter({
 	variable: "--font-geist-sans",
@@ -171,11 +172,13 @@ export default function RootLayout({
 					<TanStackProvider>
 						<AuthProvider>
 							<ThemeProvider>
-								<BoutiqueProviders>
-									<ErrorBoundary>
-										<SouFlowShell>{children}</SouFlowShell>
-									</ErrorBoundary>
-								</BoutiqueProviders>
+								<WebSocketProvider>
+									<BoutiqueProviders>
+										<ErrorBoundary>
+											<SouFlowShell>{children}</SouFlowShell>
+										</ErrorBoundary>
+									</BoutiqueProviders>
+								</WebSocketProvider>
 								<Toaster
 									position="top-right"
 									toastOptions={{

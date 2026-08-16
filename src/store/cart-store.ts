@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { create } from "zustand";
 import { cartService } from "@/services/cartService";
 import { productService } from "@/services/productService";
+import { useAuthStore } from "@/store/auth-store";
 import { useDiscountStore } from "@/store/discount-store";
 import { mapCartItemResponseToFE } from "@/types/cart.type";
 import type { CartItemFE } from "@/types/order.type";
@@ -117,6 +118,14 @@ export const useCartStore = create<CartState>()((set, get) => ({
 				const currentPath = window.location.pathname + window.location.search;
 				window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
 			}
+			return;
+		}
+
+		const user = useAuthStore.getState().user;
+		if (user?.roleCode === "ADMIN") {
+			toast.error(
+				"Tài khoản Quản trị viên chỉ dùng để phản hồi bình luận, không hỗ trợ mua hàng.",
+			);
 			return;
 		}
 

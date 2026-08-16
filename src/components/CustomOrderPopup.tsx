@@ -56,6 +56,10 @@ export function CustomOrderPopup({
 	if (!isOpen) return null;
 
 	const onSubmit = async (data: CustomOrderFormValues) => {
+		if (user?.roleCode === "ADMIN") {
+			toast.error("Tài khoản Quản trị viên không thể gửi yêu cầu đặt hoa.");
+			return;
+		}
 		try {
 			const discordPayload = {
 				content: null,
@@ -242,7 +246,7 @@ export function CustomOrderPopup({
 						{/* Nút gửi */}
 						<button
 							type="submit"
-							disabled={isSubmitting}
+							disabled={isSubmitting || user?.roleCode === "ADMIN"}
 							className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#1A1A1A] py-3.5 text-xs font-bold uppercase tracking-widest text-white transition-colors hover:bg-[#C49B83] disabled:cursor-not-allowed disabled:opacity-70"
 						>
 							{isSubmitting ? (
@@ -250,6 +254,8 @@ export function CustomOrderPopup({
 									<Loader2 className="h-4 w-4 animate-spin" />
 									Đang gửi...
 								</>
+							) : user?.roleCode === "ADMIN" ? (
+								"Chế độ Quản trị viên (Không hỗ trợ gửi)"
 							) : (
 								"Gửi Yêu Cầu"
 							)}

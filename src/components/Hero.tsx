@@ -294,6 +294,12 @@ export function Hero() {
 																router.push("/login");
 																return;
 															}
+															if (user.roleCode === "ADMIN") {
+																toast.error(
+																	"Tài khoản Quản trị viên chỉ dùng để phản hồi bình luận, không hỗ trợ đặt hàng.",
+																);
+																return;
+															}
 															setAddingItems((prev) => ({
 																...prev,
 																[flower.id]: true,
@@ -305,9 +311,16 @@ export function Hero() {
 															}));
 														}}
 														disabled={
-															addingItems[flower.id] || availableStock <= 0
+															addingItems[flower.id] ||
+															availableStock <= 0 ||
+															user?.roleCode === "ADMIN"
 														}
-														className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-sf-fg text-sf-bg hover:bg-sf-accent hover:text-white transition-colors duration-200 cursor-pointer disabled:bg-gray-400 disabled:text-gray-200 shrink-0 self-end mb-0.5"
+														title={
+															user?.roleCode === "ADMIN"
+																? "Tài khoản Quản trị viên không thể mua hàng"
+																: "Thêm vào giỏ hàng"
+														}
+														className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-sf-fg text-sf-bg hover:bg-sf-accent hover:text-white transition-colors duration-200 cursor-pointer disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed shrink-0 self-end mb-0.5"
 														aria-label="Add to cart"
 													>
 														{addingItems[flower.id] ? (

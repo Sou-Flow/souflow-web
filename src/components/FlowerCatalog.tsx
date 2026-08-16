@@ -14,7 +14,7 @@ import { motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useDebounce } from "@/hooks/use-debounce";
 import { soulFlowRoutes } from "@/lib/souflow/routes";
@@ -91,6 +91,32 @@ export function FlowerCatalog() {
 	// Giữ lại alias cho filteredFlowers.length kiểm tra empty state
 	const filteredFlowers = pageData.content;
 
+	const { data: topSalesFlowers = [] } = useQuery({
+		queryKey: ["topSalesFlowers"],
+		queryFn: async () => {
+			return await productService.getTopSales();
+		},
+	});
+
+	const bestSellerProductIds = useMemo(() => {
+		if (topSalesFlowers && topSalesFlowers.length > 0) {
+			return new Set(
+				topSalesFlowers
+					.filter((f) => (f.totalSales || 0) > 0)
+					.slice(0, 5)
+					.map((f) => f.id),
+			);
+		}
+		// Fallback: nếu API topSales chưa có data, lấy top 5 sản phẩm có totalSales > 0 từ danh sách hoa
+		return new Set(
+			[...paginatedFlowers]
+				.filter((f) => (f.totalSales || 0) > 0)
+				.sort((a, b) => (b.totalSales || 0) - (a.totalSales || 0))
+				.slice(0, 5)
+				.map((f) => f.id),
+		);
+	}, [topSalesFlowers, paginatedFlowers]);
+
 	const isMounted = useRef(false);
 
 	/* biome-ignore lint/correctness/useExhaustiveDependencies: dependencies used for triggering reset */
@@ -132,9 +158,18 @@ export function FlowerCatalog() {
 								);
 								return;
 							}
+							if (user.roleCode === "ADMIN") {
+								toast.error("Tài khoản Quản trị viên không thể gửi yêu cầu đặt hoa.");
+								return;
+							}
 							setIsCustomOrderPopupOpen(true);
 						}}
-						className="inline-flex items-center justify-center gap-2 rounded-xl bg-sf-accent text-white px-5 py-3 text-xs font-bold uppercase tracking-widest hover:bg-[#A37B63] transition-colors cursor-pointer"
+						disabled={user?.roleCode === "ADMIN"}
+						className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-xs font-bold uppercase tracking-widest transition-colors ${
+							user?.roleCode === "ADMIN"
+								? "bg-gray-400 text-gray-200 cursor-not-allowed opacity-70"
+								: "bg-sf-accent text-white hover:bg-[#A37B63] cursor-pointer"
+						}`}
 					>
 						<Palette className="h-4 w-4" />
 						Đặt hoa theo yêu cầu
@@ -277,7 +312,7 @@ export function FlowerCatalog() {
 									sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
 								/>
 
-								{flower.totalSales > 0 && availableStock > 0 && (
+								{bestSellerProductIds.has(flower.id) && availableStock > 0 && (
 									<span className="absolute top-2 left-2 sm:top-3 sm:left-3 flex items-center gap-1 rounded-full bg-amber-500 text-white px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-xs font-bold tracking-widest uppercase shadow-md">
 										<Star className="h-2.5 w-2.5 fill-current" />
 										BEST SELLER
@@ -339,6 +374,10 @@ export function FlowerCatalog() {
 												router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
 												return;
 											}
+											if (user.roleCode === "ADMIN") {
+												toast.error("Tài khoản Quản trị viên chỉ dùng để phản hồi bình luận, không hỗ trợ đặt hàng.");
+												return;
+											}
 											setAddingItems((prev) => ({
 												...prev,
 												[flower.id]: true,
@@ -352,11 +391,18 @@ export function FlowerCatalog() {
 										disabled={
 											addingItems[flower.id] ||
 											availableStock <= 0 ||
-											currentCartQty >= flower.stockQuantity
+											currentCartQty >= flower.stockQuantity ||
+											user?.roleCode === "ADMIN"
+										}
+										title={
+											user?.roleCode === "ADMIN"
+												? "Tài khoản Quản trị viên không thể mua hàng"
+												: "Thêm vào giỏ hàng"
 										}
 										className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full transition-all duration-300 shadow-xs shrink-0 self-end mb-0.5 ${
 											availableStock <= 0 ||
-											currentCartQty >= flower.stockQuantity
+											currentCartQty >= flower.stockQuantity ||
+											user?.roleCode === "ADMIN"
 												? "disabled:bg-gray-400 disabled:text-gray-200 cursor-not-allowed"
 												: "bg-sf-fg text-sf-bg hover:bg-sf-accent hover:text-white cursor-pointer"
 										}`}

@@ -3,11 +3,15 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+	Building2,
 	Check,
 	CheckCircle2,
+	Copy,
 	CreditCard,
 	Loader2,
 	Lock,
+	QrCode,
+	ShieldCheck,
 	ShoppingBag,
 	Truck,
 } from "lucide-react";
@@ -19,6 +23,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import Cookies from "js-cookie";
 import toast from "react-hot-toast";
+import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
+import { getApiBaseUrl } from "@/services/axiosClient";
 import { soulFlowRoutes } from "@/lib/souflow/routes";
 import { orderService } from "@/services/orderService";
 import { shippingService } from "@/services/shippingService";
@@ -41,12 +48,19 @@ export function CheckoutForm() {
 	// === 1. LẤY DATA TỪ STORE ===
 	const { user } = useAuthStore();
 
-	// Auth Guard: Bắt buộc đăng nhập để thanh toán
+	// Auth Guard: Bắt buộc đăng nhập để thanh toán và chặn Admin thanh toán
 	useEffect(() => {
 		const token = Cookies.get("accessToken");
 		if (!token && !user) {
 			toast.error("Vui lòng đăng nhập để tiến hành thanh toán!");
 			router.replace("/login?redirect=/checkout");
+			return;
+		}
+		if (user?.roleCode === "ADMIN") {
+			toast.error(
+				"Tài khoản Quản trị viên chỉ dùng để phản hồi bình luận, không hỗ trợ thanh toán / đặt hàng.",
+			);
+			router.replace(soulFlowRoutes.home);
 		}
 	}, [user, router]);
 
@@ -163,7 +177,18 @@ export function CheckoutForm() {
 	const [placedOrderDetails, setPlacedOrderDetails] = useState<OrderFE | null>(
 		null,
 	);
-	const [timeLeft, setTimeLeft] = useState(60); // 5 phút đếm ngược cho QR
+	const [timeLeft, setTimeLeft] = useState(30); // 30 giây đếm ngược cho QR (Review Demo)
+	const [isQrLoaded, setIsQrLoaded] = useState(false);
+	const [copiedField, setCopiedField] = useState<string | null>(null);
+
+	const handleCopyText = (text: string, fieldName: string) => {
+		if (typeof window !== "undefined" && navigator.clipboard) {
+			navigator.clipboard.writeText(text);
+			setCopiedField(fieldName);
+			toast.success(`Đã sao chép ${fieldName}!`);
+			setTimeout(() => setCopiedField(null), 2000);
+		}
+	};
 
 	// === 4. TÍNH TOÁN TIỀN BẠC ===
 	const subtotal = cart.reduce(
@@ -316,7 +341,8 @@ export function CheckoutForm() {
 			// Chia luồng giao diện dựa trên phương thức thanh toán
 			if (paymentMethod === "SEPAY") {
 				// SEPAY thì chuyển sang màn chờ quét mã
-				setTimeLeft(30); // Đặt lại thời gian đếm ngược
+				setTimeLeft(30); // 30 giây đếm ngược cho review demo
+				setIsQrLoaded(false);
 				setOrderStatus("WAITING_PAYMENT");
 			} else {
 				// COD thì không cần quét mã, cho qua trang Success luôn
@@ -367,59 +393,122 @@ export function CheckoutForm() {
 		}
 	};
 
-	// === 6. EFFECT KIỂM TRA TIỀN (POLLING) DÀNH CHO SEPAY ===
+	// === 6. KIỂM TRA TRẠNG THÁI THANH TOÁN (WEBSOCKET REALTIME + FALLBACK POLLING) ===
 	useEffect(() => {
-		let interval: NodeJS.Timeout;
+		if (orderStatus !== "WAITING_PAYMENT" || !placedOrderDetails) return;
 
-		// Chỉ chạy interval khi đang ở màn hình chờ thanh toán SEPAY
-		if (orderStatus === "WAITING_PAYMENT" && placedOrderDetails) {
-			interval = setInterval(async () => {
+		let isCompleted = false;
+		let pollInterval: NodeJS.Timeout | null = null;
+		let stompClient: Client | null = null;
+
+		const orderCode = (placedOrderDetails.businessId ||
+			placedOrderDetails.id ||
+			(placedOrderDetails as { code?: string }).code) as string;
+
+		const triggerSuccess = async (resOrder?: OrderFE | null) => {
+			if (isCompleted) return;
+			isCompleted = true;
+
+			if (pollInterval) clearInterval(pollInterval);
+			if (stompClient?.active) {
+				stompClient.deactivate();
+			}
+
+			toast.success("Thanh toán thành công!");
+			queryClient.removeQueries({ queryKey: ["flowers"] });
+			queryClient.removeQueries({ queryKey: ["flower"] });
+			queryClient.removeQueries({ queryKey: ["orderHistory"] });
+
+			let finalOrder = resOrder;
+			if (!finalOrder) {
 				try {
-					console.log("Đang kiểm tra trạng thái thanh toán...");
-					const res = await orderService.getOrderByCode(
-						(placedOrderDetails.businessId || placedOrderDetails.id) as string,
-					);
-
-					if (
-						res &&
-						["PAID", "COMPLETED", "SUCCESS", "PAID_SEPAY"].includes(res.status)
-					) {
-						clearInterval(interval);
-						toast.success("Success!");
-						queryClient.removeQueries({ queryKey: ["flowers"] });
-						queryClient.removeQueries({ queryKey: ["flower"] });
-						queryClient.removeQueries({ queryKey: ["orderHistory"] });
-
-						if (!res.items || res.items.length === 0) {
-							res.items = placedOrderDetails.items;
-						} else if (placedOrderDetails.items) {
-							// Đắp lại ảnh từ placedOrderDetails nếu backend trả về thiếu ảnh
-							res.items.forEach((resItem, idx) => {
-								if (!resItem.productImage && placedOrderDetails.items?.[idx]) {
-									resItem.productImage =
-										placedOrderDetails.items[idx].productImage;
-								}
-							});
-						}
-
-						clearCart();
-						clearDiscount();
-						setPlacedOrderDetails(res);
-						setOrderStatus("SUCCESS");
-					}
-				} catch (error) {
-					console.error("Lỗi khi kiểm tra thanh toán", error);
+					finalOrder = await orderService.getOrderByCode(orderCode);
+				} catch {
+					// fallback to placedOrderDetails
 				}
-			}, 3000); // Cứ 3 giây hỏi BE một lần
+			}
+
+			if (finalOrder) {
+				if (!finalOrder.items || finalOrder.items.length === 0) {
+					finalOrder.items = placedOrderDetails.items;
+				} else if (placedOrderDetails.items) {
+					finalOrder.items.forEach((resItem, idx) => {
+						if (!resItem.productImage && placedOrderDetails.items?.[idx]) {
+							resItem.productImage =
+								placedOrderDetails.items[idx].productImage;
+						}
+					});
+				}
+				setPlacedOrderDetails(finalOrder);
+			}
+
+			clearCart();
+			clearDiscount();
+			setOrderStatus("SUCCESS");
+		};
+
+		// 1. Kết nối WebSocket STOMP để bắt sự kiện PAID tức thì (0ms latency)
+		try {
+			const socketUrl = `${getApiBaseUrl()}/ws`;
+			const client = new Client({
+				webSocketFactory: () => new SockJS(socketUrl),
+				reconnectDelay: 3000,
+				heartbeatIncoming: 4000,
+				heartbeatOutgoing: 4000,
+				onConnect: () => {
+					console.log(`STOMP subscribed to order ${orderCode}`);
+					client.subscribe(`/topic/order.${orderCode}`, (message) => {
+						try {
+							const payload = JSON.parse(message.body);
+							if (
+								payload.type === "ORDER_PAID" ||
+								payload.status === "PAID" ||
+								payload.status === "COMPLETED" ||
+								payload.status === "SUCCESS"
+							) {
+								triggerSuccess();
+							}
+						} catch (e) {
+							console.error("Error parsing order WS message:", e);
+						}
+					});
+				},
+			});
+			client.activate();
+			stompClient = client;
+		} catch (err) {
+			console.warn("WebSocket initialization error in Checkout:", err);
 		}
 
-		return () => clearInterval(interval);
+		// 2. Fallback Polling (mỗi 8s) phòng trường hợp mất mạng WebSocket
+		pollInterval = setInterval(async () => {
+			if (isCompleted) return;
+			try {
+				const res = await orderService.getOrderByCode(orderCode);
+				if (
+					res &&
+					["PAID", "COMPLETED", "SUCCESS", "PAID_SEPAY"].includes(res.status)
+				) {
+					triggerSuccess(res);
+				}
+			} catch (error) {
+				console.error("Polling check payment error:", error);
+			}
+		}, 8000);
+
+		return () => {
+			isCompleted = true;
+			if (pollInterval) clearInterval(pollInterval);
+			if (stompClient?.active) {
+				stompClient.deactivate();
+			}
+		};
 	}, [
 		orderStatus,
 		placedOrderDetails,
 		clearCart,
 		clearDiscount,
-		queryClient.removeQueries,
+		queryClient,
 	]);
 
 	const handleCancelOrder = useCallback(async () => {
@@ -508,47 +597,203 @@ export function CheckoutForm() {
 		const qrCodeUrl = `https://qr.sepay.vn/img?bank=VPBank&acc=AGBSPE74K58LCEU9&template=compact&amount=${placedOrderDetails.total}&des=SF${orderId}&showinfo=true&fullacc=true&holder=DANG%20HUY%20HOANG&store=C%E1%BB%ADa%20H%C3%A0ng%20B%C3%A1n%20Hoa%20SouFlow`;
 
 		return (
-			<div className="mx-auto max-w-2xl px-4 py-16 text-center">
+			<div className="mx-auto max-w-4xl px-4 py-10 sm:py-16">
 				<motion.div
 					initial={{ opacity: 0, y: 20 }}
 					animate={{ opacity: 1, y: 0 }}
-					className="bg-sf-bg-elevated rounded-2xl border border-[#C49B83]/30 p-8 shadow-xl space-y-6"
+					className="bg-sf-bg-elevated rounded-3xl border border-[#C49B83]/30 p-6 sm:p-10 shadow-2xl space-y-8"
 				>
-					<h2 className="font-serif text-2xl text-sf-fg">
-						Thanh Toán Đơn Hàng
-					</h2>
-					<p className="text-sm text-sf-fg-muted">
-						Mã đơn:{" "}
-						<strong className="text-sf-fg">
-							{placedOrderDetails.businessId || placedOrderDetails.id}
-						</strong>
-					</p>
-
-					<div className="bg-white p-4 rounded-xl border border-gray-200 inline-block">
-						<Image
-							src={qrCodeUrl}
-							alt="Mã QR Thanh Toán"
-							width={256}
-							height={256}
-							className="w-64 h-64 object-contain mx-auto"
-						/>
+					{/* Header */}
+					<div className="text-center space-y-2">
+						<div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#C49B83]/10 text-[#C49B83] text-xs font-semibold uppercase tracking-wider">
+							<QrCode className="h-4 w-4" />
+							Thanh Toán Chuyển Khoản QR
+						</div>
+						<h2 className="font-serif text-2xl sm:text-3xl text-sf-fg font-normal">
+							Quét Mã Để Thanh Toán
+						</h2>
+						<p className="text-xs sm:text-sm text-sf-fg-muted">
+							Mã đơn hàng:{" "}
+							<strong className="text-sf-fg font-mono">
+								#{placedOrderDetails.businessId || placedOrderDetails.id}
+							</strong>
+						</p>
 					</div>
 
-					<div className="flex flex-col items-center gap-3">
-						<Loader2 className="h-6 w-6 text-[#C49B83] animate-spin" />
-						<p className="text-xs text-amber-600 font-medium tracking-wide uppercase">
-							Hệ thống đang chờ nhận tiền...
-						</p>
-						<p className="text-xl font-bold font-mono text-red-500">
-							{formatTime(timeLeft)}
-						</p>
+					{/* 2-Column Content */}
+					<div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+						{/* Left: SePay QR Card */}
+						<div className="lg:col-span-6 flex flex-col items-center justify-center space-y-4">
+							<div className="bg-white p-4 rounded-2xl border-2 border-[#C49B83]/30 shadow-lg w-full max-w-[320px] sm:max-w-[340px] flex items-center justify-center overflow-hidden">
+								{/* biome-ignore lint/a11y/noRedundantAlt: QR Code */}
+								<img
+									src={qrCodeUrl}
+									alt="Mã QR Thanh Toán SePay"
+									className="w-full h-auto object-contain mx-auto"
+								/>
+							</div>
+
+							{/* Realtime & Timer Badge */}
+							<div className="flex flex-col items-center gap-2 w-full max-w-[320px]">
+								<div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-medium border border-amber-500/20">
+									<Loader2 className="h-3.5 w-3.5 animate-spin text-amber-500" />
+									Hệ thống đang chờ nhận tiền...
+								</div>
+
+								<div className="text-xs text-sf-fg-muted flex items-center gap-1.5">
+									<span>Thời gian hiệu lực:</span>
+									<span className="font-mono font-bold text-red-500 text-sm">
+										{formatTime(timeLeft)}
+									</span>
+								</div>
+							</div>
+						</div>
+
+						{/* Right: Bank Transfer Details with 1-click Copy */}
+						<div className="lg:col-span-6 space-y-4">
+							<div className="bg-sf-surface rounded-2xl p-5 border border-sf-border space-y-3.5 text-left text-xs">
+								<div className="flex items-center justify-between pb-3 border-b border-sf-border">
+									<span className="font-semibold text-sf-fg text-sm flex items-center gap-2">
+										<Building2 className="h-4 w-4 text-[#C49B83]" />
+										Thông Tin Chuyển Khoản
+									</span>
+									<span className="text-[11px] text-[#C49B83] font-medium bg-[#C49B83]/10 px-2 py-0.5 rounded">
+										VPBank
+									</span>
+								</div>
+
+								{/* Số tài khoản */}
+								<div className="flex items-center justify-between bg-sf-bg p-3 rounded-xl border border-sf-border">
+									<div>
+										<div className="text-[11px] text-sf-fg-muted font-medium">Số tài khoản</div>
+										<div className="font-mono font-bold text-sm text-sf-fg tracking-wide">
+											AGBSPE74K58LCEU9
+										</div>
+									</div>
+									<button
+										type="button"
+										onClick={() => handleCopyText("AGBSPE74K58LCEU9", "Số tài khoản")}
+										className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer ${
+											copiedField === "Số tài khoản"
+												? "bg-emerald-600 text-white"
+												: "bg-[#1A1A1A] text-white hover:bg-[#C49B83] dark:bg-white dark:text-[#1A1A1A] dark:hover:bg-[#C49B83] dark:hover:text-white"
+										}`}
+									>
+										{copiedField === "Số tài khoản" ? (
+											<>
+												<Check className="h-3.5 w-3.5" />
+												Đã chép
+											</>
+										) : (
+											<>
+												<Copy className="h-3.5 w-3.5" />
+												Sao chép
+											</>
+										)}
+									</button>
+								</div>
+
+								{/* Chủ tài khoản */}
+								<div className="flex items-center justify-between bg-sf-bg p-3 rounded-xl border border-sf-border">
+									<div>
+										<div className="text-[11px] text-sf-fg-muted font-medium">Chủ tài khoản</div>
+										<div className="font-semibold text-xs text-sf-fg uppercase tracking-wide">
+											DANG HUY HOANG
+										</div>
+									</div>
+								</div>
+
+								{/* Số tiền */}
+								<div className="flex items-center justify-between bg-sf-bg p-3 rounded-xl border border-sf-border">
+									<div>
+										<div className="text-[11px] text-sf-fg-muted font-medium">Số tiền thanh toán</div>
+										<div className="font-mono font-bold text-base text-[#C49B83]">
+											{placedOrderDetails.total.toLocaleString("vi-VN")} ₫
+										</div>
+									</div>
+									<button
+										type="button"
+										onClick={() =>
+											handleCopyText(
+												String(placedOrderDetails.total),
+												"Số tiền thanh toán",
+											)
+										}
+										className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer ${
+											copiedField === "Số tiền thanh toán"
+												? "bg-emerald-600 text-white"
+												: "bg-[#1A1A1A] text-white hover:bg-[#C49B83] dark:bg-white dark:text-[#1A1A1A] dark:hover:bg-[#C49B83] dark:hover:text-white"
+										}`}
+									>
+										{copiedField === "Số tiền thanh toán" ? (
+											<>
+												<Check className="h-3.5 w-3.5" />
+												Đã chép
+											</>
+										) : (
+											<>
+												<Copy className="h-3.5 w-3.5" />
+												Sao chép
+											</>
+										)}
+									</button>
+								</div>
+
+								{/* Nội dung chuyển khoản */}
+								<div className="flex items-center justify-between bg-amber-500/10 dark:bg-amber-950/20 p-3 rounded-xl border border-amber-500/30">
+									<div>
+										<div className="text-[11px] text-amber-700 dark:text-amber-300 font-semibold">
+											Nội dung chuyển khoản (Bắt buộc)
+										</div>
+										<div className="font-mono font-bold text-sm text-sf-fg tracking-wide">
+											SF{orderId}
+										</div>
+									</div>
+									<button
+										type="button"
+										onClick={() =>
+											handleCopyText(`SF${orderId}`, "Nội dung chuyển khoản")
+										}
+										className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer ${
+											copiedField === "Nội dung chuyển khoản"
+												? "bg-emerald-600 text-white"
+												: "bg-amber-600 text-white hover:bg-amber-700 dark:bg-amber-500 dark:text-[#1A1A1A] dark:hover:bg-amber-400"
+										}`}
+									>
+										{copiedField === "Nội dung chuyển khoản" ? (
+											<>
+												<Check className="h-3.5 w-3.5" />
+												Đã chép
+											</>
+										) : (
+											<>
+												<Copy className="h-3.5 w-3.5" />
+												Sao chép
+											</>
+										)}
+									</button>
+								</div>
+							</div>
+
+							<div className="flex items-start gap-2 p-3 rounded-xl bg-sf-surface/50 border border-sf-border/60 text-[11px] text-sf-fg-muted text-left leading-relaxed">
+								<ShieldCheck className="h-4 w-4 text-[#C49B83] shrink-0 mt-0.5" />
+								<span>
+									Vui lòng giữ nguyên <strong>Nội dung chuyển khoản</strong> để hệ thống
+									tự động đối soát và xác nhận đơn ngay lập tức (0ms).
+								</span>
+							</div>
+						</div>
+					</div>
+
+					{/* Footer Actions */}
+					<div className="pt-4 border-t border-sf-border/60 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
 						<p className="text-[11px] text-sf-fg-muted">
-							Mã QR sẽ tự động hủy nếu quá thời gian hoặc thanh toán thất bại.
+							Mã QR sẽ tự động hủy sau khi hết thời gian đếm ngược.
 						</p>
 						<button
 							type="button"
 							onClick={handleCancelOrder}
-							className="mt-4 px-6 py-2 rounded-full border border-red-500 text-red-500 text-xs font-bold uppercase tracking-widest hover:bg-red-50 transition-colors"
+							className="px-6 py-2.5 rounded-full border border-red-500/60 text-red-500 text-xs font-semibold uppercase tracking-wider hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
 						>
 							Hủy thanh toán
 						</button>

@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { soulFlowRoutes } from "@/lib/souflow/routes";
+import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cart-store";
 import { useDiscountStore } from "@/store/discount-store";
 
@@ -26,6 +27,7 @@ type CartDrawerProps = {
 
 export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 	const router = useRouter();
+	const { user } = useAuthStore();
 	const { cart, removeFromCart, updateCartQuantity, revalidateCart } =
 		useCartStore();
 	const {
@@ -298,18 +300,24 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 								</div>
 
 								{/* Direct route checkout trigger */}
-								<button
-									type="button"
-									id="checkout-redirect-btn"
-									onClick={() => {
-										router.push(soulFlowRoutes.checkout);
-										onClose();
-									}}
-									className="w-full flex items-center justify-center gap-2 rounded-xl bg-sf-fg py-4 text-xs font-bold uppercase tracking-widest text-sf-bg hover:bg-sf-accent hover:text-white transition-all duration-300 shadow-md mt-2"
-								>
-									<CreditCard className="h-4 w-4" />
-									Tiến Hành Thanh Toán
-								</button>
+								{user?.roleCode === "ADMIN" ? (
+									<div className="mt-3 rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-center text-xs text-amber-600 dark:text-amber-400 font-medium">
+										Tài khoản Quản trị viên chỉ dùng để phản hồi bình luận, không hỗ trợ đặt hàng.
+									</div>
+								) : (
+									<button
+										type="button"
+										id="checkout-redirect-btn"
+										onClick={() => {
+											router.push(soulFlowRoutes.checkout);
+											onClose();
+										}}
+										className="w-full flex items-center justify-center gap-2 rounded-xl bg-sf-fg py-4 text-xs font-bold uppercase tracking-widest text-sf-bg hover:bg-sf-accent hover:text-white transition-all duration-300 shadow-md mt-2"
+									>
+										<CreditCard className="h-4 w-4" />
+										Tiến Hành Thanh Toán
+									</button>
+								)}
 							</div>
 						)}
 					</motion.div>
