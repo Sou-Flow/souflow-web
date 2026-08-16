@@ -14,11 +14,15 @@ import { WebSocketProvider } from "@/providers/WebSocketProvider";
 const inter = Inter({
 	variable: "--font-geist-sans",
 	subsets: ["latin", "vietnamese"],
+	display: "swap",
+	preload: true,
 });
 
 const playfair = Playfair_Display({
 	variable: "--font-serif",
 	subsets: ["latin", "vietnamese"],
+	display: "swap",
+	preload: true,
 });
 
 export const viewport: Viewport = {
@@ -161,6 +165,18 @@ export default function RootLayout({
 			suppressHydrationWarning
 		>
 			<head>
+				<link rel="preconnect" href="https://api.souflow.shop" />
+				<link rel="dns-prefetch" href="https://api.souflow.shop" />
+				<link rel="preconnect" href="https://storage.souflow.shop" />
+				<link rel="preconnect" href="https://s3.souflow.shop" />
+				<link
+					rel="preload"
+					as="image"
+					href="/images/about-us-main1.avif"
+					type="image/avif"
+					// @ts-expect-error - fetchPriority is standard in modern HTML
+					fetchPriority="high"
+				/>
 				<script
 					type="application/ld+json"
 					// biome-ignore lint/security/noDangerouslySetInnerHtml: Google SEO JSON-LD schema

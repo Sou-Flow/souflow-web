@@ -72,13 +72,10 @@ export function Hero() {
 
 	return (
 		<div className="relative overflow-hidden bg-sf-bg transition-colors duration-300">
-			{/* Main Hero Showcase */}
+			{/* Main Hero Showcase (Above-the-fold optimized for LCP) */}
 			<section className="relative mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8 lg:pt-8">
 				<div className="grid grid-cols-1 gap-6 lg:gap-8 lg:grid-cols-12 lg:items-center">
-					<motion.div
-						initial={{ opacity: 0, y: 30 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.8 }}
+					<div
 						className="lg:col-span-12 xl:col-span-7 space-y-4 text-center lg:text-left"
 					>
 						<h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-light tracking-tight text-sf-fg leading-tight">
@@ -107,24 +104,23 @@ export function Hero() {
 								<ArrowRight className="h-4 w-4 group-hover:translate-x-1.5 transition-transform" />
 							</Link>
 						</div>
-					</motion.div>
+					</div>
 
-					<motion.div
-						initial={{ opacity: 0, scale: 0.95 }}
-						animate={{ opacity: 1, scale: 1 }}
-						transition={{ duration: 0.8, delay: 0.1 }}
+					<div
 						className="lg:col-span-12 xl:col-span-5 relative"
 					>
-						<div className="relative aspect-4/5 w-full h-72 sm:h-96 md:h-110 overflow-hidden rounded-xl">
-							<div className="absolute inset-0 bg-sf-surface" />{" "}
-							{/* Main Hero Image */}
+						<div className="relative aspect-4/5 w-full h-72 sm:h-96 md:h-110 overflow-hidden rounded-xl bg-sf-surface">
+							{/* Main Hero Image - Critical LCP Element */}
 							<Image
 								src="/images/about-us-main1.avif"
-								alt="Hero Image"
+								alt="SouFlow - Hoa tươi thiết kế cao cấp"
 								fill
-								sizes="(max-width: 768px) 100vw, 500px"
+								sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 550px"
 								className="object-cover"
 								priority
+								fetchPriority="high"
+								loading="eager"
+								quality={85}
 							/>
 							<div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
 							<div className="absolute bottom-6 left-6 sm:left-10 z-10">
@@ -136,7 +132,7 @@ export function Hero() {
 								</h3>
 							</div>
 						</div>
-					</motion.div>
+					</div>
 				</div>
 			</section>
 
