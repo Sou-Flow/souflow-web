@@ -2,14 +2,15 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
-import { ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, KeyRound, Mail, RefreshCw } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { soulFlowRoutes } from "@/lib/souflow/routes";
 import { authService } from "@/services/authService";
+import { useAuthStore } from "@/store/auth-store";
 import { useLocationStore } from "@/store/location-store";
 import type { District, Ward } from "@/types/location.type";
 import { encodeAddress } from "@/utils/addressUtils";
@@ -21,9 +22,17 @@ import {
 export function RegisterScreen() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
-	const callbackUrl = searchParams.get("callbackUrl");
+	const callbackUrl = searchParams.get("callbackUrl") || searchParams.get("redirect");
 	const defaultEmail = searchParams.get("email") || "";
 	const defaultFullName = searchParams.get("fullname") || "";
+	const setUser = useAuthStore((state) => state.setUser);
+
+	const [step, setStep] = useState<"FORM" | "OTP">("FORM");
+	const [registeredEmail, setRegisteredEmail] = useState("");
+	const [otp, setOtp] = useState("");
+	const [resendTimer, setResendTimer] = useState(60);
+	const [isVerifying, setIsVerifying] = useState(false);
+	const [pendingPayload, setPendingPayload] = useState<Record<string, unknown> | null>(null);
 
 	const {
 		register,
@@ -33,7 +42,7 @@ export function RegisterScreen() {
 	} = useForm<RegisterFormData>({
 		resolver: zodResolver(registerValidator),
 		defaultValues: {
-			username: "",
+			username: defaultEmail ? defaultEmail.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "") : "",
 			email: defaultEmail,
 			password: "",
 			confirmPassword: "",
@@ -55,6 +64,15 @@ export function RegisterScreen() {
 			setCapsLockOn(false);
 		}
 	};
+
+	// Countdown timer for OTP resend
+	useEffect(() => {
+		if (step !== "OTP" || resendTimer <= 0) return;
+		const interval = setInterval(() => {
+			setResendTimer((prev) => prev - 1);
+		}, 1000);
+		return () => clearInterval(interval);
+	}, [step, resendTimer]);
 
 	const { locationData } = useLocationStore();
 
@@ -98,84 +116,244 @@ export function RegisterScreen() {
 				address: finalAddress,
 			};
 
-			await authService.register(payload);
-			toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
-			setTimeout(() => {
-				router.push(
-					`${soulFlowRoutes.login}${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ""}`,
-				);
-			}, 1000);
-		} catch (error) {
+			const toastId = toast.loading("Đang gửi mã xác thực OTP về email...");
+			await authService.sendRegisterOtp(payload);
+			toast.dismiss(toastId);
+			toast.success(`Mã xác thực OTP đã được gửi đến ${data.email}!`, { duration: 4000 });
+
+			setPendingPayload(payload);
+			setRegisteredEmail(data.email);
+			setStep("OTP");
+			setResendTimer(60);
+		} catch (error: unknown) {
+			toast.dismiss(toastId);
+			let errMsg = "Không thể gửi mã OTP. Vui lòng thử lại.";
 			if (axios.isAxiosError(error)) {
-				toast.error(
+				errMsg =
 					error.response?.data?.message ||
-						"Đăng ký thất bại. Vui lòng thử lại.",
-				);
+					error.response?.data?.error ||
+					(typeof error.response?.data === "string" ? error.response.data : "") ||
+					errMsg;
 			} else if (error instanceof Error) {
-				toast.error(error.message);
-			} else {
-				toast.error("Đã có lỗi xảy ra. Vui lòng thử lại.");
+				errMsg = error.message;
 			}
+			toast.error(errMsg, { duration: 5000 });
 		}
 	};
+
+	const handleResendOtp = async () => {
+		if (resendTimer > 0 || !pendingPayload) return;
+		const toastId = toast.loading("Đang gửi lại mã OTP...");
+		try {
+			await authService.sendRegisterOtp(pendingPayload);
+			toast.dismiss(toastId);
+			toast.success(`Đã gửi lại mã OTP đến ${registeredEmail}!`, { duration: 4000 });
+			setResendTimer(60);
+		} catch (error: unknown) {
+			toast.dismiss(toastId);
+			let errMsg = "Lỗi khi gửi lại OTP.";
+			if (axios.isAxiosError(error)) {
+				errMsg =
+					error.response?.data?.message ||
+					error.response?.data?.error ||
+					(typeof error.response?.data === "string" ? error.response.data : "") ||
+					errMsg;
+			} else if (error instanceof Error) {
+				errMsg = error.message;
+			}
+			toast.error(errMsg, { duration: 5000 });
+		}
+	};
+
+	const handleVerifyOtp = async (e: React.FormEvent) => {
+		e.preventDefault();
+		const cleanOtp = otp.trim();
+		if (!cleanOtp || cleanOtp.length !== 6) {
+			toast.error("Vui lòng nhập đủ 6 chữ số OTP!");
+			return;
+		}
+
+		setIsVerifying(true);
+		const toastId = toast.loading("Đang xác thực tài khoản...");
+		try {
+			const userData = await authService.verifyRegisterOtp(registeredEmail, cleanOtp);
+			setUser(userData);
+			const userName =
+				userData.fullName?.slice(0, userData.fullName.indexOf(" ")) ||
+				userData.username ||
+				"Quý Khách";
+			toast.dismiss(toastId);
+			toast.success(`Đăng ký thành công! Chào mừng ${userName} đến với SouFlow!`, { duration: 4000 });
+
+			setTimeout(() => {
+				router.push(callbackUrl || soulFlowRoutes.home);
+			}, 800);
+		} catch (error: unknown) {
+			toast.dismiss(toastId);
+			let errMsg = "Mã OTP không hợp lệ hoặc đã hết hạn!";
+			if (axios.isAxiosError(error)) {
+				errMsg =
+					error.response?.data?.message ||
+					error.response?.data?.error ||
+					(typeof error.response?.data === "string" ? error.response.data : "") ||
+					errMsg;
+			} else if (error instanceof Error) {
+				errMsg = error.message;
+			}
+			toast.error(errMsg, { duration: 5000 });
+		} finally {
+			setIsVerifying(false);
+		}
+	};
+
 	const onError = () => {
 		toast.error("Vui lòng kiểm tra lại thông tin đã nhập.");
 	};
 
 	return (
-		<div className="w-full min-h-[85vh] md:min-h-175 bg-sf-bg-elevated grid grid-cols-1 lg:grid-cols-12 gap-12 items-center p-4 sm:p-6 md:p-8">
-			{/* Cột Trái: Nội dung Editorial (Màn Hình 2) */}
-			<section className="lg:col-span-6 space-y-8 text-center lg:text-left ml-30 mb-60">
-				<div className="space-y-4">
-					<span className="text-primary font-semibold text-xs uppercase tracking-[0.3em] block">
-						Bắt đầu hành trình của bạn với SouFlow
-					</span>
-					<h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-light text-sf-heading leading-tight select-none">
-						Nơi những loài <br />
-						<span className="font-bold italic text-primary">Hoa</span> Kể
-						Chuyện.
-					</h1>
-					<p className="font-sans text-sm sm:text-base text-secondary/80 max-w-md mx-auto lg:mx-0 leading-relaxed font-light">
-						Tại SouFlow, chúng tôi tin rằng mỗi bông hoa đều có một câu chuyện
-						để kể. Hãy cùng chúng tôi khám phá vẻ đẹp của thiên nhiên và tạo nên
-						những kỷ niệm đáng nhớ qua từng cánh hoa.
-					</p>
-				</div>
-
-				{/* Khung ảnh Nghệ thuật Ranunculus nổi bật */}
-				<div className="relative group mt-8 hidden lg:block max-w-md mx-auto lg:mx-0">
-					<div className="relative aspect-4/3 rounded-2xl overflow-hidden shadow-xl border border-outline-variant/40 transform transition-transform duration-700 hover:scale-[1.01]">
-						<Image
-							className="w-full h-full object-cover"
-							src="/images/register-image.png"
-							alt="High-end Ranunculus Close-up"
-							referrerPolicy="no-referrer"
-							fill
-							sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-							priority
-						/>
-					</div>
-				</div>
-			</section>
-
-			{/* Cột Phải: Form Đăng ký */}
-			<section className="lg:col-span-6 bg-sf-bg-elevated xl:col-start-8 xl:col-span-5">
-				<div className="glass-panel p-8 sm:p-12 rounded-2xl border-2 border-outline-variant/30  border-[#C49B83]/30 shadow-xl relative overflow-hidden bg-sf-bg-elevated">
-					<div className="mb-8">
-						<h2 className="font-serif text-3xl font-light text-sf-heading mb-2">
-							Tạo Tài Khoản Mới
-						</h2>
-						<p className="font-sans text-base text-secondary/80 text-sf-fg font-light">
-							Chúng tôi rất vui được chào đón bạn đến với cộng đồng SouFlow! Hãy
-							điền thông tin bên dưới để bắt đầu hành trình khám phá vẻ đẹp của
-							thiên nhiên cùng chúng tôi.
+		<div className="w-full min-h-[85vh] bg-sf-bg flex items-center justify-center p-4 sm:p-6 lg:p-10">
+			<div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+				{/* Cột Trái: Nội dung Editorial (Ẩn trên mobile, chỉ hiện trên desktop) */}
+				<section className="hidden lg:block lg:col-span-6 space-y-6">
+					<div className="space-y-3">
+						<span className="text-sf-accent font-bold text-xs uppercase tracking-[0.3em] block">
+							Bắt đầu hành trình của bạn với SouFlow
+						</span>
+						<h1 className="font-serif text-4xl lg:text-5xl font-light text-sf-fg leading-tight select-none">
+							Nơi những loài <br />
+							<span className="font-semibold italic text-sf-accent">Hoa</span> Kể
+							Chuyện.
+						</h1>
+						<p className="font-sans text-sm sm:text-base text-sf-fg-muted max-w-md leading-relaxed font-light">
+							Tại SouFlow, chúng tôi tin rằng mỗi bông hoa đều có một câu chuyện
+							để kể. Hãy cùng chúng tôi khám phá vẻ đẹp của thiên nhiên và tạo nên
+							những kỷ niệm đáng nhớ qua từng cánh hoa.
 						</p>
 					</div>
 
-					<form
-						className="space-y-6"
-						onSubmit={handleFormSubmit(onSubmit, onError)}
-					>
+					{/* Khung ảnh Nghệ thuật Ranunculus nổi bật */}
+					<div className="relative group max-w-md">
+						<div className="relative aspect-4/3 rounded-2xl overflow-hidden shadow-lg border border-sf-border transform transition-transform duration-700 hover:scale-[1.01]">
+							<Image
+								className="w-full h-full object-cover"
+								src="/images/register-image.png"
+								alt="High-end Ranunculus Close-up"
+								referrerPolicy="no-referrer"
+								fill
+								sizes="(max-width: 1200px) 50vw, 33vw"
+								priority
+							/>
+						</div>
+					</div>
+				</section>
+
+				{/* Cột Phải: Form Đăng ký */}
+				<section className="col-span-1 lg:col-span-6 w-full max-w-xl mx-auto">
+					<div className="p-6 sm:p-10 rounded-2xl border border-sf-border shadow-xl relative overflow-hidden bg-sf-bg-elevated">
+						{step === "OTP" ? (
+							<div>
+								<div className="text-center mb-6">
+									<div className="h-14 w-14 rounded-2xl bg-sf-accent/15 border border-sf-accent/30 text-sf-accent flex items-center justify-center mx-auto mb-4 shadow-xs">
+										<Mail className="h-7 w-7" />
+									</div>
+									<h2 className="font-serif text-2xl sm:text-3xl font-normal text-sf-fg mb-2">
+										Xác Thực Mã OTP
+									</h2>
+									<p className="font-sans text-xs sm:text-sm text-sf-fg-muted leading-relaxed max-w-md mx-auto">
+										Mã xác thực 6 chữ số đã được gửi đến hộp thư:{" "}
+										<span className="font-semibold text-sf-fg">{registeredEmail}</span>
+									</p>
+								</div>
+
+								<form onSubmit={handleVerifyOtp} className="space-y-6">
+									<div className="space-y-2">
+										<label
+											htmlFor="otp-input"
+											className="text-[10px] uppercase tracking-widest font-bold text-secondary block text-center"
+										>
+											Nhập 6 Chữ Số OTP
+										</label>
+										<div className="relative flex items-center justify-center">
+											<KeyRound className="absolute left-4 w-5 h-5 text-sf-accent pointer-events-none" />
+											<input
+												id="otp-input"
+												type="text"
+												inputMode="numeric"
+												maxLength={6}
+												autoFocus
+												placeholder="------"
+												value={otp}
+												onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+												className="w-full bg-sf-bg border border-sf-border rounded-xl py-3.5 pl-12 pr-4 text-center font-mono text-2xl tracking-[0.4em] font-bold text-sf-fg focus:border-sf-accent focus:ring-1 focus:ring-sf-accent transition-all outline-none"
+												required
+											/>
+										</div>
+										<p className="text-[11px] text-center text-sf-fg-muted mt-1">
+											Mã OTP có hiệu lực trong vòng <b className="text-sf-fg">5 phút</b>.
+										</p>
+									</div>
+
+									<div className="space-y-3 pt-2">
+										<button
+											type="submit"
+											disabled={isVerifying || otp.length !== 6}
+											className="w-full py-3.5 bg-sf-accent hover:bg-[#c3632b] disabled:opacity-50 text-white text-xs font-semibold uppercase tracking-[0.2em] rounded-xl shadow-lg transition-all duration-300 transform active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+										>
+											{isVerifying ? (
+												<span>ĐANG XÁC THỰC...</span>
+											) : (
+												<>
+													<span>Xác Nhận & Hoàn Tất</span>
+													<ArrowRight className="w-4 h-4" />
+												</>
+											)}
+										</button>
+
+										<div className="flex items-center justify-between text-xs pt-2">
+											<button
+												type="button"
+												onClick={() => setStep("FORM")}
+												className="flex items-center gap-1.5 text-sf-fg-muted hover:text-sf-fg transition-colors cursor-pointer"
+											>
+												<ArrowLeft className="w-3.5 h-3.5" />
+												<span>Sửa thông tin</span>
+											</button>
+
+											<button
+												type="button"
+												disabled={resendTimer > 0}
+												onClick={handleResendOtp}
+												className={`flex items-center gap-1.5 font-medium transition-colors ${
+													resendTimer > 0
+														? "text-sf-fg-muted/60 cursor-not-allowed"
+														: "text-sf-accent hover:underline cursor-pointer"
+												}`}
+											>
+												<RefreshCw className="w-3.5 h-3.5" />
+												<span>
+													{resendTimer > 0 ? `Gửi lại mã (${resendTimer}s)` : "Gửi lại mã OTP"}
+												</span>
+											</button>
+										</div>
+									</div>
+								</form>
+							</div>
+						) : (
+							<>
+								<div className="mb-6">
+									<h2 className="font-serif text-2xl sm:text-3xl font-light text-sf-fg mb-2">
+										Tạo Tài Khoản Mới
+									</h2>
+									<p className="font-sans text-xs sm:text-sm text-sf-fg-muted font-light leading-relaxed">
+										Chúng tôi rất vui được chào đón bạn đến với cộng đồng SouFlow! Hãy
+										điền thông tin bên dưới để bắt đầu hành trình cùng chúng tôi.
+									</p>
+								</div>
+
+								<form
+									className="space-y-6"
+									onSubmit={handleFormSubmit(onSubmit, onError)}
+								>
 						<div className="space-y-5">
 							{/* fullname */}
 							<div className="space-y-1.5">
@@ -254,15 +432,14 @@ export function RegisterScreen() {
 									className="text-[10px] uppercase tracking-widest font-bold text-secondary"
 									htmlFor="reg-username"
 								>
-									Tên Người Dùng
+									Tên Người Dùng (Username)
 								</label>
 								<input
 									id="reg-username"
 									type="text"
 									placeholder="evelyn_rose"
 									{...register("username")}
-									readOnly={!!defaultEmail}
-									className={`w-full border-0 border-b border-outline-variant/60 py-2.5 px-0 text-sm focus:border-primary transition-all focus:outline-none placeholder-secondary/30 text-sf-fg ${defaultEmail ? "bg-white/10 opacity-70 cursor-not-allowed" : "bg-white/5"}`}
+									className="w-full bg-white/5 border-0 border-b border-outline-variant/60 py-2.5 px-0 text-sm focus:border-primary transition-all focus:outline-none placeholder-secondary/30 text-sf-fg"
 									required
 								/>
 								{errors.username && (
@@ -528,8 +705,11 @@ export function RegisterScreen() {
 							</button>
 						</p>
 					</div>
-				</div>
-			</section>
+				</>
+			)}
 		</div>
-	);
+	</section>
+		</div>
+	</div>
+);
 }

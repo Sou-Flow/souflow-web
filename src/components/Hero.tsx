@@ -43,38 +43,14 @@ export function Hero() {
 		},
 	});
 
-	const randomBudgetFlowers = useMemo(() => {
+	const featuredBudgetFlowers = useMemo(() => {
 		if (!flowers || flowers.length === 0) return [];
-
-		// Giả định property chứa giá trị số nguyên của bạn là 'price'
-		const budgetFlowers = flowers.filter((f) => f.price < 500000);
-
-		// Randomize (xáo trộn) mảng và lấy 3 phần tử đầu
-		// eslint-disable-next-line react-hooks/purity
-		const shuffled = [...budgetFlowers].sort(() => 0.5 - Math.random());
-		return shuffled.slice(0, 3);
+		// Sắp xếp ổn định theo lượt bán để tránh layout shift khi re-render
+		return [...flowers]
+			.filter((f) => f.stockQuantity > 0)
+			.sort((a, b) => (b.totalSales || 0) - (a.totalSales || 0))
+			.slice(0, 3);
 	}, [flowers]);
-
-	const _budgetTiers = [
-		{
-			label: "Petite Delight",
-			value: "Dưới 500k",
-			img: "https://images.unsplash.com/photo-1596436889106-be35e843f974?auto=format&fit=crop&q=80&w=300",
-			desc: "Thiết kế tinh tế nhỏ gọn, tô điểm bàn làm việc.",
-		},
-		{
-			label: "Atelier Signature",
-			value: "500k - 1 Triệu",
-			img: "https://images.unsplash.com/photo-1561181286-d3fee7d55364?auto=format&fit=crop&q=80&w=300",
-			desc: "Bó hoa xoắn tròn nguyên bản tinh xảo từ nghệ nhân.",
-		},
-		{
-			label: "Grand Opulence",
-			value: "Trên 1 Triệu",
-			img: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&q=80&w=300",
-			desc: "Cực phẩm hoa quý phái sang trọng cho buổi lễ đỉnh cao.",
-		},
-	];
 
 	const brandPillars = [
 		{
@@ -96,17 +72,10 @@ export function Hero() {
 
 	return (
 		<div className="relative overflow-hidden bg-sf-bg transition-colors duration-300">
-			{/* Decorative Blur Orbs */}
-			<div className="absolute top-1/4 left-1/10 h-48 w-48 rounded-full bg-sf-accent/10 blur-3xl pointer-events-none" />
-			<div className="absolute bottom-1/4 right-1/10 h-64 w-64 rounded-full bg-(--sf-surface)/50 blur-3xl pointer-events-none" />
-
-			{/* Main Hero Showcase */}
+			{/* Main Hero Showcase (Above-the-fold optimized for LCP) */}
 			<section className="relative mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8 lg:pt-8">
 				<div className="grid grid-cols-1 gap-6 lg:gap-8 lg:grid-cols-12 lg:items-center">
-					<motion.div
-						initial={{ opacity: 0, y: 30 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.8 }}
+					<div
 						className="lg:col-span-12 xl:col-span-7 space-y-4 text-center lg:text-left"
 					>
 						<h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-light tracking-tight text-sf-fg leading-tight">
@@ -135,24 +104,23 @@ export function Hero() {
 								<ArrowRight className="h-4 w-4 group-hover:translate-x-1.5 transition-transform" />
 							</Link>
 						</div>
-					</motion.div>
+					</div>
 
-					<motion.div
-						initial={{ opacity: 0, scale: 0.95 }}
-						animate={{ opacity: 1, scale: 1 }}
-						transition={{ duration: 0.8, delay: 0.1 }}
+					<div
 						className="lg:col-span-12 xl:col-span-5 relative"
 					>
-						<div className="relative aspect-4/5 w-full h-72 sm:h-96 md:h-110 overflow-hidden rounded-xl">
-							<div className="absolute inset-0 bg-sf-surface" />{" "}
-							{/* Main Hero Image */}
+						<div className="relative aspect-4/5 w-full h-72 sm:h-96 md:h-110 overflow-hidden rounded-xl bg-sf-surface">
+							{/* Main Hero Image - Critical LCP Element */}
 							<Image
-								src="/images/about-us-main1.avif"
-								alt="Hero Image"
+								src="/images/about-us-main1.webp"
+								alt="SouFlow - Hoa tươi thiết kế cao cấp"
 								fill
-								sizes="(max-width: 768px) 100vw, 500px"
+								sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 550px"
 								className="object-cover"
 								priority
+								fetchPriority="high"
+								loading="eager"
+								quality={85}
 							/>
 							<div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
 							<div className="absolute bottom-6 left-6 sm:left-10 z-10">
@@ -164,7 +132,7 @@ export function Hero() {
 								</h3>
 							</div>
 						</div>
-					</motion.div>
+					</div>
 				</div>
 			</section>
 
@@ -298,16 +266,15 @@ export function Hero() {
 													</p>
 												</Link>
 
-												<div className="flex items-center justify-between border-t border-sf-border mt-2.5 sm:mt-3 pt-2">
-													<div>
-														<span className="text-[11px] sm:text-xs text-sf-fg-muted uppercase tracking-wider block font-semibold">
+												<div className="flex items-end justify-between border-t border-sf-border mt-2.5 sm:mt-3 pt-2 gap-2">
+													<div className="min-w-0">
+														<span className="text-[11px] sm:text-xs text-sf-fg-muted uppercase tracking-wider block font-semibold truncate">
 															{availableStock > 0
 																? `Kho: ${availableStock}`
 																: "Hết hàng"}
 														</span>
-														<span className="text-sm sm:text-base text-sf-fg font-bold">
-															{flower.formattedPrice}{" "}
-															{/* Giá đã format sẵn "120.000 ₫" */}
+														<span className="text-sm sm:text-base text-sf-fg font-bold whitespace-nowrap block mt-0.5">
+															{flower.formattedPrice}
 														</span>
 													</div>
 
@@ -323,6 +290,12 @@ export function Hero() {
 																router.push("/login");
 																return;
 															}
+															if (user.roleCode === "ADMIN") {
+																toast.error(
+																	"Tài khoản Quản trị viên chỉ dùng để phản hồi bình luận, không hỗ trợ đặt hàng.",
+																);
+																return;
+															}
 															setAddingItems((prev) => ({
 																...prev,
 																[flower.id]: true,
@@ -334,9 +307,16 @@ export function Hero() {
 															}));
 														}}
 														disabled={
-															addingItems[flower.id] || availableStock <= 0
+															addingItems[flower.id] ||
+															availableStock <= 0 ||
+															user?.roleCode === "ADMIN"
 														}
-														className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-sf-fg text-sf-bg hover:bg-sf-accent hover:text-white transition-colors duration-200 cursor-pointer disabled:bg-gray-400 disabled:text-gray-200 shrink-0"
+														title={
+															user?.roleCode === "ADMIN"
+																? "Tài khoản Quản trị viên không thể mua hàng"
+																: "Thêm vào giỏ hàng"
+														}
+														className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-sf-fg text-sf-bg hover:bg-sf-accent hover:text-white transition-colors duration-200 cursor-pointer disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed shrink-0 self-end mb-0.5"
 														aria-label="Add to cart"
 													>
 														{addingItems[flower.id] ? (
@@ -371,20 +351,20 @@ export function Hero() {
 					</p>
 				</div>
 
-				<div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
-					{randomBudgetFlowers.map((flower) => (
+				<div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3 items-stretch">
+					{featuredBudgetFlowers.map((flower) => (
 						<Link
 							key={flower.id}
 							href={soulFlowRoutes.product(
 								flower.businessId || flower.code || String(flower.id),
 							)}
-							className="block"
+							className="block h-full"
 						>
 							<motion.div
 								whileHover={{ y: -6 }}
-								className="group cursor-pointer overflow-hidden rounded-xl border border-sf-border bg-sf-bg-elevated p-3.5 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300"
+								className="group cursor-pointer overflow-hidden rounded-xl border border-sf-border bg-sf-bg-elevated p-3.5 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col h-full justify-between"
 							>
-								<div className="relative aspect-16/10 w-full overflow-hidden rounded-lg bg-sf-surface flex items-center justify-center text-sf-fg-muted">
+								<div className="relative aspect-16/10 w-full overflow-hidden rounded-lg bg-sf-surface flex items-center justify-center text-sf-fg-muted shrink-0">
 									<Image
 										src={flower.imageUrl || "/images/about-us-main1.avif"}
 										alt={flower.nameVn}
@@ -398,19 +378,26 @@ export function Hero() {
 									</span>
 								</div>
 
-								<div className="mt-3 sm:mt-4 space-y-1">
-									<h3 className="font-serif text-base sm:text-lg font-semibold text-sf-fg group-hover:text-sf-accent transition-colors line-clamp-1">
-										{flower.nameVn}
-									</h3>
-									<p className="text-xs sm:text-sm text-sf-fg-muted font-light text-ellipsis overflow-hidden line-clamp-2">
-										{flower.descriptionVn ||
-											"Thiết kế tinh tế nhỏ gọn, điểm tô không gian."}
-									</p>
+								<div className="mt-3 sm:mt-4 flex flex-col grow justify-between">
+									<div>
+										<h3 className="font-serif text-base sm:text-lg font-semibold text-sf-fg group-hover:text-sf-accent transition-colors line-clamp-1">
+											{flower.nameVn}
+										</h3>
+										<p className="text-xs sm:text-sm text-sf-fg-muted font-light line-clamp-2 h-9 sm:h-10 leading-relaxed mt-1">
+											{flower.descriptionVn ||
+												"Thiết kế tinh tế nhỏ gọn, điểm tô không gian."}
+										</p>
+									</div>
+
+									<div className="flex items-center justify-between border-t border-sf-border mt-3 pt-2 text-xs text-sf-accent font-bold uppercase tracking-wider">
+										<span>Xem Chi Tiết</span>
+										<ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+									</div>
 								</div>
 							</motion.div>
 						</Link>
 					))}
-					{randomBudgetFlowers.length === 0 && (
+					{featuredBudgetFlowers.length === 0 && (
 						<p className="col-span-3 text-center text-sm text-sf-fg-muted py-6">
 							Chưa có sản phẩm nào phù hợp với ngân sách này.
 						</p>

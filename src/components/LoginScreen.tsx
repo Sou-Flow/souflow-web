@@ -31,7 +31,7 @@ export function LoginScreen() {
 	const setUser = useAuthStore((state) => state.setUser);
 	const router = useRouter();
 	const searchParams = useSearchParams();
-	const callbackUrl = searchParams.get("callbackUrl");
+	const callbackUrl = searchParams.get("callbackUrl") || searchParams.get("redirect");
 
 	const handlePasswordKeyUp = (e: React.KeyboardEvent<HTMLInputElement>) => {
 		if (e.getModifierState("CapsLock")) {

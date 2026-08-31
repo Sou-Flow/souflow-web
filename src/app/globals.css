@@ -38,18 +38,18 @@
 
 html {
 	color-scheme: light;
-	font-size: 115%;
+	font-size: 110%;
 	-webkit-text-size-adjust: 100%;
 	scroll-behavior: smooth;
 }
 
 @media (min-width: 768px) {
 	html {
-		font-size: 120%;
+		font-size: 118%;
 	}
 }
 
-@media (min-width: 1440px) {
+@media (min-width: 1024px) {
 	html {
 		font-size: 125%;
 	}

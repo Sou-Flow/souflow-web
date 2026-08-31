@@ -114,4 +114,33 @@ export const productService = {
 			return null;
 		}
 	},
+
+	getTopSales: async (): Promise<ProductFE[]> => {
+		try {
+			const rawResponse: ApiResponse<ProductResponseDTO[]> =
+				await axiosClient.get("/product/top-sales");
+
+			// biome-ignore lint/suspicious/noExplicitAny: skip
+			const actualData: any =
+				(rawResponse as unknown as Record<string, unknown>).data ?? rawResponse;
+
+			let rawList: ProductResponseDTO[] = [];
+			if (Array.isArray(actualData)) {
+				rawList = actualData;
+			} else if (
+				actualData &&
+				typeof actualData === "object" &&
+				Array.isArray(actualData.content)
+			) {
+				rawList = actualData.content;
+			} else {
+				return [];
+			}
+
+			return rawList.map(mapProductResponseToFE);
+		} catch (error) {
+			console.warn("⚠️ API '/product/top-sales' lỗi hoặc BE chưa chạy.", error);
+			return [];
+		}
+	},
 };

@@ -7,17 +7,21 @@ import "./globals.css";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SouFlowShell } from "@/components/SouFlowShell";
 import { AuthProvider } from "@/providers/AuthProviders";
-import GoogleProvider from "@/providers/GoogleProvider";
 import TanStackProvider from "@/providers/TanStackProvider";
+import { WebSocketProvider } from "@/providers/WebSocketProvider";
 
 const inter = Inter({
 	variable: "--font-geist-sans",
 	subsets: ["latin", "vietnamese"],
+	display: "swap",
+	preload: true,
 });
 
 const playfair = Playfair_Display({
 	variable: "--font-serif",
 	subsets: ["latin", "vietnamese"],
+	display: "swap",
+	preload: true,
 });
 
 export const viewport: Viewport = {
@@ -87,9 +91,10 @@ export const metadata: Metadata = {
 			"SouFlow - Nơi kết nối tâm hồn và thiên nhiên. Khám phá bộ sưu tập thiết kế hoa tươi nghệ thuật độc đáo.",
 		images: [
 			{
-				url: "https://souflow.shop/images/about-us-main1.avif",
+				url: "https://souflow.shop/images/og-image.jpg",
 				width: 1200,
 				height: 630,
+				type: "image/jpeg",
 				alt: "SouFlow - Hoa tươi thiết kế cao cấp",
 			},
 		],
@@ -99,7 +104,7 @@ export const metadata: Metadata = {
 		title: "SouFlow | Hoa tươi thiết kế cao cấp",
 		description:
 			"SouFlow - Nơi kết nối tâm hồn và thiên nhiên. Khám phá bộ sưu tập thiết kế hoa tươi nghệ thuật độc đáo.",
-		images: ["https://souflow.shop/images/about-us-main1.avif"],
+		images: ["https://souflow.shop/images/og-image.jpg"],
 	},
 };
 
@@ -107,7 +112,7 @@ const storeJsonLd = {
 	"@context": "https://schema.org",
 	"@type": "Florist",
 	name: "SouFlow",
-	image: "https://souflow.shop/images/about-us-main1.avif",
+	image: "https://souflow.shop/images/og-image.jpg",
 	url: "https://souflow.shop",
 	telephone: "+84901234567",
 	priceRange: "₫₫",
@@ -160,6 +165,18 @@ export default function RootLayout({
 			suppressHydrationWarning
 		>
 			<head>
+				<link rel="preconnect" href="https://api.souflow.shop" />
+				<link rel="dns-prefetch" href="https://api.souflow.shop" />
+				<link rel="preconnect" href="https://storage.souflow.shop" />
+				<link rel="preconnect" href="https://s3.souflow.shop" />
+				<link
+					rel="preload"
+					as="image"
+					href="/images/about-us-main1.webp"
+					type="image/webp"
+					// @ts-expect-error - fetchPriority is standard in modern HTML
+					fetchPriority="high"
+				/>
 				<script
 					type="application/ld+json"
 					// biome-ignore lint/security/noDangerouslySetInnerHtml: Google SEO JSON-LD schema
@@ -167,36 +184,36 @@ export default function RootLayout({
 				/>
 			</head>
 			<body className="min-h-full flex flex-col bg-sf-bg text-sf-fg transition-colors duration-300">
-				<GoogleProvider>
-					<TanStackProvider>
-						<AuthProvider>
-							<ThemeProvider>
+				<TanStackProvider>
+					<AuthProvider>
+						<ThemeProvider>
+							<WebSocketProvider>
 								<BoutiqueProviders>
 									<ErrorBoundary>
 										<SouFlowShell>{children}</SouFlowShell>
 									</ErrorBoundary>
 								</BoutiqueProviders>
-								<Toaster
-									position="top-right"
-									toastOptions={{
-										style: {
-											background: "#2A2A2A",
-											color: "#fff",
-											borderRadius: "10px",
-											border: "1px solid #4A4A4A",
+							</WebSocketProvider>
+							<Toaster
+								position="top-right"
+								toastOptions={{
+									style: {
+										background: "#2A2A2A",
+										color: "#fff",
+										borderRadius: "10px",
+										border: "1px solid #4A4A4A",
+									},
+									success: {
+										iconTheme: {
+											primary: "#4ade80",
+											secondary: "#fff",
 										},
-										success: {
-											iconTheme: {
-												primary: "#4ade80",
-												secondary: "#fff",
-											},
-										},
-									}}
-								/>
-							</ThemeProvider>
-						</AuthProvider>
-					</TanStackProvider>
-				</GoogleProvider>
+									},
+								}}
+							/>
+						</ThemeProvider>
+					</AuthProvider>
+				</TanStackProvider>
 			</body>
 		</html>
 	);

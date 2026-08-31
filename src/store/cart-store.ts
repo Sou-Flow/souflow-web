@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { create } from "zustand";
 import { cartService } from "@/services/cartService";
 import { productService } from "@/services/productService";
+import { useAuthStore } from "@/store/auth-store";
 import { useDiscountStore } from "@/store/discount-store";
 import { mapCartItemResponseToFE } from "@/types/cart.type";
 import type { CartItemFE } from "@/types/order.type";
@@ -110,6 +111,24 @@ export const useCartStore = create<CartState>()((set, get) => ({
 
 	// 2. THÊM VÀO GIỎ HÀNG (PESSIMISTIC UPDATE)
 	addToCart: async (product, quantity = 1) => {
+		const token = Cookies.get("accessToken");
+		if (!token) {
+			toast.error("Vui lòng đăng nhập để thêm hoa vào giỏ hàng!");
+			if (typeof window !== "undefined") {
+				const currentPath = window.location.pathname + window.location.search;
+				window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
+			}
+			return;
+		}
+
+		const user = useAuthStore.getState().user;
+		if (user?.roleCode === "ADMIN") {
+			toast.error(
+				"Tài khoản Quản trị viên chỉ dùng để phản hồi bình luận, không hỗ trợ mua hàng.",
+			);
+			return;
+		}
+
 		const { cartId, fetchCart } = get();
 
 		// Kiểm tra tồn kho trước khi gọi API

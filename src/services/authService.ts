@@ -79,12 +79,39 @@ export const authService = {
 	},
 
 	register: async (data: Record<string, unknown>): Promise<void> => {
-		console.log("REGISTER DATA:", data);
 		// Tách file ảnh ra khỏi dữ liệu account
 		const { file, avatar, photo, ...accountData } = data;
 
 		// Đăng ký cho khách hàng không yêu cầu FormData có file (avatar upload sau hoặc bỏ qua)
 		await axiosClient.post("/register", accountData);
+	},
+
+	sendRegisterOtp: async (data: Record<string, unknown>): Promise<void> => {
+		const { file, avatar, photo, ...accountData } = data;
+		await axiosClient.post("/register/send-otp", accountData);
+	},
+
+	verifyRegisterOtp: async (email: string, otp: string): Promise<UserFE> => {
+		const rawResponse: ApiResponse<AuthResponseDTO> = await axiosClient.post(
+			"/register/verify-otp",
+			{ email, otp },
+		);
+
+		// biome-ignore lint/suspicious/noExplicitAny: skip
+		const authData: any =
+			(rawResponse as unknown as Record<string, unknown>).data ?? rawResponse;
+
+		const token = authData.token || authData.accessToken;
+		const refreshToken = authData.refreshToken;
+
+		if (token) {
+			Cookies.set("accessToken", token, { expires: 7 });
+		}
+		if (refreshToken) {
+			Cookies.set("refreshToken", refreshToken, { expires: 7 });
+		}
+
+		return await authService.me();
 	},
 
 	logout: () => {

@@ -93,7 +93,7 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 	return (
 		<header className="sticky top-0 z-40 w-full border-b border-sf-border bg-sf-bg/90 backdrop-blur-md transition-colors duration-300">
 			<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-				<div className="flex h-16 items-center justify-between gap-4">
+				<div className="flex h-16 items-center justify-between gap-3 lg:gap-6">
 					{/* Logo */}
 					<div className="flex items-center shrink-0">
 						<Link
@@ -103,23 +103,23 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 								setSelectedCategory(null);
 								setSearchQuery("");
 							}}
-							className="group flex items-center gap-3 text-left cursor-pointer"
+							className="group flex items-center gap-2.5 text-left cursor-pointer"
 						>
 							{/* The Blooming Petal Logo */}
-							<div className="relative flex h-12 w-12 cursor-pointer items-center justify-center overflow-hidden rounded-2xl border border-[#C49B83]/10 bg-white shadow-sm transition-all duration-500 hover:shadow-md group">
+							<div className="relative flex h-10 w-10 cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-sf-accent/20 bg-sf-surface shadow-xs transition-all duration-500 hover:shadow-md group">
 								{/* 4 cánh hoa */}
-								<div className="absolute h-5 w-5 -translate-x-1.5 -translate-y-1.5 rounded-tr-full rounded-bl-full bg-[#C49B83]/20 transition-transform duration-500 group-hover:rotate-45 group-hover:bg-[#C49B83]/40"></div>
-								<div className="absolute h-5 w-5 translate-x-1.5 -translate-y-1.5 rounded-tl-full rounded-br-full bg-[#C49B83]/30 transition-transform duration-500 group-hover:-rotate-45 group-hover:bg-[#C49B83]/50"></div>
-								<div className="absolute h-5 w-5 -translate-x-1.5 translate-y-1.5 rounded-tl-full rounded-br-full bg-[#C49B83]/40 transition-transform duration-500 group-hover:-rotate-45 group-hover:bg-[#C49B83]/60"></div>
-								<div className="absolute h-5 w-5 translate-x-1.5 translate-y-1.5 rounded-tr-full rounded-bl-full bg-[#C49B83]/50 transition-transform duration-500 group-hover:rotate-45 group-hover:bg-[#C49B83]/70"></div>
+								<div className="absolute h-4 w-4 -translate-x-1.5 -translate-y-1.5 rounded-tr-full rounded-bl-full bg-sf-accent/20 transition-transform duration-500 group-hover:rotate-45 group-hover:bg-sf-accent/40"></div>
+								<div className="absolute h-4 w-4 translate-x-1.5 -translate-y-1.5 rounded-tl-full rounded-br-full bg-sf-accent/30 transition-transform duration-500 group-hover:-rotate-45 group-hover:bg-sf-accent/50"></div>
+								<div className="absolute h-4 w-4 -translate-x-1.5 translate-y-1.5 rounded-tl-full rounded-br-full bg-sf-accent/40 transition-transform duration-500 group-hover:-rotate-45 group-hover:bg-sf-accent/60"></div>
+								<div className="absolute h-4 w-4 translate-x-1.5 translate-y-1.5 rounded-tr-full rounded-bl-full bg-sf-accent/50 transition-transform duration-500 group-hover:rotate-45 group-hover:bg-sf-accent/70"></div>
 
 								{/* Nhụy hoa trung tâm */}
-								<div className="relative z-10 h-2 w-2 scale-100 rounded-full border border-[#C49B83] bg-white shadow-sm transition-transform group-hover:scale-125"></div>
+								<div className="relative z-10 h-1.5 w-1.5 scale-100 rounded-full border border-sf-accent bg-sf-bg shadow-xs transition-transform group-hover:scale-125"></div>
 							</div>
 
 							{/* Brand text */}
 							<div className="leading-tight">
-								<span className="block font-serif md:text-lg text-base font-semibold tracking-[0.28em] text-sf-fg">
+								<span className="block font-serif text-base lg:text-lg font-semibold tracking-[0.24em] text-sf-fg">
 									SOUFLOW
 								</span>
 							</div>
@@ -128,17 +128,17 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 
 					{/* Desktop Nav Links & Interactive Dropdown on Hover */}
 					<nav
-						className="hidden md:flex space-x-1 items-center"
+						className="hidden md:flex space-x-1 items-center shrink-0"
 						aria-label="Desktop navigation"
 					>
 						{/* Home Link */}
 						<Link
 							id="nav-link-home"
 							href={soulFlowRoutes.home}
-							className={`relative px-3 py-2 rounded-lg text-xs font-semibold tracking-wider uppercase transition-all duration-300 cursor-pointer ${
+							className={`relative px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wider uppercase transition-all duration-300 cursor-pointer ${
 								isHome
 									? "text-sf-accent"
-									: "text-[#4A4A4A]fg-muted hover:text-sf-accent"
+									: "text-sf-fg-muted hover:text-sf-accent"
 							}`}
 						>
 							Trang Chủ
@@ -170,14 +170,14 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 								href={soulFlowRoutes.catalog}
 								onFocus={() => setIsDropdownOpen(true)}
 								onClick={() => setSelectedCategory(null)}
-								className={`relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold tracking-wider uppercase transition-all duration-300 cursor-pointer ${
+								className={`relative flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wider uppercase transition-all duration-300 cursor-pointer ${
 									isCatalog
 										? "text-sf-accent"
-										: "text-[#4A4A4A]fg-muted hover:text-sf-accent"
+										: "text-sf-fg-muted hover:text-sf-accent"
 								}`}
 							>
 								Sản Phẩm
-								<ChevronDown className="h-3 w-3 text-[#4A4A4A]fg-muted hover:text-sf-accent" />
+								<ChevronDown className="h-3 w-3 text-sf-fg-muted group-hover:text-sf-accent transition-colors" />
 								{isCatalog && (
 									<motion.span
 										layoutId="navUnderline"
@@ -195,7 +195,7 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 										animate={{ opacity: 1, y: 0 }}
 										exit={{ opacity: 0, y: 10 }}
 										transition={{ duration: 0.15 }}
-										className="absolute left-0 mt-0 w-56 rounded-xl border border-sf-border bg-sf-bg-elevated p-2 shadow-xl ring-1 ring-black/5 z-50 overflow-hidden"
+										className="absolute left-0 mt-1 w-56 rounded-xl border border-sf-border bg-sf-bg-elevated p-2 shadow-xl ring-1 ring-black/5 z-50 overflow-hidden"
 									>
 										<div className="px-3 py-2 border-b border-sf-border mb-1">
 											<p className="text-xs uppercase tracking-widest font-bold text-sf-accent">
@@ -205,16 +205,15 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 										{categories.map((cat) => (
 											<button
 												type="button"
-												key={cat.id} // Dùng id làm key (pk trong DB)
+												key={cat.id}
 												id={`header-dropdown-cat-${cat.code.toLowerCase()}`}
-												onClick={() => handleCategorySelect(cat.id)} // Truyền id (number) vào store
+												onClick={() => handleCategorySelect(cat.id)}
 												className={`flex w-full items-center justify-between px-3 py-2 rounded-lg text-left text-xs font-medium cursor-pointer transition-colors ${
 													selectedCategory === cat.id && isCatalog
 														? "bg-sf-accent/10 text-sf-accent font-bold"
 														: "text-sf-fg-muted hover:bg-sf-surface hover:text-sf-accent"
 												}`}
 											>
-												{/* CHỈ LẤY nameVn SHOW RA Ở ĐÂY */}
 												<span>{cat.nameVn}</span>
 
 												{selectedCategory === cat.id && isCatalog && (
@@ -226,14 +225,15 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 								)}
 							</AnimatePresence>
 						</div>
+
 						{/* Contact link */}
 						<Link
 							id="nav-link-contact"
 							href={soulFlowRoutes.contact}
-							className={`relative px-3 py-2 rounded-lg text-xs font-semibold tracking-wider uppercase transition-all duration-300 cursor-pointer ${
+							className={`relative px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wider uppercase transition-all duration-300 cursor-pointer ${
 								isContact
 									? "text-sf-accent"
-									: "text-[#4A4A4A]fg-muted hover:text-sf-accent"
+									: "text-sf-fg-muted hover:text-sf-accent"
 							}`}
 						>
 							Liên Hệ
@@ -249,10 +249,10 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 						<Link
 							id="nav-link-about"
 							href={soulFlowRoutes.about}
-							className={`relative px-3 py-2 rounded-lg text-xs font-semibold tracking-wider uppercase transition-all duration-300 cursor-pointer ${
+							className={`relative px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wider uppercase transition-all duration-300 cursor-pointer ${
 								isAbout
 									? "text-sf-accent"
-									: "text-[#4A4A4A]fg-muted hover:text-sf-accent"
+									: "text-sf-fg-muted hover:text-sf-accent"
 							}`}
 						>
 							Về Chúng Tôi
@@ -266,22 +266,22 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 						</Link>
 					</nav>
 
-					{/* Luxury Integrated Search Bar */}
-					<div className="relative grow w-min md:max-w-md hidden sm:block">
-						<Search className="absolute left-3.5 top-2.5 h-4.5 w-4.5 text-sf-accent" />
+					{/* Sleek Integrated Search Bar */}
+					<div className="relative grow max-w-xs lg:max-w-sm hidden sm:block">
+						<Search className="absolute left-3.5 top-2.5 h-3.5 w-3.5 text-sf-accent" />
 						<input
 							id="header-search-input"
 							type="text"
-							placeholder="Tìm hoa, loại hoa..."
+							placeholder="Tìm kiếm hoa tươi..."
 							value={searchQuery}
 							onChange={(e) => goToCatalogWithSearch(e.target.value)}
-							className="w-full rounded-full border border-sf-border bg-sf-bg-elevated/70 pl-9 pr-8 py-2 text-[15px] text-sf-fg focus:border-sf-accent focus:bg-sf-bg-elevated focus:ring-1 focus:ring-sf-accent outline-none transition-all placeholder:text-sf-fg-muted shadow-inner"
+							className="w-full rounded-full border border-sf-border bg-sf-bg-elevated/80 pl-9 pr-8 py-1.5 text-xs text-sf-fg focus:border-sf-accent focus:bg-sf-bg-elevated focus:ring-1 focus:ring-sf-accent outline-none transition-all placeholder:text-sf-fg-muted shadow-xs"
 						/>
 						{searchQuery && (
 							<button
 								type="button"
 								onClick={() => setSearchQuery("")}
-								className="absolute right-3 top-1.5 h-4.5 w-4.5 flex items-center justify-center text-sf-fg-muted hover:text-sf-fg text-xs font-bold"
+								className="absolute right-3 top-1.5 h-4 w-4 flex items-center justify-center text-sf-fg-muted hover:text-sf-fg text-xs font-bold"
 								title="Clear Search"
 							>
 								×
@@ -290,61 +290,45 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 					</div>
 
 					{/* User Controls */}
-
-					<div className="flex items-center space-x-1 md:space-x-2 shrink-0">
+					<div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
 						<ThemeToggle />
 
 						{/* Account Profile Link */}
-
-						<div className="hidden md:flex items-center gap-3">
+						<div className="hidden md:flex items-center gap-2">
 							{!user ? (
-								<div className="flex items-center bg-sf-surface border border-sf-border rounded-full p-1">
+								<div className="flex items-center bg-sf-surface border border-sf-border rounded-full p-0.5">
 									<button
 										type="button"
 										onClick={() => {
-											showToast("Chuyển đến trang đăng nhập", "success");
 											router.push(
 												`${soulFlowRoutes.login}?callbackUrl=${encodeURIComponent(pathname)}`,
 											);
 										}}
-										className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] uppercase tracking-widest font-bold transition-all cursor-pointer ${
+										className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
 											pathname === soulFlowRoutes.login
-												? "bg-sf-accent text-white shadow-sm"
-												: "text-sf-fg-muted hover:text-sf-accent"
+												? "bg-sf-accent text-white shadow-xs"
+												: "text-sf-fg-muted hover:text-sf-accent hover:bg-sf-bg-elevated"
 										}`}
 									>
-										<LogIn
-											className={`h-3.5 w-3.5 ${
-												pathname === soulFlowRoutes.login
-													? "text-white"
-													: "text-sf-accent"
-											}`}
-										/>
-										<span className="hidden lg:inline">Đăng Nhập</span>
+										<LogIn className="h-3.5 w-3.5" />
+										<span>Đăng Nhập</span>
 									</button>
 
 									<button
 										type="button"
 										onClick={() => {
-											showToast("Chuyển đến trang đăng ký", "success");
 											router.push(
 												`${soulFlowRoutes.register}?callbackUrl=${encodeURIComponent(pathname)}`,
 											);
 										}}
-										className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] uppercase tracking-widest font-bold transition-all cursor-pointer ${
+										className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
 											pathname === soulFlowRoutes.register
-												? "bg-sf-accent text-white shadow-sm"
-												: "text-sf-fg-muted hover:text-sf-accent"
+												? "bg-sf-accent text-white shadow-xs"
+												: "text-sf-fg-muted hover:text-sf-accent hover:bg-sf-bg-elevated"
 										}`}
 									>
-										<SquarePen
-											className={`h-3.5 w-3.5 ${
-												pathname === soulFlowRoutes.register
-													? "text-white"
-													: "text-sf-accent"
-											}`}
-										/>
-										<span className="hidden lg:inline">Đăng Ký</span>
+										<SquarePen className="h-3.5 w-3.5" />
+										<span>Đăng Ký</span>
 									</button>
 								</div>
 							) : (
@@ -352,22 +336,22 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 									<Link
 										id="account-nav-btn"
 										href={soulFlowRoutes.account}
-										className={`flex items-center gap-2 p-1.5 rounded-full hover:bg-sf-surface transition-colors ${
+										className={`flex items-center gap-2 p-1 rounded-full hover:bg-sf-surface transition-colors ${
 											isAccount ? "ring-2 ring-sf-accent" : ""
 										}`}
 									>
 										<img
 											src={user.avatar}
 											alt={user.fullName}
-											className="h-7 w-7 rounded-full object-cover grayscale brightness-105 border border-sf-border"
+											className="h-9 w-9 rounded-full object-cover grayscale brightness-105 border border-sf-border ring-2 ring-sf-accent/30 shadow-xs"
 											referrerPolicy="no-referrer"
 										/>
 
-										<span className="hidden lg:flex items-center gap-1.5 text-sm font-bold tracking-widest text-sf-fg uppercase">
+										<span className="hidden lg:flex items-center gap-1 text-xs font-bold tracking-wider text-sf-fg uppercase">
 											{user.roleCode === "ADMIN" ? (
 												<>
-													SouFlow Shop{" "}
-													<Crown className="h-4 w-4 text-sf-accent" />
+													SouFlow{" "}
+													<Crown className="h-3.5 w-3.5 text-sf-accent" />
 												</>
 											) : user.fullName ? (
 												user.fullName.trim().split(" ").at(-1)
@@ -380,9 +364,9 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 									<LogOut
 										className="h-4 w-4 text-sf-fg-muted hover:text-red-400 cursor-pointer transition-colors"
 										onClick={() => {
-											logout(); // Xóa token, clear user, clear cart state
+											logout();
 											showToast("Đăng xuất thành công", "success");
-											router.push(soulFlowRoutes.home); // Đá về trang chủ
+											router.push(soulFlowRoutes.home);
 										}}
 									/>
 								</>
@@ -394,7 +378,14 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 					<button
 						type="button"
 						id="cart-nav-btn"
-						onClick={onOpenCart}
+						onClick={() => {
+							if (!user) {
+								toast.error("Vui lòng đăng nhập để xem giỏ hàng của bạn!");
+								router.push(`${soulFlowRoutes.login}?redirect=${encodeURIComponent(pathname)}`);
+								return;
+							}
+							onOpenCart();
+						}}
 						className="relative flex items-center justify-center p-2 rounded-lg text-sf-fg hover:bg-sf-surface transition-colors duration-200 cursor-pointer"
 						aria-label="Open shopping bag"
 					>
@@ -457,7 +448,7 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 											<img
 												src={user.avatar || "/images/avatar.png"}
 												alt={user.fullName || "User"}
-												className="h-8 w-8 rounded-full object-cover grayscale brightness-105 border border-sf-border"
+												className="h-10 w-10 rounded-full object-cover grayscale brightness-105 border border-sf-border ring-2 ring-sf-accent/30 shadow-xs"
 												referrerPolicy="no-referrer"
 											/>
 											<span className="flex items-center gap-1.5">
@@ -517,6 +508,11 @@ export function Navbar({ onOpenCart }: NavbarProps) {
 									id="mobile-cart-nav-btn"
 									onClick={() => {
 										setMobileMenuOpen(false);
+										if (!user) {
+											toast.error("Vui lòng đăng nhập để xem giỏ hàng của bạn!");
+											router.push(`${soulFlowRoutes.login}?redirect=${encodeURIComponent(pathname)}`);
+											return;
+										}
 										onOpenCart();
 									}}
 									aria-label="Open shopping bag"

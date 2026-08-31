@@ -1,35 +1,66 @@
 "use client";
 
-import { ShieldCheck, Sparkles } from "lucide-react";
+import {
+	Clock,
+	Heart,
+	Mail,
+	MapPin,
+	Phone,
+	ShieldCheck,
+	Sparkles,
+} from "lucide-react";
 import Link from "next/link";
 import { soulFlowRoutes } from "@/lib/souflow/routes";
 
 export function Footer() {
 	return (
-		<footer className="bg-sf-bg border-t-4 border-sf-border transition-colors duration-300">
-			<div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
-				<div className="grid grid-cols-1 gap-8 md:grid-cols-12">
-					<div className="space-y-3 md:col-span-3">
-						<span className="font-sans font-bold text-2xl tracking-[0.25em] text-sf-fg">
-							SOUFLOW
-						</span>
-						<p className="text-sm text-sf-fg-muted font-light leading-relaxed">
-							Một không gian hoa tinh tế và nghệ thuật lưu giữ vẻ đẹp thiên
-							nhiên. Chúng tôi tạo nên những thiết kế mang cảm hứng cảm xúc, sự
-							thanh lịch và nét đẹp riêng trong từng loài hoa.
+		<footer className="bg-sf-bg-elevated border-t border-sf-border text-sf-fg transition-colors duration-300">
+			{/* Main Footer Content */}
+			<div className="mx-auto max-w-7xl px-4 pt-12 pb-8 sm:px-6 lg:px-8">
+				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10">
+					{/* Col 1: Brand & Philosophy (Span 4) */}
+					<div className="lg:col-span-4 space-y-4">
+						<Link
+							href={soulFlowRoutes.home}
+							className="group inline-flex items-center gap-2.5"
+						>
+							{/* Petal Logo Icon */}
+							<div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border border-sf-accent/30 bg-sf-surface shadow-xs transition-transform duration-500 group-hover:scale-105">
+								<div className="absolute h-3.5 w-3.5 -translate-x-1 -translate-y-1 rounded-tr-full rounded-bl-full bg-sf-accent/30 transition-transform duration-500 group-hover:rotate-45" />
+								<div className="absolute h-3.5 w-3.5 translate-x-1 -translate-y-1 rounded-tl-full rounded-br-full bg-sf-accent/40 transition-transform duration-500 group-hover:-rotate-45" />
+								<div className="absolute h-3.5 w-3.5 -translate-x-1 translate-y-1 rounded-tl-full rounded-br-full bg-sf-accent/50 transition-transform duration-500 group-hover:-rotate-45" />
+								<div className="absolute h-3.5 w-3.5 translate-x-1 translate-y-1 rounded-tr-full rounded-bl-full bg-sf-accent/60 transition-transform duration-500 group-hover:rotate-45" />
+								<div className="relative z-10 h-1.5 w-1.5 rounded-full border border-sf-accent bg-sf-bg" />
+							</div>
+
+							<span className="font-serif text-lg font-bold tracking-[0.24em] text-sf-fg">
+								SOUFLOW
+							</span>
+						</Link>
+
+						<p className="text-xs sm:text-sm text-sf-fg-muted font-light leading-relaxed max-w-sm">
+							Không gian hoa nghệ thuật cao cấp. Mỗi tác phẩm là một bản giao
+							hưởng tinh tế từ những cánh hoa tươi được tuyển chọn khắt khe mỗi
+							ngày.
 						</p>
+
+						<div className="flex items-center gap-2 text-xs text-sf-fg-muted pt-1">
+							<Sparkles className="h-4 w-4 text-sf-accent shrink-0" />
+							<span>100% Hoa tươi nhập vườn tiêu chuẩn cao</span>
+						</div>
 					</div>
 
-					<div className="space-y-3 md:col-span-2">
-						<h4 className="text-sm font-bold tracking-widest uppercase text-sf-accent">
-							Đường Dẫn Nhanh
+					{/* Col 2: Khám Phá (Span 2) */}
+					<div className="lg:col-span-2 space-y-3">
+						<h4 className="text-xs font-bold uppercase tracking-widest text-sf-accent">
+							Khám Phá
 						</h4>
-						<ul className="space-y-1 text-xs font-light text-sf-fg-muted">
+						<ul className="space-y-2 text-xs font-medium text-sf-fg-muted">
 							<li>
 								<Link
 									id="footer-btn-home"
 									href={soulFlowRoutes.home}
-									className="hover:text-sf-accent text-sm transition-colors"
+									className="hover:text-sf-accent transition-colors"
 								>
 									Trang Chủ
 								</Link>
@@ -38,69 +69,124 @@ export function Footer() {
 								<Link
 									id="footer-btn-catalog"
 									href={soulFlowRoutes.catalog}
-									className="hover:text-sf-accent text-sm transition-colors"
+									className="hover:text-sf-accent transition-colors"
 								>
-									Danh Mục Sản Phẩm
+									Bộ Sưu Tập Hoa
+								</Link>
+							</li>
+							<li>
+								<Link
+									id="footer-btn-about"
+									href={soulFlowRoutes.about}
+									className="hover:text-sf-accent transition-colors"
+								>
+									Về Chúng Tôi
 								</Link>
 							</li>
 							<li>
 								<Link
 									id="footer-btn-contact"
 									href={soulFlowRoutes.contact}
-									className="hover:text-sf-accent text-sm transition-colors font-medium"
+									className="hover:text-sf-accent transition-colors"
 								>
-									Liên Hệ Chúng Tôi
+									Liên Hệ Tư Vấn
 								</Link>
 							</li>
 						</ul>
 					</div>
 
-					<div className="space-y-3 md:col-span-4">
-						<h4 className="text-sm font-bold tracking-widest uppercase text-sf-accent">
-							Cam Kết Bền Vững
+					{/* Col 3: Chính Sách & Hỗ Trợ (Span 3) */}
+					<div className="lg:col-span-3 space-y-3">
+						<h4 className="text-xs font-bold uppercase tracking-widest text-sf-accent">
+							Chính Sách &amp; Hỗ Trợ
 						</h4>
-						<div className="space-y-2 text-sm font-light text-sf-fg-muted leading-relaxed">
-							<div className="flex items-center gap-1.5 text-sm uppercase font-bold text-sf-fg">
-								<Sparkles className="h-6.5 w-6.5 text-sf-accent" />
-								Người trồng hoa địa phương được tuyển chọn kỹ lưỡng
-							</div>
-							<p className="text-[17px] leading-relaxed">
-								Chúng tôi hợp tác với những người trồng hoa địa phương cam kết
-								thực hành bền vững, đảm bảo rằng mỗi bó hoa không chỉ đẹp mà còn
-								có nguồn gốc đạo đức và thân thiện với môi trường.
-							</p>
-						</div>
+						<ul className="space-y-2 text-xs font-medium text-sf-fg-muted">
+							<li>
+								<Link
+									href={soulFlowRoutes.privacy}
+									className="hover:text-sf-accent transition-colors"
+								>
+									Chính Sách Bảo Mật
+								</Link>
+							</li>
+							<li>
+								<Link
+									href={soulFlowRoutes.terms}
+									className="hover:text-sf-accent transition-colors"
+								>
+									Điều Khoản Dịch Vụ
+								</Link>
+							</li>
+							<li>
+								<span className="text-sf-fg-muted/80">
+									Giao Hoa Hỏa Tốc 2 Giờ
+								</span>
+							</li>
+							<li>
+								<span className="text-sf-fg-muted/80">
+									Cam Kết Hoàn Tiền Nếu Hoa Hỏng
+								</span>
+							</li>
+						</ul>
 					</div>
 
-					<div className="space-y-3 md:col-span-3">
-						<h4 className="text-sm font-bold tracking-widest uppercase text-sf-accent">
-							Địa Chỉ Cửa Hàng
+					{/* Col 4: Liên Hệ & Showroom (Span 3) */}
+					<div className="lg:col-span-3 space-y-3">
+						<h4 className="text-xs font-bold uppercase tracking-widest text-sf-accent">
+							Showroom &amp; Liên Hệ
 						</h4>
-						<p className="text-sm text-sf-fg-muted leading-relaxed">
-							Tòa nhà QTSC 9, Công viên phần mềm Quang Trung, Quận 12, Thành phố
-							Hồ Chí Minh
-						</p>
-						<div className="flex items-center gap-1 text-xl pt-4.5 text-sf-fg-muted font-semibold uppercase">
-							<ShieldCheck className="h-8 w-8 text-green-500" />
-							An Toàn &amp; Bảo Mật
+						<ul className="space-y-2 text-xs text-sf-fg-muted font-light">
+							<li className="flex items-start gap-2">
+								<MapPin className="h-4 w-4 text-sf-accent shrink-0 mt-0.5" />
+								<span>
+									Tòa nhà QTSC 9, Công viên phần mềm Quang Trung, Quận 12, TP.
+									Hồ Chí Minh
+								</span>
+							</li>
+							<li className="flex items-center gap-2">
+								<Phone className="h-4 w-4 text-sf-accent shrink-0" />
+								<span className="font-semibold text-sf-fg">
+									Hotline: 0901 234 567
+								</span>
+							</li>
+							<li className="flex items-center gap-2">
+								<Mail className="h-4 w-4 text-sf-accent shrink-0" />
+								<span>contact@souflow.shop</span>
+							</li>
+							<li className="flex items-center gap-2">
+								<Clock className="h-4 w-4 text-sf-accent shrink-0" />
+								<span>Mở cửa: 08:00 - 21:00 (Hàng ngày)</span>
+							</li>
+						</ul>
+
+						<div className="pt-2 flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider">
+							<ShieldCheck className="h-4 w-4" />
+							<span>Thanh toán Bảo mật 100%</span>
 						</div>
 					</div>
 				</div>
 
-				<div className="mt-2 border-t-2 border-sf-border pt-3 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-sf-fg-muted">
-					<p>© 2026 SouFlow Flower Vietnam. All rights reserved.</p>
-					<div className="flex gap-4">
+				{/* Bottom Bar */}
+				<div className="mt-10 border-t border-sf-border pt-5 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-sf-fg-muted">
+					<p className="flex items-center gap-1">
+						© 2026 SouFlow Botanical Vietnam. Kiến tạo với{" "}
+						<Heart className="h-3 w-3 text-rose-500 fill-current inline" /> tình
+						yêu hoa tươi.
+					</p>
+
+					<div className="flex items-center gap-4">
 						<Link
 							href={soulFlowRoutes.privacy}
-							className="hover:underline cursor-pointer"
+							className="hover:text-sf-accent transition-colors"
 						>
-							Chính Sách Bảo Mật
+							Bảo Mật
 						</Link>
+						<span>•</span>
 						<Link
 							href={soulFlowRoutes.terms}
-							className="hover:underline cursor-pointer"
+							className="hover:text-sf-accent transition-colors"
 						>
-							Điều Khoản Dịch Vụ
+							Điều Khoản
 						</Link>
 					</div>
 				</div>
