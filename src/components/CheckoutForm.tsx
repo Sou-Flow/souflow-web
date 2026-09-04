@@ -178,6 +178,8 @@ export function CheckoutForm() {
 		null,
 	);
 	const [timeLeft, setTimeLeft] = useState(30); // 30 giây đếm ngược cho QR (Review Demo)
+	const [isGracePeriod, setIsGracePeriod] = useState(false);
+	const [graceTime, setGraceTime] = useState(10); // 10 giây ân hạn đồng bộ giao dịch ngân hàng
 	const [isQrLoaded, setIsQrLoaded] = useState(false);
 	const [copiedField, setCopiedField] = useState<string | null>(null);
 
@@ -342,6 +344,8 @@ export function CheckoutForm() {
 			if (paymentMethod === "SEPAY") {
 				// SEPAY thì chuyển sang màn chờ quét mã
 				setTimeLeft(30); // 30 giây đếm ngược cho review demo
+				setIsGracePeriod(false);
+				setGraceTime(10);
 				setIsQrLoaded(false);
 				setOrderStatus("WAITING_PAYMENT");
 			} else {
@@ -535,30 +539,40 @@ export function CheckoutForm() {
 			// LUÔN LUÔN quay lại form IDLE, giữ nguyên giỏ hàng
 			setOrderStatus("IDLE");
 			setPlacedOrderDetails(null);
+			setIsGracePeriod(false);
+			setGraceTime(10);
 		}
 	}, [placedOrderDetails, queryClient.removeQueries]);
 
-	// === 6.1. EFFECT ĐẾM NGƯỢC THỜI GIAN QR ===
+	// === 6.1. EFFECT ĐẾM NGƯỢC THỜI GIAN QR + GRACE PERIOD 10S ===
 	useEffect(() => {
 		let timer: NodeJS.Timeout;
 
-		if (orderStatus === "WAITING_PAYMENT" && timeLeft > 0) {
-			timer = setInterval(() => {
-				setTimeLeft((prev) => prev - 1);
-			}, 1000);
-		} else if (orderStatus === "WAITING_PAYMENT" && timeLeft === 0) {
-			// Xử lý hết giờ -> Tự động hủy
-			// Đưa hàm cập nhật state vào setTimeout để chạy bất đồng bộ, tránh lỗi cascading render
-			const cancelTimeout = setTimeout(() => {
-				handleCancelOrder();
-			}, 0);
-
-			// Dọn dẹp cả timeout nếu component unmount bất ngờ
-			return () => clearTimeout(cancelTimeout);
+		if (orderStatus === "WAITING_PAYMENT") {
+			if (timeLeft > 0) {
+				timer = setInterval(() => {
+					setTimeLeft((prev) => prev - 1);
+				}, 1000);
+			} else if (!isGracePeriod) {
+				// Hết 30s đếm ngược -> Bắt đầu 10s ân hạn chờ webhook ngân hàng đồng bộ
+				setIsGracePeriod(true);
+				setGraceTime(10);
+			} else if (graceTime > 0) {
+				// Đang trong 10s ân hạn đồng bộ
+				timer = setInterval(() => {
+					setGraceTime((prev) => prev - 1);
+				}, 1000);
+			} else {
+				// Hết cả thời gian ân hạn mà không có tiền vào -> Chính thức hủy đơn
+				const cancelTimeout = setTimeout(() => {
+					handleCancelOrder();
+				}, 0);
+				return () => clearTimeout(cancelTimeout);
+			}
 		}
 
 		return () => clearInterval(timer);
-	}, [orderStatus, timeLeft, handleCancelOrder]);
+	}, [orderStatus, timeLeft, isGracePeriod, graceTime, handleCancelOrder]);
 
 	const formatTime = (seconds: number) => {
 		const m = Math.floor(seconds / 60);
@@ -635,16 +649,31 @@ export function CheckoutForm() {
 
 							{/* Realtime & Timer Badge */}
 							<div className="flex flex-col items-center gap-2 w-full max-w-[320px]">
-								<div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-medium border border-amber-500/20">
-									<Loader2 className="h-3.5 w-3.5 animate-spin text-amber-500" />
-									Hệ thống đang chờ nhận tiền...
-								</div>
+								{isGracePeriod ? (
+									<div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-medium border border-blue-500/20 animate-pulse">
+										<Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
+										Đang kiểm tra giao dịch với ngân hàng ({graceTime}s)...
+									</div>
+								) : (
+									<div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-medium border border-amber-500/20">
+										<Loader2 className="h-3.5 w-3.5 animate-spin text-amber-500" />
+										Hệ thống đang chờ nhận tiền...
+									</div>
+								)}
 
 								<div className="text-xs text-sf-fg-muted flex items-center gap-1.5">
-									<span>Thời gian hiệu lực:</span>
-									<span className="font-mono font-bold text-red-500 text-sm">
-										{formatTime(timeLeft)}
-									</span>
+									{isGracePeriod ? (
+										<span className="text-[11px] text-amber-600 font-medium text-center">
+											Nếu bạn vừa chuyển tiền, vui lòng chờ trong giây lát...
+										</span>
+									) : (
+										<>
+											<span>Thời gian hiệu lực:</span>
+											<span className="font-mono font-bold text-red-500 text-sm">
+												{formatTime(timeLeft)}
+											</span>
+										</>
+									)}
 								</div>
 							</div>
 						</div>
